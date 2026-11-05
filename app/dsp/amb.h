@@ -9,6 +9,7 @@
  *           as it swells) or Voices (saws through two formants, as "2/1"); then a soft low-pass and an
  *           ensemble chorus. The chord moves every DRIFT (20 s .. 5 min): voices on shared
  *           notes hold, the others breathe in anew.
+ *           Or the SLATE: up to four chords in order, each for a set number of bars, in place of Drift.
  *   BELLS   soft two-operator FM bells played by four tape loops of unequal length (13, 17, 23, 29
  *           quarter notes), each holding a short phrase that shifts against the others, each its own
  *           shade of bell. EVOLVE changes a note now and then; DENSITY sets how many notes a loop holds.
@@ -44,6 +45,9 @@ extern const uint16_t EN_MODE_POOL[EN_NMODES];
 extern const char *const EN_NOTE_NAME[12];
 extern const uint8_t EN_LOOP_LEN[EN_NLOOP];
 extern const uint8_t EN_DRUM_N[EN_NDRUM];
+#define EN_NSLOT 4                     /* the slate's steps */
+#define EN_NBARS 8
+extern const uint8_t EN_SLATE_BARS[EN_NBARS];
 
 /* parameters: value ranges in en_param_info() */
 enum {
@@ -55,6 +59,8 @@ enum {
     P_PADTONE,                                        /* the pad's colour, set by the piece: Rhodes, Voices */
     P_BASSOCT, P_GLIDE, P_FIFTH,                      /* bass: its octave, its glide, how often it leans on the fifth */
     P_SWING, P_HATS,                                  /* pulse: swing, the hats' colour */
+    P_SLOT1, P_SLOT2, P_SLOT3, P_SLOT4,               /* the slate: each step's chord, 0 empty, n the scale's degree n */
+    P_LEN1, P_LEN2, P_LEN3, P_LEN4,                   /* and how long it lasts: an index into EN_SLATE_BARS */
     P_NPARAMS
 };
 typedef struct {

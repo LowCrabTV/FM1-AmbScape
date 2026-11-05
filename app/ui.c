@@ -10,14 +10,15 @@
  *   SELECT tempo   ALGORITHM mode (loads a pool)   PRESETS the piece (Root is on the Setup page)
  *   HOME SEQ FX SEL GLO   the pages: LAYERS, MOTION, SPACE, TONE, SETUP (EDIT steps through them)
  *   KNOB 1-4       the page's four values
+ *   SELECT pressed the Chords page, the slate: KNOB 1-4 each step's chord; SELECT held, each step's bars
  *   SAVE           saves (it also saves by itself a few seconds after a change, while resting);
  *                  held 1.5 s: the piece back to its recipe */
 #include "fastmath.h"
 
 /* the pages, one a layer (a button each); SELECT steps through them in this order */
-enum { V_GARDEN, V_PAD, V_BELLS, V_BASS, V_PULSE, V_SPACE, V_SETUP, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Bass", "Pulse", "Space", "Setup"};
-static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO};
+enum { V_GARDEN, V_PAD, V_BELLS, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, NVIEWS };
+static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Bass", "Pulse", "Space", "Setup", "Chords"};
+static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL};
 /* the four knobs of each page: a parameter, or one of these; and what the knob is called there */
 enum { K_LEDS = 100, K_CPU, K_NONE };
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
@@ -28,6 +29,7 @@ static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_PULSE, P_HITS, P_SWING, P_HATS},
     {P_ECHO, P_ETIME, P_REVERB, P_SIZE},
     {P_ROOT, P_TUNE, P_MIDI, K_LEDS},
+    {P_SLOT1, P_SLOT2, P_SLOT3, P_SLOT4},
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Tempo", "Evolve", "Motion", "Drift"},
@@ -37,7 +39,9 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Level", "Hits", "Swing", "Hats"},
     {"Echo", "Echo time", "Reverb", "Size"},
     {"Root", "Tune", "MIDI out", "Lights"},
+    {"Chord 1", "Chord 2", "Chord 3", "Chord 4"},
 };
+static const char *const LEN_LABEL[4] = {"Bars 1", "Bars 2", "Bars 3", "Bars 4"};
 
 /* the screen's colours: the cover of Ambient 1: Music for Airports (1978), as the web app and the site.
  * The map's paper, its ink; the land's greens for the pad (the chord) and the scale, its rivers for the
@@ -166,11 +170,12 @@ static int knob_get(int k)
         return (int)plat_cpu_pct();
     return 0;
 }
+static int is_slot(int k) { return k >= P_SLOT1 && k < P_SLOT1 + EN_NSLOT; }
 static void knob_range(int k, int *lo, int *hi)
 {
     if (k < P_NPARAMS) {
         *lo = en_param_info(k)->lo;
-        *hi = en_param_info(k)->hi;
+        *hi = is_slot(k) ? pool_count(proj.pool) : en_param_info(k)->hi;   /* a slot: the scale's degrees */
     } else {
         *lo = 0;
         *hi = k == K_LEDS ? 2 : k == K_CPU ? 100 : 0;
@@ -185,7 +190,10 @@ static const char *knob_name(int k)
 static void knob_text(int k, char *b)
 {
     int v = knob_get(k);
-    if (k < P_NPARAMS) {
+    if (is_slot(k) && v) {                       /* a slot says its chord: "Dm7" */
+        int pcs[4], n = en_chord_tones(proj.pool, proj.par[P_ROOT], v - 1, pcs);
+        en_chord_name(pcs, n, b);
+    } else if (k < P_NPARAMS) {
         en_param_text(k, v, b);
     } else if (k == K_LEDS) {                    /* On: the keys, and the unlit buttons glow; Keys: no glow */
         const char *n = v == 2 ? "Keys" : v ? "On" : "Off";
@@ -249,6 +257,11 @@ static void turn(int role, int k, int32_t e)
     knob_range(k, &lo, &hi);
     knob_set(k, knob_get(k) + accel(role, e, hi - lo));
 }
+
+/* what a page's knob sets now: on the Chords page with SELECT held, the steps' bars */
+static int len_held(int view) { return view == V_CHORDS && (ui.btn >> B_SEL & 1u); }
+static int view_knob(int view, int i) { return len_held(view) ? P_LEN1 + i : VIEW_KNOB[view][i]; }
+static const char *view_label(int view, int i) { return len_held(view) ? LEN_LABEL[i] : KNOB_LABEL[view][i]; }
 
 /* ------------------------------------------------------------- the pool --- */
 static void toggle_note(int pc)                 /* a key: its note in or out of the scale */
@@ -454,7 +467,9 @@ static void input(void)
     }
     for (i = 0; i < 4; i++)
         if ((e = plat_enc(EN_K1 + (int)i)) != 0) {
-            turn(EN_K1 + (int)i, VIEW_KNOB[ui.view][i], e);
+            turn(EN_K1 + (int)i, view_knob(ui.view, (int)i), e);
+            if (btn >> B_SEL & 1u)               /* SELECT held and used: its release does nothing */
+                ui.btn_used |= 1u << B_SEL;
             ui.touched = (int8_t)i;
             ui.touch_until = plat_ms() + 1200u;
             ui.act_t = ui.turn_t = plat_ms();
@@ -940,8 +955,9 @@ static void draw_knobs(void)
     uint32_t h = hash(2166136261u, ui.view | (uint32_t)ui.touched << 8), i;
     int now_touch = plat_ms() < ui.touch_until;
     for (i = 0; i < 4; i++)
-        h = hash(h, (uint32_t)knob_get(VIEW_KNOB[ui.view][i]));
+        h = hash(h, (uint32_t)knob_get(view_knob(ui.view, (int)i)));
     h = hash(h, (uint32_t)now_touch);
+    h = hash(h, (uint32_t)len_held(ui.view) | proj.pool << 1 | (uint32_t)proj.par[P_ROOT] << 13);   /* a slot names its chord */
     if (h == ui.sig[2])
         return;
     ui.sig[2] = h;
@@ -958,7 +974,7 @@ static void draw_knobs(void)
             cv_round(xd + k * 6, 3, 4, 4, 2, k == ui.view ? K_ACC : K_LINE);
     }
     for (i = 0; i < 4; i++) {
-        int k = VIEW_KNOB[ui.view][i], lo, hi, v, hot = now_touch && ui.touched == (int)i;
+        int k = view_knob(ui.view, (int)i), lo, hi, v, hot = now_touch && ui.touched == (int)i;
         int32_t x = (int32_t)i * 60, cx = x + 30;
         char t[16];
         uint16_t bg = hot ? K_PANEL : K_BG, fill = hot ? K_ACC : K_PAD;
@@ -970,7 +986,9 @@ static void draw_knobs(void)
             cv_round(x + 3, 11, 54, 57, 6, K_PANEL);
         knob_range(k, &lo, &hi);
         v = knob_get(k);
-        caps(t, KNOB_LABEL[ui.view][i], sizeof t);
+        if (v > hi)                              /* a slot, the scale since shorter */
+            v = hi;
+        caps(t, view_label(ui.view, (int)i), sizeof t);
         text_c(cx, 12, &FONT_XS, t, hot ? K_TEXT : K_DIM);
         if (k != K_CPU && hi - lo < 6) {         /* a switch: its positions as pips */
             int n = hi - lo + 1, j, pw = n > 4 ? 6 : 9, gap = 3, w0 = n * (pw + gap) - gap;
@@ -1088,9 +1106,9 @@ static void sp_value(int k)
 }
 static void sp_knob(int view, int i)           /* "Swell 60": the name the page gives it, then its value */
 {
-    sp_cat(KNOB_LABEL[view][i]);
+    sp_cat(view_label(view, i));
     sp_cat(" ");
-    sp_value(VIEW_KNOB[view][i]);
+    sp_value(view_knob(view, i));
 }
 
 static void sp_chord_q(int root, const char *q)   /* "E minor 7" */
@@ -1242,7 +1260,7 @@ static void sp_snap(void)
 {
     int i;
     for (i = 0; i < 4; i++)
-        sp.val[i] = (int16_t)knob_get(VIEW_KNOB[ui.view][i]);
+        sp.val[i] = (int16_t)knob_get(view_knob(ui.view, i));
     sp.view = ui.view;
     sp.help = ui.help;
     sp.ext = en_ext;
@@ -1308,7 +1326,7 @@ static void speak(void)
         return;
     }
     for (i = 0; i < 4; i++) {                         /* a knob turning */
-        int v = knob_get(VIEW_KNOB[ui.view][i]);
+        int v = knob_get(view_knob(ui.view, i));
         if (v != sp.val[i]) {
             sp.val[i] = (int16_t)v;
             if (changed < 0)

@@ -21,6 +21,7 @@ const uint16_t EN_MODE_POOL[EN_NMODES] = {
 #undef B
 const uint8_t EN_LOOP_LEN[EN_NLOOP] = {13, 17, 23, 29};
 const uint8_t EN_DRUM_N[EN_NDRUM] = {16, 12, 7};
+const uint8_t EN_SLATE_BARS[EN_NBARS] = {1, 2, 3, 4, 6, 8, 12, 16};
 
 static const en_param_t PARAMS[P_NPARAMS] = {
     {"Pad", 0, 100, 60},      {"Bells", 0, 100, 65},    {"Bass", 0, 100, 45},     {"Pulse", 0, 100, 40},
@@ -31,6 +32,9 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Mode", 0, EN_NMODES - 1, 1}, {"Bell oct", -2, 2, 0}, {"Pad tone", 0, 1, 0},
     {"Bass oct", -1, 1, 0},   {"Glide", 0, 100, 20},    {"Fifth", 0, 100, 35},
     {"Swing", 0, 100, 0},     {"Hats", 0, 100, 50},
+    {"Chord 1", 0, 12, 0},    {"Chord 2", 0, 12, 0},    {"Chord 3", 0, 12, 0},    {"Chord 4", 0, 12, 0},
+    {"Bars 1", 0, EN_NBARS - 1, 3}, {"Bars 2", 0, EN_NBARS - 1, 3}, {"Bars 3", 0, EN_NBARS - 1, 3},
+    {"Bars 4", 0, EN_NBARS - 1, 3},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -58,7 +62,7 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
     int p;
     i = (unsigned)i < EN_NPIECES ? i : 0;
     for (p = 0; p < P_NPARAMS; p++)
-        par[p] = PIECES[i].v[p];
+        par[p] = p < P_SLOT1 ? PIECES[i].v[p] : PARAMS[p].def;   /* the slate is the player's: empty in every recipe */
     *pool = EN_MODE_POOL[PIECES[i].v[P_MODE]];
 }
 
@@ -106,6 +110,19 @@ void en_param_text(int i, int v, char *b)
             k++;
         }
         b[k] = 0;
+        return;
+    }
+    if (i >= P_SLOT1 && i < P_SLOT1 + EN_NSLOT && !v) {
+        b[0] = 'O', b[1] = 'f', b[2] = 'f', b[3] = 0;
+        return;
+    }
+    if (i >= P_LEN1 && i < P_LEN1 + EN_NSLOT) {
+        int bars = EN_SLATE_BARS[(unsigned)v < EN_NBARS ? v : 0];
+        b = itoa_s(bars, b);
+        s = bars == 1 ? " bar" : " bars";
+        while (*s)
+            *b++ = *s++;
+        *b = 0;
         return;
     }
     if (i == P_DRIFT) {
@@ -618,6 +635,17 @@ static void drift_reset(void)
     fifth_done = 0;
 }
 
+static void chord_to(int d)                     /* the chord on degree d: the pad, the bass */
+{
+    deg = d;
+    pad_retarget();
+    pad_leave();
+    bass_to(chord_pcs[0]);
+    /* Evolve: the bass sometimes sits a chord out, more often when the arc is sparse */
+    bass.rest = frand() < evolve * 0.3f + 0.25f * fm_maxf(-arcm, 0.0f);
+    drift_reset();
+}
+
 static void chord_change(void)                  /* to another degree: the near, strong moves first */
 {
     static const float W7[7] = {4.0f, 2.0f, 1.0f, 3.0f, 3.0f, 3.0f, 0.4f};
@@ -635,13 +663,49 @@ static void chord_change(void)                  /* to another degree: the near, 
     }
     if (i >= nsteps)
         i = deg == 0 ? (nsteps > 1 ? 1 : 0) : 0;
-    deg = i;
-    pad_retarget();
-    pad_leave();
-    bass_to(chord_pcs[0]);
-    /* Evolve: the bass sometimes sits a chord out, more often when the arc is sparse */
-    bass.rest = frand() < evolve * 0.3f + 0.25f * fm_maxf(-arcm, 0.0f);
-    drift_reset();
+    chord_to(i);
+}
+
+/* ------------------------------------------------------------- the slate --- */
+/* Up to four chords in order, each for its bars, in place of Drift while any slot holds one. It counts bars on
+ * the grid, so it follows MIDI clock; Freeze holds it; EDIT goes to the next step on the next bar. A step's
+ * degree wraps if the scale has since lost notes, as en_chord_tones does. */
+#define SLATE_NONE 0xFFu
+static uint8_t slate_on, slate_i = SLATE_NONE;  /* any slot filled; the step playing */
+static uint16_t slate_left, slate_total;        /* bars left on this step, and its length */
+
+static void slate_next(void)                    /* to the next filled slot after this one */
+{
+    int k, i = slate_i == SLATE_NONE ? EN_NSLOT - 1 : slate_i;
+    for (k = 0; k < EN_NSLOT; k++) {
+        i = (i + 1) % EN_NSLOT;
+        if (par[P_SLOT1 + i]) {
+            slate_i = (uint8_t)i;
+            slate_total = slate_left = EN_SLATE_BARS[par[P_LEN1 + i]];
+            chord_to((par[P_SLOT1 + i] - 1) % nsteps);
+            return;
+        }
+    }
+}
+
+static void slate_bar(void)                     /* a bar line, the garden not frozen */
+{
+    if (slate_i == SLATE_NONE || change_pending || --slate_left == 0) {
+        change_pending = 0;
+        slate_next();
+    }
+}
+
+static void slate_check(void)                   /* a slot changed: the slate on, or off and Drift back */
+{
+    int i, on = 0;
+    for (i = 0; i < EN_NSLOT; i++)
+        on |= par[P_SLOT1 + i] != 0;
+    if (slate_on && !on) {
+        slate_i = SLATE_NONE;
+        drift_reset();
+    }
+    slate_on = (uint8_t)on;
 }
 
 /* ------------------------------------------------------------- the loops --- */
@@ -913,9 +977,13 @@ static void tick(void)
             }
         }
     }
-    if ((sixteenth & 15u) == 0u && change_pending && !en_frozen) {   /* chords move on the bar */
-        change_pending = 0;
-        chord_change();
+    if ((sixteenth & 15u) == 0u && !en_frozen) {   /* chords move on the bar */
+        if (slate_on) {
+            slate_bar();
+        } else if (change_pending) {
+            change_pending = 0;
+            chord_change();
+        }
     }
     sixteenth++;
     en_bars = sixteenth;
@@ -1199,6 +1267,7 @@ static void apply(int p, int v)
     case P_BTONE: btone = (float)v * 0.01f; break;
     case P_PADTONE: pad_handoff(); break;        /* the voices cross over as they did for a new key */
     case P_MOTION: motion = (float)v * 0.01f; break;
+    case P_SLOT1: case P_SLOT2: case P_SLOT3: case P_SLOT4: slate_check(); break;
     case P_BOCT:                                 /* let it be heard now: a bell from the first loop */
         if (en_playing && nsteps) {
             int l, k;
@@ -1258,6 +1327,7 @@ static void regrow(void)                        /* a new piece: fresh loops, hom
     drums_pattern();
     drift_reset();
     change_pending = 0;
+    slate_i = SLATE_NONE;                        /* from its first step, on the next bar */
 }
 
 static void notes_off(void)
@@ -1345,6 +1415,7 @@ static void play_start(int from_top)
     if (from_top) {
         pulse = 0;
         sixteenth = 0;
+        slate_i = SLATE_NONE;
         for (i = 0; i < EN_NDRUM; i++)
             drum_pos[i] = 0;
         for (i = 0; i < EN_NLOOP; i++)
@@ -1400,6 +1471,8 @@ static void drain(void)
         case C_NEXT:
             if (en_playing)
                 change_pending = 1;
+            else if (slate_on)
+                slate_next();
             else
                 chord_change();
             break;
@@ -1709,6 +1782,13 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     }
 }
 
+static float slate_done(void)                   /* 0..1: how far through this step */
+{
+    if (slate_i == SLATE_NONE || !slate_total)
+        return 0.0f;
+    return fm_clampf(((float)(slate_total - slate_left) + (float)(sixteenth & 15u) * 0.0625f) / (float)slate_total, 0.0f, 1.0f);
+}
+
 /* the arc: a slow tide, minutes long, between sparse (-1) and full (+1); Motion sets how far it goes */
 static float arc, arc_tgt;
 static uint32_t arc_left;
@@ -1733,16 +1813,17 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
     pl_dd2 = fm_clampf(pl_decay + 0.15f, 0.25f, 0.5f);
     rev_in_gain += ((en_frozen ? 0.0f : 1.0f) - rev_in_gain) * 0.01f;
     if (en_playing && !en_frozen && !change_pending) {
-        drift_left -= (float)n;
-        if (!fifth_done && drift_left < 0.5f * drift_total) {
+        if (!slate_on)
+            drift_left -= (float)n;
+        if (!fifth_done && (slate_on ? slate_done() >= 0.5f : drift_left < 0.5f * drift_total)) {
             fifth_done = 1;                      /* halfway: the bass may lean on the fifth */
             if (frand() < (float)par[P_FIFTH] * 0.01f && chord_nt >= 3)
                 bass_to(chord_pcs[2]);
         }
-        if (drift_left <= 0.0f)
+        if (!slate_on && drift_left <= 0.0f)
             change_pending = 1;
     }
-    en_drift = drift_total > 0.0f ? 1.0f - fm_clampf(drift_left / drift_total, 0.0f, 1.0f) : 0.0f;
+    en_drift = slate_on ? slate_done() : drift_total > 0.0f ? 1.0f - fm_clampf(drift_left / drift_total, 0.0f, 1.0f) : 0.0f;
     for (i = 0; i < EN_NLOOP; i++)
         en_loop_glow[i] *= 0.985f;
     for (i = 0; i < EN_NDRUM; i++)

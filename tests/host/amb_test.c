@@ -298,6 +298,75 @@ int main(void)
         en_play(1);
     }
 
+    /* the slate: each step on its bar, for its bars; EDIT moves on; emptied, Drift is back */
+    {
+        static const int ROOT[3] = {2, 5, 5};      /* D Dorian: degree 1 for a bar, degree 3 for two */
+        int bad_bar = 0, b2, seen = 0;
+        en_play(0);
+        run(0.05f);
+        en_init();
+        en_set(P_TEMPO, 120);
+        en_set(P_DRIFT, 0);
+        en_set(P_SLOT1, 1);
+        en_set(P_LEN1, 0);
+        en_set(P_SLOT3, 3);                        /* the empty slot between is skipped */
+        en_set(P_LEN3, 1);
+        en_play(1);
+        for (b2 = 0; b2 < 60 * 44100 / 256; b2++) {   /* a minute: thirty bars, past any Drift */
+            en_render(buf, 256, 2048);
+            if (en_bars) {
+                unsigned bar = (en_bars - 1u) / 16u;
+                seen = (int)bar;
+                bad_bar += en_chord_root != ROOT[bar % 3u];
+            }
+        }
+        CHECK(seen >= 28, "the slate's bars: %d", seen);
+        CHECK(!bad_bar, "the slate off its bars for %d blocks", bad_bar);
+        CHECK(en_drift >= 0.0f && en_drift <= 1.0f, "the slate's progress %f", (double)en_drift);
+
+        /* frozen, it holds */
+        {
+            int r0;
+            en_freeze(1);
+            run(0.05f);
+            r0 = en_chord_root;
+            run(10.0f);
+            CHECK(en_chord_root == r0, "frozen, the slate moved on");
+            en_freeze(0);
+        }
+        /* a slot past a shorter scale wraps, and stays in the scale */
+        {
+            int k;
+            en_set(P_SLOT1, 12);
+            en_set(P_SLOT3, 0);
+            en_set(P_LEN1, 0);
+            en_pool(0x091u);                       /* root, major third, fifth */
+            run(5.0f);
+            for (k = 0; k < 4; k++) {
+                int pc = (en_chord[k] - 2 + 120) % 12;
+                CHECK(pc == 0 || pc == 4 || pc == 7, "a wrapped slot left the scale: %d", en_chord[k]);
+            }
+            en_pool(EN_MODE_POOL[MODE_DORIAN]);
+        }
+        /* empty: Drift again */
+        {
+            int changes = 0, last, k;
+            en_set(P_SLOT1, 0);
+            run(0.1f);
+            last = en_chord_root * 16 + en_chord[0] % 16;
+            for (k = 0; k < 120; k++) {
+                int now;
+                run(1.0f);
+                now = en_chord_root * 16 + en_chord[0] % 16;
+                changes += now != last;
+                last = now;
+            }
+            CHECK(changes >= 3, "the slate empty, Drift did not return: %d", changes);
+        }
+        en_init();
+        en_play(1);
+    }
+
     /* stop: the tails die away */
     for (i = 0; i < P_NPARAMS; i++)
         en_set(i, en_param_info(i)->def);

@@ -1,0 +1,49 @@
+# the Chords page: SELECT presses to it; a knob sets a step's chord, and with SELECT held its bars; the slate is kept
+# with the piece, and goes with the recipe. A project from 1.3.1 (format 4) keeps its settings, its slate empty.
+wait 300
+tap SEL
+wait 100
+expect view 7
+expect par28 0
+spin K1 1
+expect par28 1
+shot chords.png
+press SEL
+wait 100
+shot chords_bars.png
+spin K1 2
+expect par32 5
+release SEL
+wait 100
+expect view 7
+spin K3 3
+expect par30 3
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par28 1
+expect par32 5
+expect par30 3
+# back to the recipe: empty
+press SAVE
+wait 1700
+release SAVE
+wait 100
+expect par28 0
+expect par30 0
+expect par32 3
+# from 1.3.1
+turn PRESET 4
+expect piece 4
+storev4 33
+reboot
+wait 300
+expect piece 4
+expect par0 33
+expect par28 0
+expect par32 3
+tap SAVE
+reboot
+wait 300
+expect par0 33
