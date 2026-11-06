@@ -37,6 +37,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Bars 4", 0, EN_NBARS - 1, 3},
     {"Arp", 0, EN_NARP - 1, 0}, {"Arp rate", 0, EN_NARATE - 1, 2}, {"Arp range", 1, 3, 2},
     {"Pad notes", 2, 4, 4},   {"Bass notes", 0, 100, 0},
+    {"Arp poly", 0, EN_NAPOLY - 1, 0},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -71,6 +72,9 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
 static const char *const ARP_NAME[EN_NARP] = {"Off", "Up", "Down", "Up/Dn", "Dn/Up", "Random", "Converge", "Diverge"};
 static const char *const ARATE_NAME[EN_NARATE] = {"1/4", "1/8.", "1/8", "1/16"};
 static const uint8_t ARATE_STEPS[EN_NARATE] = {4, 3, 2, 1};      /* sixteenths a step */
+/* Poly: so many notes in the time of so many Rate steps */
+static const char *const APOLY_NAME[EN_NAPOLY] = {"Off", "3:4", "5:4", "3:2", "7:4"};
+static const uint8_t APOLY_NUM[EN_NAPOLY] = {1, 3, 5, 3, 7}, APOLY_DEN[EN_NAPOLY] = {1, 4, 4, 2, 4};
 static const float ARATE_DEC[EN_NARATE] = {1.0f, 0.8f, 0.6f, 0.4f};   /* the faster, the shorter the bell */
 static const char *const ETIME_NAME[6] = {"1/4.", "1/2", "1/2.", "1 bar", "2 bars", "4 bars"};
 static const float ETIME_BEATS[6] = {1.5f, 2.0f, 3.0f, 4.0f, 8.0f, 16.0f};
@@ -113,6 +117,8 @@ void en_param_text(int i, int v, char *b)
         s = ARP_NAME[(unsigned)v < EN_NARP ? v : 0];
     else if (i == P_ARATE)
         s = ARATE_NAME[(unsigned)v < EN_NARATE ? v : 0];
+    else if (i == P_APOLY)
+        s = APOLY_NAME[(unsigned)v < EN_NAPOLY ? v : 0];
     if (s) {
         int k = 0;
         while (s[k] && k < 9) {
@@ -576,9 +582,10 @@ static float bass_vol, glide_k = 1.0f / (0.25f * EN_SR);      /* glide_k: 1 / th
 typedef struct {
     float cph, mph, cinc, minc, amp, adec, idx, idec, att, gl, gr;
     int32_t wait;
-    uint8_t on, note, loop;
+    uint8_t on, note, loop, mvel;               /* mvel: its MIDI note waits with it (the arp, off the grid) */
 } bell_t;
 static bell_t bell[NBELL];
+static uint8_t bell_late;                       /* the next bell's MIDI note waits with it */
 static float bell_vol, btone, bell_dec = 1.0f;   /* bell_dec: the next bell's ring, times this */
 static int8_t loop_note[EN_NLOOP][EN_LOOP_MAX];
 static uint8_t loop_vel[EN_NLOOP][EN_LOOP_MAX], loop_pos[EN_NLOOP];
@@ -900,7 +907,11 @@ static void bell_voice(int l, int n, float vel, int32_t wait)
     v->gr = fm_sinf(p);
     v->wait = wait;
     en_loop_glow[l] = 1.0f;
-    midi(0x91, (uint32_t)n, (uint32_t)(vel * 110.0f));
+    v->mvel = 0;
+    if (bell_late && wait > 0)
+        v->mvel = (uint8_t)(vel * 110.0f);
+    else
+        midi(0x91, (uint32_t)n, (uint32_t)(vel * 110.0f));
 }
 
 static void bell_ring(int l, int slot)
@@ -916,16 +927,18 @@ static void bell_ring(int l, int slot)
 /* -------------------------------------------------------------- the arp --- */
 /* In place of the loops' notes (they keep turning, silent, for when it's off): the chord's tones over Range, in
  * the Style's order at the Rate. Density picks the steps that sound, of 16, as Hits does the pulse's; the arc
- * thins them and Evolve turns the pattern and rests it. A step that doesn't sound doesn't move the order on. */
+ * thins them and Evolve turns the pattern and rests it. A step that doesn't sound doesn't move the order on.
+ * Poly: the steps fall so many in the time of so many Rate steps, against the grid and locked to it. Each note
+ * takes the chord as it's struck: chords move on bar lines, and a step in a sixteenth is struck within it. */
 static uint32_t sixteenth;
 static float swing, step_len;                   /* (the pulse's: below) */
-static uint8_t arp_left, arp_pos, arp_rot, arp_rest, arp_last;
+static uint8_t arp_acc, arp_pos, arp_rot, arp_rest, arp_last;   /* arp_acc: to the next step, in 1/num sixteenths */
 static uint16_t arp_seq;
 static uint32_t arp_pat;
 
 static void arp_reset(void)
 {
-    arp_left = arp_pos = arp_rot = arp_rest = 0;
+    arp_acc = arp_pos = arp_rot = arp_rest = 0;
     arp_seq = 0;
 }
 
@@ -964,14 +977,9 @@ static int arp_index(int n)                     /* where the Style is, of n note
     }
 }
 
-static void arp_step(void)                      /* a sixteenth */
+static void arp_note(int32_t wait)              /* a step of the arp, wait samples from now */
 {
     int list[12], n, i, pos;
-    if (arp_left > 1) {
-        arp_left--;
-        return;
-    }
-    arp_left = ARATE_STEPS[par[P_ARATE]];
     if (arp_pos == 0) {                         /* its pattern: Density, swelled and thinned by the arc */
         float k = (float)par[P_DENSITY] * 0.16f * (1.0f + 0.8f * arcm);
         if (frand() < evolve * 0.25f)
@@ -986,10 +994,23 @@ static void arp_step(void)                      /* a sixteenth */
     i = arp_index(n);
     arp_last = (uint8_t)i;
     bell_dec = ARATE_DEC[par[P_ARATE]];         /* each step a loop's shade of bell, and its place */
-    bell_voice(arp_seq % EN_NLOOP, list[i], pos == 0 ? 0.9f : 0.55f + 0.25f * frand(),
-               (sixteenth & 1u ? (int32_t)(swing * step_len) : 0) + irand(300));
+    bell_late = 1;
+    bell_voice(arp_seq % EN_NLOOP, list[i], pos == 0 ? 0.9f : 0.55f + 0.25f * frand(), wait + irand(300));
+    bell_late = 0;
     bell_dec = 1.0f;
     arp_seq++;
+}
+
+static void arp_step(void)                      /* a sixteenth: the steps that fall in it */
+{
+    const int num = APOLY_NUM[par[P_APOLY]], every = ARATE_STEPS[par[P_ARATE]] * APOLY_DEN[par[P_APOLY]];
+    while (arp_acc < num) {
+        /* on the grid, Swing moves the off sixteenths; off it, the rhythm is already its own */
+        arp_note(par[P_APOLY] ? (int32_t)((float)arp_acc / (float)num * step_len)
+                              : sixteenth & 1u ? (int32_t)(swing * step_len) : 0);
+        arp_acc = (uint8_t)(arp_acc + every);
+    }
+    arp_acc = (uint8_t)(arp_acc - num);
 }
 
 /* ------------------------------------------------------- the bass's notes --- */
@@ -1458,6 +1479,7 @@ static void apply(int p, int v)
         if (nsteps)
             bass_to(bass.midi_note % 12);
         break;
+    case P_ARATE: case P_APOLY: arp_acc = 0; break;   /* the new rhythm from the next sixteenth */
     case P_BASSN:
         if (v) {
             bass_pattern();
@@ -1908,6 +1930,10 @@ static void render_bells(uint32_t n)
             }
             j = (uint32_t)v->wait;
             v->wait = 0;
+        }
+        if (v->mvel) {                           /* (its wait may have ended on the last block's edge) */
+            midi(0x91, v->note, v->mvel);
+            v->mvel = 0;
         }
         for (; j < n; j++) {
             float m = sine(mph) * idx, x;

@@ -18,7 +18,9 @@ spin K3 -1
 expect par38 1
 wait 100
 shot arp.png
-spin K4 3
+spin K4 2
+expect par41 2
+shot poly.png
 release SEL
 wait 100
 expect view 2
@@ -57,6 +59,7 @@ expect par36 6
 expect par37 3
 expect par38 1
 expect par39 3
+expect par41 2
 press SAVE
 wait 1700
 release SAVE
@@ -66,6 +69,7 @@ expect par37 2
 expect par38 2
 expect par39 4
 expect par40 0
+expect par41 0
 # from the slate's build
 turn PRESET 3
 storev5 44

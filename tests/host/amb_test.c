@@ -428,6 +428,29 @@ int main(void)
         bell_n = 0;
         run(8.0f);
         CHECK(n4 > 3 * bell_n && bell_n > 0, "the arp's rate: %d at 1/16, %d at 1/4", n4, bell_n);
+        {   /* Poly, at 1/8: so many notes against the grid, still of the chord */
+            static const float WANT[EN_NAPOLY] = {1.0f, 0.75f, 1.25f, 1.5f, 1.75f};
+            int base = 0, q;
+            en_set(P_ARATE, 2);
+            for (q = 0; q < EN_NAPOLY; q++) {
+                en_set(P_APOLY, q);
+                en_play(0), run(0.05f), en_play(1);
+                bell_n = 0;
+                run(16.0f);
+                if (!q)
+                    base = bell_n;
+                CHECK(fabs((double)bell_n - (double)base * (double)WANT[q]) <= 3.0 + 0.04 * base,
+                      "Poly %d: %d notes against %d", q, bell_n, base);
+                pcs[0] = en_chord[0] % 12, pcs[1] = en_chord[1] % 12, pcs[2] = en_chord[2] % 12, pcs[3] = en_chord[3] % 12;
+                for (k = 0; k < bell_n; k++) {
+                    int pc = bell_log[k] % 12, j, in = 0;
+                    for (j = 0; j < 4; j++)
+                        in |= pc == pcs[j];
+                    CHECK(in, "Poly %d: %d is off the chord", q, bell_log[k]);
+                }
+            }
+            en_set(P_APOLY, 0);
+        }
         en_set(P_ARATE, 3), en_set(P_DENSITY, 25);
         en_play(0), run(0.05f), en_play(1);
         bell_n = 0;

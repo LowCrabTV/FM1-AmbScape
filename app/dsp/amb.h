@@ -49,6 +49,7 @@ extern const uint8_t EN_DRUM_N[EN_NDRUM];
 #define EN_NBARS 8
 #define EN_NARP 8                      /* the arp's styles, Off first */
 #define EN_NARATE 4
+#define EN_NAPOLY 5
 extern const uint8_t EN_SLATE_BARS[EN_NBARS];
 
 /* parameters: value ranges in en_param_info() */
@@ -65,6 +66,7 @@ enum {
     P_LEN1, P_LEN2, P_LEN3, P_LEN4,                   /* and how long it lasts: an index into EN_SLATE_BARS */
     P_ARP, P_ARATE, P_ARANGE,                         /* the bells' arpeggio: its style (0 off), rate, octaves */
     P_PADN, P_BASSN,                                  /* how many notes: the pad's chord, 2..4; the bass's, 0 held */
+    P_APOLY,                                          /* the arp against the grid: Off, 3:4, 5:4, 3:2, 7:4 */
     P_NPARAMS
 };
 typedef struct {

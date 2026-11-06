@@ -240,8 +240,11 @@ SELECT for the page.
   from the middle). The loops keep turning, silent, for when it's off.
 - **Bells, Rate (KNOB 2):** 1/4, 1/8., 1/8 or 1/16. Faster, the bells ring shorter.
 - **Bells, Range (KNOB 3):** 1 to 3 octaves, from the chord's root. Octave moves it up and down.
+- **Bells, Poly (KNOB 4):** **Off**, or the arp against the grid: **3:4**, **5:4**, **3:2** or **7:4**
+  (so many notes in the time of so many Rate steps). It stays locked to the tempo, shifts against
+  the pulse and comes back around. Every note takes the chord as it's struck.
 - **With the arp on, Density** picks which of 16 steps sound, spread as Hits does the pulse: 100
-  plays every step. Swing, the arc and Evolve all act on it.
+  plays every step. The arc and Evolve act on it, and Swing does while Poly is off.
 
 ### ENV: Pad
 
@@ -412,6 +415,7 @@ The defaults are Garden's; each piece has its own.
 | Bells | Arp (SELECT held) | Off, Up, Down, Up/Dn, Dn/Up, Random, Converge, Diverge | Off |
 | Bells | Rate (SELECT held) | 1/4, 1/8., 1/8, 1/16 | 1/8 |
 | Bells | Range (SELECT held) | 1–3 octaves | 2 |
+| Bells | Poly (SELECT held) | Off, 3:4, 5:4, 3:2, 7:4 | Off |
 | Bass | Notes (SELECT held) | Held, 1–100 (1 to 8 hits a bar) | Held |
 | Pad | Level | 0–100 | 60 |
 | Pad | Swell | 0–100 | 60 |

@@ -45,7 +45,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {K_NONE, K_NONE, K_NONE, K_NONE},
     {K_NONE, P_PADN, K_NONE, K_NONE},
-    {P_ARP, P_ARATE, P_ARANGE, K_NONE},
+    {P_ARP, P_ARATE, P_ARANGE, P_APOLY},
     {K_NONE, P_BASSN, K_NONE, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
@@ -55,7 +55,7 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"", "", "", ""},
     {"", "Notes", "", ""},
-    {"Arp", "Rate", "Range", ""},
+    {"Arp", "Rate", "Range", "Poly"},
     {"", "Notes", "", ""},
     {"", "", "", ""},
     {"", "", "", ""},
