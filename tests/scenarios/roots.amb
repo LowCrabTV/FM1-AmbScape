@@ -15,10 +15,15 @@ wait 100
 expect view 9
 expect par45 0
 shot off.png
-spin K1 3
+# the knob starts from the piece's own root, D, and Off is one click back
+spin K1 1
 expect par45 3
+spin K1 -1
+expect par45 0
+spin K1 3
+expect par45 5
 spin K2 8
-expect par46 8
+expect par46 10
 press SEL
 wait 100
 shot bars.png
@@ -30,12 +35,27 @@ wait 100
 expect view 9
 wait 5000
 shot playing.png
+# Setup's Root defers to the Roots page while it has a step
+tap GLO
+wait 100
+expect view 7
+spin K1 2
+expect par19 2
+wait 100
+shot setup.png
+wait 2500
+tap SEL
+wait 100
+expect view 8
+tap SEL
+wait 100
+expect view 9
 tap SAVE
 wait 200
 reboot
 wait 300
-expect par45 3
-expect par46 8
+expect par45 5
+expect par46 10
 expect par49 1
 press SAVE
 wait 1700

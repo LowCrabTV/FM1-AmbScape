@@ -178,13 +178,17 @@ static int pool_count(uint32_t p)
         n += (int)(p >> i & 1u);
     return n;
 }
-static int root_now(void)                      /* the root playing: the rotator's, while it has a step */
+static int any_step(int first)                 /* any of a page's four steps filled: P_SLOT1 or P_RSLOT1 */
 {
     int i;
     for (i = 0; i < EN_NSLOT; i++)
-        if (proj.par[P_RSLOT1 + i])
-            return en_root;
-    return proj.par[P_ROOT];
+        if (proj.par[first + i])
+            return 1;
+    return 0;
+}
+static int root_now(void)                      /* the root playing: the rotator's, while it has a step */
+{
+    return any_step(P_RSLOT1) ? en_root : proj.par[P_ROOT];
 }
 
 static uint32_t pool_abs(void)                 /* the pool as absolute pitch classes */
@@ -209,6 +213,10 @@ static int knob_get(int k)
     return 0;
 }
 static int is_slot(int k) { return k >= P_SLOT1 && k < P_SLOT1 + EN_NSLOT; }
+static int is_rslot(int k) { return k >= P_RSLOT1 && k < P_RSLOT1 + EN_NSLOT; }
+/* where a Roots step sits on its knob: Off, then the piece's own root, then on up round the notes */
+static int rslot_pos(int v) { return v ? (v - 1 - proj.par[P_ROOT] + 12) % 12 + 1 : 0; }
+static int rslot_val(int pos) { return pos ? (pos - 1 + proj.par[P_ROOT]) % 12 + 1 : 0; }
 static void knob_range(int k, int *lo, int *hi)
 {
     if (k < P_NPARAMS) {
@@ -228,7 +236,21 @@ static const char *knob_name(int k)
 static void knob_text(int k, char *b)
 {
     int v = knob_get(k);
-    if (is_slot(k) && v) {                       /* a slot says its chord: "Dm7" */
+    if (k == P_SLOT1 && !any_step(P_SLOT1)) {    /* an empty page says who's driving */
+        const char *n = "Drift";
+        while ((*b++ = *n++))
+            ;
+    } else if (k == P_RSLOT1 && !any_step(P_RSLOT1)) {
+        const char *n = EN_NOTE_NAME[proj.par[P_ROOT]];
+        b[0] = 'R', b[1] = 'o', b[2] = 'o', b[3] = 't', b[4] = ' ';
+        b += 5;
+        while ((*b++ = *n++))
+            ;
+    } else if (k == P_ROOT && any_step(P_RSLOT1)) {   /* the Roots page has it */
+        const char *n = "Roots";
+        while ((*b++ = *n++))
+            ;
+    } else if (is_slot(k) && v) {                /* a slot says its chord: "Dm7" */
         int pcs[4], n = en_chord_shape(proj.pool, root_now(), (v - 1) / EN_NSHAPE, (v - 1) % EN_NSHAPE, pcs);
         en_chord_name(pcs, n, b);
     } else if (k < P_NPARAMS) {
@@ -317,7 +339,16 @@ static void turn(int role, int k, int32_t e)
     int lo, hi;
     if (!e || k == K_NONE || k == K_CPU)
         return;
+    if (k == P_ROOT && any_step(P_RSLOT1)) {     /* it wouldn't be heard: say where it is */
+        say("Root", "Roots page");
+        return;
+    }
     knob_range(k, &lo, &hi);
+    if (is_rslot(k)) {
+        int pos = rslot_pos(knob_get(k)) + accel(role, e, hi - lo);
+        knob_set(k, rslot_val(pos < 0 ? 0 : pos > 12 ? 12 : pos));
+        return;
+    }
     knob_set(k, knob_get(k) + accel(role, e, hi - lo));
 }
 
@@ -1063,6 +1094,8 @@ static void draw_knobs(void)
         v = knob_get(k);
         if (v > hi)                              /* a slot, the scale since shorter */
             v = hi;
+        if (is_rslot(k))
+            v = rslot_pos(v);
         caps(t, view_label(ui.view, (int)i), sizeof t);
         text_c(cx, 12, &FONT_XS, t, hot ? K_TEXT : K_DIM);
         if (k != K_CPU && hi - lo < 6) {         /* a switch: its positions as pips */

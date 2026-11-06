@@ -224,7 +224,7 @@ SELECT for the page.
   root comes in six shapes, in this order: seventh (`Dm7`), triad (`Dm`), `sus2`, `sus4`, `add9` and
   sixth (`Dm6`). All of them keep to the scale, so nothing can clash; the bells, the arp and the bass
   follow the shape. A pentatonic scale has fewer, and the knob skips the repeats. **Off** skips that
-  step. With all four off, the chord drifts as usual.
+  step. With all four off, the chord drifts as usual, and KNOB 1 reads **Drift**.
 - **Hold SELECT and turn KNOB 1–4:** that step's length: 1, 2, 3, 4, 6, 8, 12 or 16 bars. Short
   chords may not let the pad finish breathing in: at most tempos, try 4 bars or more.
 - **EDIT** goes to the next step on the next bar, and **REC** holds the step. Each piece keeps its
@@ -236,12 +236,15 @@ The root rotator: up to four root notes in order, each for a set number of bars,
 but for the key. Press SELECT from the Chords page, and again to go back. The scale moves with the
 root, and so do your chords: Dm7 and G7 in D become Gm7 and C7 in G.
 
-- **KNOB 1–4:** each step's root, C to B. **Off** skips that step. With all four off, the Root on the
-  Setup page is back in charge; while any step is on, the rotator is.
+- **KNOB 1–4:** each step's root. Turned up from **Off**, a knob starts on the piece's own root and goes on
+  up round the notes. **Off** skips that step. With all four off, the Root on the Setup page is in charge,
+  and KNOB 1 reads it (**Root D**). While any step is on, the rotator is, and the Setup page's Root reads
+  **Roots**; it can't be turned until the steps are off.
 - **Hold SELECT and turn KNOB 1–4:** that step's length: 1, 2, 4, 8, 12, 16, 24 or 32 bars.
-- **Each new step starts the chords again from their first step**, so sections line up like a verse
+- **Each new root starts the chords again from their first step**, so sections line up like a verse
   and a chorus. Make a root last as long as your chords add up to, or the last ones won't be reached.
-  With no chords set, each step begins on the home chord.
+  With no chords set, each new root begins on the home chord. A step on the same root as the one before
+  starts nothing again, so a single root simply holds and the chords go on.
 - The change lands on a bar line; the pad's voices fade in about a second and come back on the new
   root. **REC** holds it. Each piece keeps its own.
 

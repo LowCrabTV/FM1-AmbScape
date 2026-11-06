@@ -691,6 +691,30 @@ int main(void)
         en_play(1);
     }
 
+    /* one root on the rotator: it holds; the chords go on through its bars, no starting again */
+    {
+        int bar, wrong = 0;
+        en_init();
+        for (i = 0; i < P_NPARAMS; i++)
+            en_set(i, en_param_info(i)->def);
+        run(0.05f);
+        en_set(P_TEMPO, 120), en_set(P_MOTION, 0), en_set(P_EVOLVE, 0), en_set(P_DENSITY, 100);
+        en_set(P_LEN1, 1), en_set(P_LEN2, 1);     /* Dm7 and G7, two bars each */
+        en_set(P_SLOT1, 1), en_set(P_SLOT2, 3 * EN_NSHAPE + 1);
+        en_set(P_RSLOT1, 2 + 1), en_set(P_RLEN1, 0);   /* D, a step of one bar */
+        run(0.05f);
+        en_play(0), run(0.05f), en_play(1);
+        for (bar = 0; bar < 12; bar++) {
+            run(1.0f);
+            wrong += en_chord_root != (bar % 4 < 2 ? 2 : 7);
+            CHECK(en_root == 2, "one root, bar %d: %d", bar, en_root);
+            run(1.0f);
+        }
+        CHECK(!wrong, "one root: the chords went wrong in %d bars of 12", wrong);
+        en_init();
+        en_play(1);
+    }
+
     /* the bells' colours: each sounds, stays bounded and clean; the strike comes as it should */
     {
         static const char *const NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano"};

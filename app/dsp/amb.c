@@ -863,6 +863,8 @@ static int root_bar(void)                       /* a bar line, the garden not fr
         if (par[P_RSLOT1 + i]) {
             root_i = (uint8_t)i;
             root_left = EN_ROOT_BARS[par[P_RLEN1 + i]];
+            if ((par[P_RSLOT1 + i] - 1) % 12 == cur_root)
+                return 0;                       /* the same root: nothing to start again */
             cur_root = (par[P_RSLOT1 + i] - 1) % 12;
             en_root = (uint8_t)cur_root;
             change_pending = 0;
