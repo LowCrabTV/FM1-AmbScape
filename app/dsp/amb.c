@@ -22,6 +22,7 @@ const uint16_t EN_MODE_POOL[EN_NMODES] = {
 const uint8_t EN_LOOP_LEN[EN_NLOOP] = {13, 17, 23, 29};
 const uint8_t EN_DRUM_N[EN_NDRUM] = {16, 12, 7};
 const uint8_t EN_SLATE_BARS[EN_NBARS] = {1, 2, 3, 4, 6, 8, 12, 16};
+static const uint8_t EN_ROOT_BARS[EN_NRBARS] = {1, 2, 4, 8, 12, 16, 24, 32};
 
 static const en_param_t PARAMS[P_NPARAMS] = {
     {"Pad", 0, 100, 60},      {"Bells", 0, 100, 65},    {"Bass", 0, 100, 45},     {"Pulse", 0, 100, 40},
@@ -40,6 +41,9 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Pad notes", 2, 4, 4},   {"Bass notes", 0, 100, 0},
     {"Arp poly", 0, EN_NAPOLY - 1, 0},
     {"Sparkle", 0, 100, 0},   {"Spk length", 0, 100, 56}, {"Spk often", 0, 100, 44},
+    {"Root 1", 0, 12, 0},     {"Root 2", 0, 12, 0},     {"Root 3", 0, 12, 0},     {"Root 4", 0, 12, 0},
+    {"Root bars 1", 0, EN_NRBARS - 1, 3}, {"Root bars 2", 0, EN_NRBARS - 1, 3}, {"Root bars 3", 0, EN_NRBARS - 1, 3},
+    {"Root bars 4", 0, EN_NRBARS - 1, 3},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -132,8 +136,24 @@ void en_param_text(int i, int v, char *b)
         b[k] = 0;
         return;
     }
-    if (i >= P_SLOT1 && i < P_SLOT1 + EN_NSLOT && !v) {
+    if (((i >= P_SLOT1 && i < P_SLOT1 + EN_NSLOT) || (i >= P_RSLOT1 && i < P_RSLOT1 + EN_NSLOT)) && !v) {
         b[0] = 'O', b[1] = 'f', b[2] = 'f', b[3] = 0;
+        return;
+    }
+    if (i >= P_RSLOT1 && i < P_RSLOT1 + EN_NSLOT) {
+        s = EN_NOTE_NAME[(v - 1) % 12];
+        while (*s)
+            *b++ = *s++;
+        *b = 0;
+        return;
+    }
+    if (i >= P_RLEN1 && i < P_RLEN1 + EN_NSLOT) {
+        int bars = EN_ROOT_BARS[(unsigned)v < EN_NRBARS ? v : 0];
+        b = itoa_s(bars, b);
+        s = bars == 1 ? " bar" : " bars";
+        while (*s)
+            *b++ = *s++;
+        *b = 0;
         return;
     }
     if (i >= P_LEN1 && i < P_LEN1 + EN_NSLOT) {
@@ -391,6 +411,7 @@ volatile float en_drum_glow[EN_NDRUM];
 volatile uint32_t en_bars;
 volatile float en_arc;
 volatile float en_spark;
+volatile uint8_t en_root;
 volatile uint8_t en_pulse_rest;
 volatile uint8_t en_pad_note[EN_NPAD];
 volatile float en_pad_amp[EN_NPAD];
@@ -398,6 +419,7 @@ volatile float en_pad_amp[EN_NPAD];
 static int16_t par[P_NPARAMS];
 static uint32_t pool = 0xAADu;                  /* Ionian until told */
 static int nsteps, steps[12];                   /* the scale */
+static int cur_root;                            /* the root playing: Root, or the rotator's step */
 static int deg, shape;                          /* the chord's scale degree, and its shape */
 static int chord_pcs[4], chord_nt;
 static int pad_pcs[4], pad_nt;                 /* the tones the pad sings of it (Pad notes) */
@@ -673,7 +695,7 @@ static int shape_note(int off)
 
 static int bell_note(int l, int off)            /* a loop slot's note, from the chord's degree */
 {
-    int d = deg + shape_note(off), oct = d / nsteps, s = steps[d % nsteps], base, root = par[P_ROOT], n;
+    int d = deg + shape_note(off), oct = d / nsteps, s = steps[d % nsteps], base, root = cur_root, n;
     base = LOOP_BASE[l] - ((LOOP_BASE[l] - root) % 12 + 12) % 12;   /* the root at or below the register */
     n = base + s + 12 * oct + 12 * par[P_BOCT];
     while (n > 103)
@@ -706,7 +728,7 @@ static void pad_tones(void)
 static void pad_retarget(void)                  /* the chord's tones to the four voices */
 {
     int from[4], to[4], all[4], i;
-    chord_nt = en_chord_shape(pool, par[P_ROOT], deg, shape, chord_pcs);
+    chord_nt = en_chord_shape(pool, cur_root, deg, shape, chord_pcs);
     pad_tones();
     for (i = 0; i < EN_NPAD; i++)
         from[i] = (int)(pad[i].target + 0.5f);
@@ -815,6 +837,58 @@ static void slate_check(void)                   /* a slot changed: the slate on,
         drift_reset();
     }
     slate_on = (uint8_t)on;
+}
+
+/* ----------------------------------------------------- the root rotator --- */
+/* Up to four roots in order, each for its bars, in place of Root while any step holds one. The scale moves with it,
+ * so the chords do. A step's end starts the chords again from their first step (or, drifting, the home chord): the
+ * sections line up. On the grid and the bar, so it follows MIDI clock; Freeze holds it. */
+static uint8_t root_on, root_i = SLATE_NONE;
+static uint16_t root_left;
+
+static int root_bar(void)                       /* a bar line, the garden not frozen: 1 if a new step began */
+{
+    int k, i = root_i == SLATE_NONE ? EN_NSLOT - 1 : root_i;
+    if (root_i != SLATE_NONE && --root_left)
+        return 0;
+    for (k = 0; k < EN_NSLOT; k++) {
+        i = (i + 1) % EN_NSLOT;
+        if (par[P_RSLOT1 + i]) {
+            root_i = (uint8_t)i;
+            root_left = EN_ROOT_BARS[par[P_RLEN1 + i]];
+            cur_root = (par[P_RSLOT1 + i] - 1) % 12;
+            en_root = (uint8_t)cur_root;
+            change_pending = 0;
+            if (slate_on) {
+                slate_i = SLATE_NONE;
+                slate_next();
+            } else {
+                shape = 0;
+                chord_to(0);
+            }
+            pad_handoff();                      /* the voices cross over, as for any new key */
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void root_check(void)                    /* a step changed: the rotator on, or off and Root back */
+{
+    int i, on = 0;
+    for (i = 0; i < EN_NSLOT; i++)
+        on |= par[P_RSLOT1 + i] != 0;
+    if (root_on && !on) {
+        root_i = SLATE_NONE;
+        cur_root = par[P_ROOT];
+        en_root = (uint8_t)cur_root;
+        if (nsteps) {
+            pad_retarget();
+            pad_handoff();
+            bass_to(chord_pcs[0]);
+        }
+    }
+    root_on = (uint8_t)on;
 }
 
 /* ------------------------------------------------------------- the loops --- */
@@ -1368,7 +1442,9 @@ static void tick(void)
             drums_evolve();
     }
     if ((sixteenth & 15u) == 0u && !en_frozen) {   /* chords move on the bar: first, so what sounds on it is of the new chord */
-        if (slate_on) {
+        if (root_on && root_bar()) {
+            /* the new step's first chord is in */
+        } else if (slate_on) {
             slate_bar();
         } else if (change_pending) {
             change_pending = 0;
@@ -1729,7 +1805,12 @@ static void apply(int p, int v)
         tempo_set();
         echo_time();
         break;
+    case P_RSLOT1: case P_RSLOT2: case P_RSLOT3: case P_RSLOT4: root_check(); break;
     case P_ROOT:
+        if (root_on)                             /* it's back when the rotator's off */
+            break;
+        cur_root = v;
+        en_root = (uint8_t)v;
         if (nsteps) {
             pad_retarget();
             pad_handoff();
@@ -1774,6 +1855,7 @@ static void regrow(void)                        /* a new piece: fresh loops, hom
     drift_reset();
     change_pending = 0;
     slate_i = SLATE_NONE;                        /* from its first step, on the next bar */
+    root_i = SLATE_NONE;
     arp_reset();
 }
 
@@ -1811,6 +1893,8 @@ void en_init(void)
     tape_w = plex_w = tape_ph = 0;
     bass.env = bass.lvl = bass.edec = 1.0f;
     bass.wait = 0;
+    root_on = 0;
+    root_i = SLATE_NONE;
     head2 = head2_t = 0.75f;
     head2_v = 0.0f;
     echo_len = 0.0f;
@@ -1865,6 +1949,7 @@ static void play_start(int from_top)
         pulse = 0;
         sixteenth = 0;
         slate_i = SLATE_NONE;
+        root_i = SLATE_NONE;
         arp_reset();
         for (i = 0; i < EN_NDRUM; i++)
             drum_pos[i] = 0;

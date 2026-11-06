@@ -634,6 +634,54 @@ int main(void)
         en_play(1);
     }
 
+    /* the root rotator: each step for its bars, the chords again from their first; of the new root's scale; off, Root */
+    {
+        /* D Dorian's first, fourth and third chords, a bar each; D for two bars, G for two: only two chords fit */
+        static const int WANT[4] = {2, 7, 7, 0};   /* Dm7, G7; Gm7, C7 */
+        int bar, wrong = 0, third = 0, last = -1, b2, off = 0, k, starts = 0;
+        en_init();
+        for (i = 0; i < P_NPARAMS; i++)
+            en_set(i, en_param_info(i)->def);
+        run(0.05f);
+        en_set(P_TEMPO, 120), en_set(P_MOTION, 0), en_set(P_EVOLVE, 0), en_set(P_DENSITY, 100);
+        en_set(P_LEN1, 0), en_set(P_LEN2, 0), en_set(P_LEN3, 0);
+        en_set(P_SLOT1, 1), en_set(P_SLOT2, 3 * EN_NSHAPE + 1), en_set(P_SLOT3, 2 * EN_NSHAPE + 1);
+        en_set(P_RSLOT1, 2 + 1), en_set(P_RSLOT3, 7 + 1);   /* the empty step between is skipped */
+        en_set(P_RLEN1, 1), en_set(P_RLEN3, 1);
+        run(0.05f);
+        en_play(0), run(0.05f), en_play(1);
+        for (bar = 0; bar < 16; bar++) {
+            run(1.0f);                             /* mid-bar */
+            b2 = en_chord_root;
+            wrong += b2 != WANT[bar % 4];
+            third += b2 == 5 || b2 == 10;          /* the third chord: F or Bb */
+            CHECK(en_root == (bar % 4 < 2 ? 2 : 7), "bar %d: root %d", bar, en_root);
+            starts += b2 != last;
+            last = b2;
+            run(1.0f);
+        }
+        CHECK(!wrong, "the rotator's chords off %d bars of 16", wrong);
+        CHECK(!third, "the third chord played %d bars: it should never fit", third);
+        CHECK(starts >= 8, "the rotator: %d changes", starts);
+        en_set(P_ARP, 1);                          /* the arp follows: chord tones of the moving root */
+        run(0.05f);
+        bell_logging = 1, bell_n = 0;
+        for (bar = 0; bar < 8; bar++) {
+            bell_n = 0;
+            run(1.9f);
+            for (k = 0; k < bell_n; k++)
+                off += !(EN_MODE_POOL[MODE_DORIAN] >> ((bell_log[k] - en_root + 120) % 12) & 1u);
+            run(0.1f);
+        }
+        bell_logging = 0;
+        CHECK(off <= 2, "the arp off the moving scale %d times", off);
+        en_set(P_RSLOT1, 0), en_set(P_RSLOT3, 0);  /* off: Root again */
+        run(0.05f);
+        CHECK(en_root == 2, "the rotator off: root %d", en_root);
+        en_init();
+        en_play(1);
+    }
+
     /* stop: the tails die away */
     for (i = 0; i < P_NPARAMS; i++)
         en_set(i, en_param_info(i)->def);

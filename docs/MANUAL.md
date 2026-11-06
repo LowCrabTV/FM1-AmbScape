@@ -230,6 +230,21 @@ SELECT for the page.
 - **EDIT** goes to the next step on the next bar, and **REC** holds the step. Each piece keeps its
   own slate.
 
+### SELECT again: Roots
+
+The root rotator: up to four root notes in order, each for a set number of bars, like the slate
+but for the key. Press SELECT from the Chords page, and again to go back. The scale moves with the
+root, and so do your chords: Dm7 and G7 in D become Gm7 and C7 in G.
+
+- **KNOB 1–4:** each step's root, C to B. **Off** skips that step. With all four off, the Root on the
+  Setup page is back in charge; while any step is on, the rotator is.
+- **Hold SELECT and turn KNOB 1–4:** that step's length: 1, 2, 4, 8, 12, 16, 24 or 32 bars.
+- **Each new step starts the chords again from their first step**, so sections line up like a verse
+  and a chorus. Make a root last as long as your chords add up to, or the last ones won't be reached.
+  With no chords set, each step begins on the home chord.
+- The change lands on a bar line; the pad's voices fade in about a second and come back on the new
+  root. **REC** holds it. Each piece keeps its own.
+
 ### Hold SELECT: Sparkle, on the Garden page
 
 Little flourishes on the bells, coming and going in waves: a run of the scale, a grace note, the
@@ -426,6 +441,8 @@ The defaults are Garden's; each piece has its own.
 | Garden | Drift | 20 s – 5:00 | 25 (about 40 s) |
 | Chords | Chord 1–4 | Off, or a chord of the scale in one of six shapes | Off |
 | Chords | Bars 1–4 (SELECT held) | 1, 2, 3, 4, 6, 8, 12, 16 | 4 |
+| Roots | Root 1–4 | Off, C – B | Off |
+| Roots | Bars 1–4 (SELECT held) | 1, 2, 4, 8, 12, 16, 24, 32 | 8 |
 | Garden | Sparkle (SELECT held) | 0–100 | 0 |
 | Garden | Length (SELECT held) | 5 s – 1 min | 20 s |
 | Garden | Often (SELECT held) | 10 s – 5 min | 45 s |

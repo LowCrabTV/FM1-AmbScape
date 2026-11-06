@@ -1,0 +1,56 @@
+# the root rotator: SELECT pressed again from Chords; a knob sets a step's root, with SELECT held its bars; with the
+# piece, gone with the recipe. Plays, and the header and keys follow. A project from Sparkle's build keeps its settings.
+wait 300
+tap SEL
+wait 100
+expect view 7
+tap SEL
+wait 100
+expect view 8
+tap SEL
+wait 100
+expect view 7
+tap SEL
+wait 100
+expect view 8
+expect par45 0
+shot off.png
+spin K1 3
+expect par45 3
+spin K2 8
+expect par46 8
+press SEL
+wait 100
+shot bars.png
+expect par49 3
+spin K1 -2
+expect par49 1
+release SEL
+wait 100
+expect view 8
+wait 5000
+shot playing.png
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par45 3
+expect par46 8
+expect par49 1
+press SAVE
+wait 1700
+release SAVE
+wait 100
+expect par45 0
+expect par46 0
+expect par49 3
+storev8 44
+reboot
+wait 300
+expect par0 44
+expect par45 0
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par0 44

@@ -10,15 +10,16 @@
  *   SELECT tempo   ALGORITHM mode (loads a pool)   PRESETS the piece (Root is on the Setup page)
  *   HOME SEQ FX SEL GLO   the pages: LAYERS, MOTION, SPACE, TONE, SETUP (EDIT steps through them)
  *   KNOB 1-4       the page's four values
- *   SELECT pressed the Chords page, the slate: KNOB 1-4 each step's chord; SELECT held, each step's bars
+ *   SELECT pressed the Chords page, the slate: KNOB 1-4 each step's chord; SELECT held, each step's bars;
+ *                  pressed again, the Roots page: the same, for the root rotator
  *   SAVE           saves (it also saves by itself a few seconds after a change, while resting);
  *                  held 1.5 s: the piece back to its recipe */
 #include "fastmath.h"
 
 /* the pages, one a layer (a button each); SELECT steps through them in this order */
-enum { V_GARDEN, V_PAD, V_BELLS, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Bass", "Pulse", "Space", "Setup", "Chords"};
-static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL};
+enum { V_GARDEN, V_PAD, V_BELLS, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, V_ROOTS, NVIEWS };
+static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Bass", "Pulse", "Space", "Setup", "Chords", "Roots"};
+static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL};
 /* the four knobs of each page: a parameter, or one of these; and what the knob is called there */
 enum { K_LEDS = 100, K_CPU, K_NONE };
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
@@ -30,6 +31,7 @@ static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_ECHO, P_ETIME, P_REVERB, P_SIZE},
     {P_ROOT, P_TUNE, P_MIDI, K_LEDS},
     {P_SLOT1, P_SLOT2, P_SLOT3, P_SLOT4},
+    {P_RSLOT1, P_RSLOT2, P_RSLOT3, P_RSLOT4},
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Tempo", "Evolve", "Motion", "Drift"},
@@ -40,6 +42,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Echo", "Echo time", "Reverb", "Size"},
     {"Root", "Tune", "MIDI out", "Lights"},
     {"Chord 1", "Chord 2", "Chord 3", "Chord 4"},
+    {"Root 1", "Root 2", "Root 3", "Root 4"},
 };
 /* SELECT held: a page's other knobs */
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
@@ -51,6 +54,7 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {K_NONE, K_NONE, K_NONE, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
     {P_LEN1, P_LEN2, P_LEN3, P_LEN4},
+    {P_RLEN1, P_RLEN2, P_RLEN3, P_RLEN4},
 };
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"Sparkle", "Length", "Often", ""},
@@ -60,6 +64,7 @@ static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"", "", "", ""},
     {"", "", "", ""},
     {"", "", "", ""},
+    {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
     {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
 };
 
@@ -169,9 +174,18 @@ static int pool_count(uint32_t p)
         n += (int)(p >> i & 1u);
     return n;
 }
+static int root_now(void)                      /* the root playing: the rotator's, while it has a step */
+{
+    int i;
+    for (i = 0; i < EN_NSLOT; i++)
+        if (proj.par[P_RSLOT1 + i])
+            return en_root;
+    return proj.par[P_ROOT];
+}
+
 static uint32_t pool_abs(void)                 /* the pool as absolute pitch classes */
 {
-    uint32_t p = proj.pool, r = (uint32_t)proj.par[P_ROOT];
+    uint32_t p = proj.pool, r = (uint32_t)root_now();
     return ((p << r) | (p >> (12u - r))) & 0xFFFu;
 }
 static const char *mode_name(void)
@@ -211,7 +225,7 @@ static void knob_text(int k, char *b)
 {
     int v = knob_get(k);
     if (is_slot(k) && v) {                       /* a slot says its chord: "Dm7" */
-        int pcs[4], n = en_chord_shape(proj.pool, proj.par[P_ROOT], (v - 1) / EN_NSHAPE, (v - 1) % EN_NSHAPE, pcs);
+        int pcs[4], n = en_chord_shape(proj.pool, root_now(), (v - 1) / EN_NSHAPE, (v - 1) % EN_NSHAPE, pcs);
         en_chord_name(pcs, n, b);
     } else if (k < P_NPARAMS) {
         en_param_text(k, v, b);
@@ -232,7 +246,7 @@ static void knob_text(int k, char *b)
 
 static uint32_t shape_mask(int deg, int s)      /* a chord's notes, as a set */
 {
-    int pcs[4], n = en_chord_shape(proj.pool, proj.par[P_ROOT], deg, s, pcs), i;
+    int pcs[4], n = en_chord_shape(proj.pool, root_now(), deg, s, pcs), i;
     uint32_t m = 0;
     for (i = 0; i < n; i++)
         m |= 1u << pcs[i];
@@ -315,7 +329,7 @@ static const char *view_label(int view, int i) { return layer_held(view) ? KNOB_
 /* ------------------------------------------------------------- the pool --- */
 static void toggle_note(int pc)                 /* a key: its note in or out of the scale */
 {
-    int rel = (pc - proj.par[P_ROOT] + 12) % 12;
+    int rel = (pc - root_now() + 12) % 12;
     uint32_t p = proj.pool ^ (1u << rel);
     if (rel == 0) {
         warn("THE ROOT STAYS", "(SETUP)");
@@ -363,6 +377,10 @@ static void set_view(int v)
 static void button(int b)
 {
     int v;
+    if (b == B_SEL) {                            /* the two rotators: Chords, then Roots, then Chords */
+        set_view(ui.view == V_CHORDS ? V_ROOTS : V_CHORDS);
+        return;
+    }
     for (v = 0; v < NVIEWS; v++)                 /* a page's button: its page */
         if (VIEW_BTN[v] == b) {
             set_view(v);
@@ -728,7 +746,7 @@ static void draw_header(void)
 {
     char t[24];
     int msg = plat_ms() < ui.msg_until;
-    uint32_t h = hash(hash(hash(2166136261u, proj.piece | (uint32_t)proj.par[P_ROOT] << 8 | (uint32_t)proj.pool << 12),
+    uint32_t h = hash(hash(hash(2166136261u, proj.piece | (uint32_t)root_now() << 8 | (uint32_t)proj.pool << 12),
                            en_playing | ui.dirty << 4 | (uint32_t)msg << 5 | (uint32_t)en_ext << 6 | (uint32_t)proj.par[P_MODE] << 8),
                       (uint32_t)proj.par[P_TEMPO] | (ui.view == V_SETUP ? plat_cpu_pct() << 8 : 0u) |
                       (uint32_t)(batt() + 1) << 24);
@@ -784,8 +802,8 @@ static void draw_header(void)
         cv_round(4, 4, w, 20, 6, K_TEXT);
         cv_text(10, 6, &FONT_B, piece_name(proj.piece), K_BG);
         w += 10;                                  /* the root, then the mode, where they clear the right side */
-        if (w + text_w(&FONT_XS, EN_NOTE_NAME[proj.par[P_ROOT]]) + 4 <= x) {
-            w = cv_text(w, 8, &FONT_XS, EN_NOTE_NAME[proj.par[P_ROOT]], K_TEXT);
+        if (w + text_w(&FONT_XS, EN_NOTE_NAME[root_now()]) + 4 <= x) {
+            w = cv_text(w, 8, &FONT_XS, EN_NOTE_NAME[root_now()], K_TEXT);
             if (w + 3 + text_w(&FONT_XS, mode_name()) + 4 <= x)
                 cv_text(w + 3, 8, &FONT_XS, mode_name(), K_DIM);
         }
@@ -843,7 +861,7 @@ static void draw_ring(void)
         int32_t x, y;
         int in = (int)(abs_pool >> i & 1u), ch = (int)(chord >> i & 1u);
         polar(CX, CY, 24.0f, i, 12, &x, &y);
-        if (i == proj.par[P_ROOT])
+        if (i == root_now())
             cv_disc(x, y, 5, K_TEXT);           /* the root: ringed in ink */
         if (ch)
             cv_disc(x, y, 4, mix(K_PAD_T, K_PAD, 6 + q16(en_pad_level) * 10 / 16));
@@ -950,7 +968,7 @@ static void draw_help(void)
 
 static void draw_main(void)
 {
-    uint32_t h = hash(2166136261u, pool_abs() | (uint32_t)proj.par[P_ROOT] << 12 | (uint32_t)en_frozen << 16 | proj.piece << 24 |
+    uint32_t h = hash(2166136261u, pool_abs() | (uint32_t)root_now() << 12 | (uint32_t)en_frozen << 16 | proj.piece << 24 |
                                         (uint32_t)en_playing << 17 | (uint32_t)proj.par[P_MODE] << 20), i;
     if (ui.frame % 3u)                           /* the garden moves slowly: 20 frames a second is plenty */
         return;
@@ -1006,7 +1024,7 @@ static void draw_knobs(void)
     for (i = 0; i < 4; i++)
         h = hash(h, (uint32_t)knob_get(view_knob(ui.view, (int)i)));
     h = hash(h, (uint32_t)now_touch);
-    h = hash(h, (uint32_t)layer_held(ui.view) | proj.pool << 1 | (uint32_t)proj.par[P_ROOT] << 13);   /* a slot names its chord */
+    h = hash(h, (uint32_t)layer_held(ui.view) | proj.pool << 1 | (uint32_t)root_now() << 13);   /* a slot names its chord */
     if (h == ui.sig[2])
         return;
     ui.sig[2] = h;
@@ -1198,7 +1216,7 @@ static void sp_page(int all)
     sp_cat(". Piece ");
     sp_cat(piece_name(proj.piece));
     sp_cat(", ");
-    sp_cat(EN_NOTE_NAME[proj.par[P_ROOT]]);
+    sp_cat(EN_NOTE_NAME[root_now()]);
     sp_cat(" ");
     sp_cat(mode_name());
     if (en_ext) {
@@ -1240,7 +1258,7 @@ static void sp_garden(void)
     }
     sp_cat(". Scale");
     for (i = 0; i < 12; i++) {
-        int pc = (proj.par[P_ROOT] + i) % 12;
+        int pc = (root_now() + i) % 12;
         if (ap >> pc & 1u) {
             sp_cat(last < 0 ? " " : EN_NOTE_NAME[last][0] == EN_NOTE_NAME[pc][0] ? " and " : ", ");
             sp_cat(EN_NOTE_NAME[pc]);
@@ -1281,7 +1299,7 @@ static void sp_piece_text(void)                /* "PIECE Departures, C# Ionian, 
     sp_cat("PIECE ");
     sp_cat(piece_name(proj.piece));
     sp_cat(", ");
-    sp_cat(EN_NOTE_NAME[proj.par[P_ROOT]]);
+    sp_cat(EN_NOTE_NAME[root_now()]);
     sp_cat(" ");
     sp_cat(mode_name());
     sp_cat(", tempo ");
