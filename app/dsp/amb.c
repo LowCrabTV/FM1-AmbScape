@@ -32,7 +32,8 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Mode", 0, EN_NMODES - 1, 1}, {"Bell oct", -2, 2, 0}, {"Pad tone", 0, 1, 0},
     {"Bass oct", -1, 1, 0},   {"Glide", 0, 100, 20},    {"Fifth", 0, 100, 35},
     {"Swing", 0, 100, 0},     {"Hats", 0, 100, 50},
-    {"Chord 1", 0, 12, 0},    {"Chord 2", 0, 12, 0},    {"Chord 3", 0, 12, 0},    {"Chord 4", 0, 12, 0},
+    {"Chord 1", 0, 12 * EN_NSHAPE, 0}, {"Chord 2", 0, 12 * EN_NSHAPE, 0},
+    {"Chord 3", 0, 12 * EN_NSHAPE, 0}, {"Chord 4", 0, 12 * EN_NSHAPE, 0},
     {"Bars 1", 0, EN_NBARS - 1, 3}, {"Bars 2", 0, EN_NBARS - 1, 3}, {"Bars 3", 0, EN_NBARS - 1, 3},
     {"Bars 4", 0, EN_NBARS - 1, 3},
     {"Arp", 0, EN_NARP - 1, 0}, {"Arp rate", 0, EN_NARATE - 1, 2}, {"Arp range", 1, 3, 2},
@@ -250,6 +251,38 @@ int en_chord_tones(uint32_t pool, int root, int deg, int *pcs)
     return n;
 }
 
+/* the shapes, in scale steps above the root. Every tone of the scale, so nothing can clash; the fifth stays third */
+static const int8_t SHAPE_OFF[EN_NSHAPE][4] = {
+    {0, 2, 4, 6}, {0, 2, 4, -1}, {0, 1, 4, -1}, {0, 3, 4, -1}, {0, 2, 4, 1}, {0, 2, 4, 5}};
+static const int8_t SHAPE_COLOUR[EN_NSHAPE] = {-1, -1, 1, 3, 1, 5};   /* the step that makes it, among the passing ones */
+
+int en_chord_shape(uint32_t pool, int root, int deg, int shape, int *pcs)
+{
+    int st[12], m, n = 0, i, j;
+    if (shape <= 0 || shape >= EN_NSHAPE)
+        return en_chord_tones(pool, root, deg, pcs);
+    m = en_scale(pool, st);
+    deg = ((deg % m) + m) % m;
+    for (i = 0; i < 4 && SHAPE_OFF[shape][i] >= 0; i++) {
+        int pc = (root + st[(deg + SHAPE_OFF[shape][i]) % m]) % 12, dup = 0;
+        for (j = 0; j < n; j++)
+            dup |= pcs[j] == pc;
+        if (!dup)
+            pcs[n++] = pc;
+    }
+    if (n < 3) {                                /* a short scale: the plain chord's notes */
+        int t[4], k = en_chord_tones(pool, root, deg, t);
+        for (i = 0; i < k && n < 3; i++) {
+            int dup = 0;
+            for (j = 0; j < n; j++)
+                dup |= pcs[j] == t[i];
+            if (!dup)
+                pcs[n++] = t[i];
+        }
+    }
+    return n;
+}
+
 static int nearest(int from, int pc, int lo, int hi)    /* the note of class pc nearest from, in lo..hi */
 {
     int n = from + ((pc - from) % 12 + 12) % 12;          /* at or above */
@@ -304,7 +337,7 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
             : iv >> 2 & 1u ? "add9" : "";
     } else if (third == 3) {
         if (fifth == 6)
-            q = iv >> 10 & 1u ? "m7b5" : iv >> 9 & 1u ? "dim7" : "dim";
+            q = iv >> 10 & 1u ? "m7b5" : iv >> 9 & 1u ? "dim7" : iv >> 2 & 1u ? "dimadd9" : "dim";
         else
             q = iv >> 10 & 1u ? "m7" : iv >> 11 & 1u ? "mM7" : iv >> 9 & 1u ? "m6" : iv >> 2 & 1u ? "madd9" : "m";
     } else {
@@ -361,7 +394,7 @@ volatile float en_pad_amp[EN_NPAD];
 static int16_t par[P_NPARAMS];
 static uint32_t pool = 0xAADu;                  /* Ionian until told */
 static int nsteps, steps[12];                   /* the scale */
-static int deg;                                 /* the chord's scale degree */
+static int deg, shape;                          /* the chord's scale degree, and its shape */
 static int chord_pcs[4], chord_nt;
 static int pad_pcs[4], pad_nt;                 /* the tones the pad sings of it (Pad notes) */
 static float tunefac = 1.0f;
@@ -620,9 +653,23 @@ static void scale_set(void)
     nsteps = en_scale(pool, steps);
 }
 
+/* a loop's note over a chord in a shape: its third gives way to a sus's note; its seventh to the shape's own */
+static int shape_note(int off)
+{
+    static const int8_t SEVENTH[EN_NSHAPE] = {6, 4, 4, 4, 1, 5};
+    int r = off % nsteps;
+    if (!shape)
+        return off;
+    if (r == 2 && (shape == 2 || shape == 3))
+        return off - r + SHAPE_COLOUR[shape];
+    if (r == 6 && nsteps > 6)
+        return off - r + SEVENTH[shape];
+    return off;
+}
+
 static int bell_note(int l, int off)            /* a loop slot's note, from the chord's degree */
 {
-    int d = deg + off, oct = d / nsteps, s = steps[d % nsteps], base, root = par[P_ROOT], n;
+    int d = deg + shape_note(off), oct = d / nsteps, s = steps[d % nsteps], base, root = par[P_ROOT], n;
     base = LOOP_BASE[l] - ((LOOP_BASE[l] - root) % 12 + 12) % 12;   /* the root at or below the register */
     n = base + s + 12 * oct + 12 * par[P_BOCT];
     while (n > 103)
@@ -655,7 +702,7 @@ static void pad_tones(void)
 static void pad_retarget(void)                  /* the chord's tones to the four voices */
 {
     int from[4], to[4], all[4], i;
-    chord_nt = en_chord_tones(pool, par[P_ROOT], deg, chord_pcs);
+    chord_nt = en_chord_shape(pool, par[P_ROOT], deg, shape, chord_pcs);
     pad_tones();
     for (i = 0; i < EN_NPAD; i++)
         from[i] = (int)(pad[i].target + 0.5f);
@@ -719,6 +766,7 @@ static void chord_change(void)                  /* to another degree: the near, 
     }
     if (i >= nsteps)
         i = deg == 0 ? (nsteps > 1 ? 1 : 0) : 0;
+    shape = 0;
     chord_to(i);
 }
 
@@ -738,7 +786,8 @@ static void slate_next(void)                    /* to the next filled slot after
         if (par[P_SLOT1 + i]) {
             slate_i = (uint8_t)i;
             slate_total = slate_left = EN_SLATE_BARS[par[P_LEN1 + i]];
-            chord_to((par[P_SLOT1 + i] - 1) % nsteps);
+            shape = (par[P_SLOT1 + i] - 1) % EN_NSHAPE;
+            chord_to((par[P_SLOT1 + i] - 1) / EN_NSHAPE % nsteps);
             return;
         }
     }
@@ -771,7 +820,7 @@ static float passing(void) { return 0.28f * fm_clampf(((float)par[P_DENSITY] - 2
 static int rand_offset(void)                    /* scale steps above the chord's degree */
 {
     if (frand() >= passing()) {                 /* a chord tone, sometimes an octave up */
-        int o = 2 * irand(chord_nt);
+        int o = shape ? SHAPE_OFF[shape][irand(shape == 1 || shape == 2 || shape == 3 ? 3 : 4)] : 2 * irand(chord_nt);
         return o + (frand() < 0.3f ? nsteps : 0);
     }
     return 1 + 2 * irand(3);                    /* a passing note: the 2nd, 4th or 6th */
@@ -818,7 +867,7 @@ static int loop_pick_passing(int l)             /* a random slot on a passing no
 {
     int len = EN_LOOP_LEN[l], i, s = irand(len);
     for (i = 0; i < len; i++, s = (s + 1) % len)
-        if (loop_note[l][s] >= 0 && loop_note[l][s] % nsteps & 1)
+        if (loop_note[l][s] >= 0 && loop_note[l][s] % nsteps & 1 && loop_note[l][s] % nsteps != SHAPE_COLOUR[shape])
             return s;
     return -1;
 }
@@ -1573,6 +1622,7 @@ static void regrow(void)                        /* a new piece: fresh loops, hom
         loop_rest[l] = 0;
     }
     deg = 0;
+    shape = 0;
     pad_retarget();
     pad_handoff();
     bass_to(chord_pcs[0]);

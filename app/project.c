@@ -182,6 +182,19 @@ static void from_v5(const project_v5_t *o)
         proj.par[p] = p < V5_NPARAMS ? o->par[p] : r.par[p];
 }
 
+/* before format 7, a slot held only its degree: now the seventh on that degree, the chord it always was */
+static void slots_up(void)
+{
+    int i, s;
+    for (s = P_SLOT1; s < P_SLOT1 + EN_NSLOT; s++) {
+        if (proj.par[s])
+            proj.par[s] = (int16_t)((proj.par[s] - 1) * EN_NSHAPE + 1);
+        for (i = 0; i < NPIECES; i++)
+            if (proj.slot[i].par[s])
+                proj.slot[i].par[s] = (int16_t)((proj.slot[i].par[s] - 1) * EN_NSHAPE + 1);
+    }
+}
+
 int project_load(void)
 {
     static union {
@@ -198,8 +211,12 @@ int project_load(void)
     else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 4u)
         from_v4(&buf.v4);
     else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 5u)
-        from_v5(&buf.v5);
-    else
+        from_v5(&buf.v5), slots_up();
+    else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 6u) {   /* the same settings as now */
+        proj = buf.now;
+        proj.format = PROJ_FORMAT;
+        slots_up();
+    } else
         proj = buf.now;
     if (n >= 8 && project_valid())
         return 0;

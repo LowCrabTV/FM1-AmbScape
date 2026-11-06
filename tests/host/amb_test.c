@@ -315,7 +315,7 @@ int main(void)
         en_set(P_DRIFT, 0);
         en_set(P_SLOT1, 1);
         en_set(P_LEN1, 0);
-        en_set(P_SLOT3, 3);                        /* the empty slot between is skipped */
+        en_set(P_SLOT3, 2 * EN_NSHAPE + 1);                        /* the empty slot between is skipped */
         en_set(P_LEN3, 1);
         en_play(1);
         for (b2 = 0; b2 < 60 * 44100 / 256; b2++) {   /* a minute: thirty bars, past any Drift */
@@ -343,7 +343,7 @@ int main(void)
         /* a slot past a shorter scale wraps, and stays in the scale */
         {
             int k;
-            en_set(P_SLOT1, 12);
+            en_set(P_SLOT1, 11 * EN_NSHAPE + 1);
             en_set(P_SLOT3, 0);
             en_set(P_LEN1, 0);
             en_pool(0x091u);                       /* root, major third, fifth */
@@ -521,6 +521,57 @@ int main(void)
         CHECK(j == 2, "Pad notes 2: %d notes", j);
         CHECK(seen >> en_chord_root & 1, "Pad notes 2 without the root");
         CHECK(en_chord_n >= 3, "the chord still whole for the screen: %d", en_chord_n);
+        en_init();
+        en_play(1);
+    }
+
+    /* the shapes: their names, in the scale; a sus has no third, in the pad, the bells, the arp or the bass */
+    {
+        static const char *const NAME[EN_NSHAPE] = {"Dm7", "Dm", "Dsus2", "Dsus4", "Dmadd9", "Dm6"};
+        int s, d, k, j, pcs[4], n;
+        char nm[16];
+        for (s = 0; s < EN_NSHAPE; s++) {
+            n = en_chord_shape(EN_MODE_POOL[MODE_DORIAN], 2, 0, s, pcs);
+            CHECK(!strcmp(en_chord_name(pcs, n, nm), NAME[s]), "shape %d named %s", s, nm);
+            CHECK(pcs[0] == 2 && pcs[2] == 9, "shape %d: root %d, fifth %d", s, pcs[0], pcs[2]);
+            for (d = 0; d < 7; d++) {
+                n = en_chord_shape(EN_MODE_POOL[MODE_DORIAN], 2, d, s, pcs);
+                CHECK(n >= 3, "shape %d degree %d: %d notes", s, d, n);
+                for (k = 0; k < n; k++)
+                    CHECK(EN_MODE_POOL[MODE_DORIAN] >> ((pcs[k] - 2 + 12) % 12) & 1u, "shape %d degree %d off the scale", s, d);
+            }
+            for (d = 0; d < 5; d++) {              /* a short scale, whatever the shape: three notes at least */
+                n = en_chord_shape(EN_MODE_POOL[MODE_PENT_MAJ], 4, d, s, pcs);
+                CHECK(n >= 3, "pentatonic shape %d degree %d: %d notes", s, d, n);
+            }
+        }
+        for (k = 0; k < 2; k++) {                  /* Dsus4: the loops, then the arp; no F */
+            int fs = 0, bad = 0;
+            en_init();
+            for (i = 0; i < P_NPARAMS; i++)
+                en_set(i, en_param_info(i)->def);
+            run(0.05f);
+            en_set(P_ROOT, 2), en_set(P_DENSITY, 100), en_set(P_MOTION, 0), en_set(P_EVOLVE, 40), en_set(P_BASSN, 100);
+            en_set(P_SLOT1, 3 + 1);                /* degree 1, sus4 */
+            en_set(P_ARP, k);
+            en_pool(EN_MODE_POOL[MODE_DORIAN]);
+            run(0.05f);
+            en_regrow();
+            en_play(0), run(0.05f), en_play(1);
+            run(8.0f);                             /* (what was ringing as it began) */
+            bell_logging = 1, bell_n = 0, bass_n = 0;
+            run(30.0f);
+            bell_logging = 0;
+            CHECK(bell_n > 10 && bass_n > 10, "Dsus4: %d bells, %d bass", bell_n, bass_n);
+            for (j = 0; j < bell_n; j++)
+                fs += bell_log[j] % 12 == 5;
+            for (j = 0; j < bass_n; j++)
+                fs += bass_log[j] % 12 == 5;
+            for (j = 0; j < EN_NPAD; j++)
+                bad += en_chord[j] % 12 == 5;
+            CHECK(!fs, "Dsus4, arp %d: the third, %d times", k, fs);
+            CHECK(!bad, "Dsus4: the third in the pad");
+        }
         en_init();
         en_play(1);
     }

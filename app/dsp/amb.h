@@ -47,6 +47,8 @@ extern const uint8_t EN_LOOP_LEN[EN_NLOOP];
 extern const uint8_t EN_DRUM_N[EN_NDRUM];
 #define EN_NSLOT 4                     /* the slate's steps */
 #define EN_NBARS 8
+#define EN_NSHAPE 6                    /* a chord's shapes: seventh, triad, sus2, sus4, add9, sixth. A slot's value: 0 empty,
+                                        * else 1 + degree * EN_NSHAPE + shape */
 #define EN_NARP 8                      /* the arp's styles, Off first */
 #define EN_NARATE 4
 #define EN_NAPOLY 5
@@ -120,6 +122,8 @@ uint32_t en_euclid(int k, int n, int rot);     /* Bjorklund's pattern, as a bitm
 int en_scale(uint32_t pool, int *steps);       /* the pool's pitch classes (relative), ascending; count */
 /* the chord on scale degree deg: its tones (MIDI pitch classes, absolute), 3 or 4 of them; count */
 int en_chord_tones(uint32_t pool, int root, int deg, int *pcs);
+/* and in a shape: the root first, the fifth third (as en_chord_tones), each tone of the scale; count */
+int en_chord_shape(uint32_t pool, int root, int deg, int shape, int *pcs);
 /* voice leading: new pad notes for the tones, each voice moving as little as possible, all in lo..hi */
 void en_voice_lead(const int *from, const int *pcs, int ntones, int *to, int lo, int hi);
 const char *en_chord_name(const int *pcs, int n, char *buf);   /* "Em7", "Dsus4", "C" ... */

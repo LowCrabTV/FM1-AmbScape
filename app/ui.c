@@ -195,7 +195,7 @@ static void knob_range(int k, int *lo, int *hi)
 {
     if (k < P_NPARAMS) {
         *lo = en_param_info(k)->lo;
-        *hi = is_slot(k) ? pool_count(proj.pool) : en_param_info(k)->hi;   /* a slot: the scale's degrees */
+        *hi = is_slot(k) ? pool_count(proj.pool) * EN_NSHAPE : en_param_info(k)->hi;   /* a slot: the scale's chords */
     } else {
         *lo = 0;
         *hi = k == K_LEDS ? 2 : k == K_CPU ? 100 : 0;
@@ -211,7 +211,7 @@ static void knob_text(int k, char *b)
 {
     int v = knob_get(k);
     if (is_slot(k) && v) {                       /* a slot says its chord: "Dm7" */
-        int pcs[4], n = en_chord_tones(proj.pool, proj.par[P_ROOT], v - 1, pcs);
+        int pcs[4], n = en_chord_shape(proj.pool, proj.par[P_ROOT], (v - 1) / EN_NSHAPE, (v - 1) % EN_NSHAPE, pcs);
         en_chord_name(pcs, n, b);
     } else if (k < P_NPARAMS) {
         en_param_text(k, v, b);
@@ -230,6 +230,24 @@ static void knob_text(int k, char *b)
     }
 }
 
+static uint32_t shape_mask(int deg, int s)      /* a chord's notes, as a set */
+{
+    int pcs[4], n = en_chord_shape(proj.pool, proj.par[P_ROOT], deg, s, pcs), i;
+    uint32_t m = 0;
+    for (i = 0; i < n; i++)
+        m |= 1u << pcs[i];
+    return m;
+}
+static int slot_dup(int v)                      /* the same notes as a shape before it on this root: the scale's short */
+{
+    int deg = (v - 1) / EN_NSHAPE, s = (v - 1) % EN_NSHAPE, t;
+    uint32_t m = shape_mask(deg, s);
+    for (t = 0; t < s; t++)
+        if (shape_mask(deg, t) == m)
+            return 1;
+    return 0;
+}
+
 static void knob_set(int k, int v)
 {
     int lo, hi;
@@ -237,6 +255,13 @@ static void knob_set(int k, int v)
         return;
     knob_range(k, &lo, &hi);
     v = v < lo ? lo : v > hi ? hi : v;
+    if (is_slot(k) && v != knob_get(k)) {       /* a turn never lands on the same chord under another shape */
+        int dir = v > knob_get(k) ? 1 : -1;
+        while (v > 0 && v <= hi && slot_dup(v))
+            v += dir;
+        if (v > hi)
+            return;
+    }
     if (v == knob_get(k))
         return;
     if (k < P_NPARAMS) {
@@ -1076,7 +1101,7 @@ static uint32_t sp_n;
 static const char *const CHORD_Q[][2] = {
     {"", "major"}, {"m", "minor"}, {"7", "7"}, {"M7", "major 7"}, {"m7", "minor 7"}, {"6", "6"},
     {"m6", "minor 6"}, {"add9", "add 9"}, {"madd9", "minor add 9"}, {"aug", "augmented"}, {"dim", "diminished"},
-    {"dim7", "diminished 7"}, {"m7b5", "half diminished"}, {"mM7", "minor major 7"}, {"sus2", "suspended 2"},
+    {"dim7", "diminished 7"}, {"dimadd9", "diminished add 9"}, {"m7b5", "half diminished"}, {"mM7", "minor major 7"}, {"sus2", "suspended 2"},
     {"sus4", "suspended 4"}, {"7sus4", "7 suspended 4"}, {"5", "5"},
 };
 #define NCHORD_Q (sizeof CHORD_Q / sizeof CHORD_Q[0])

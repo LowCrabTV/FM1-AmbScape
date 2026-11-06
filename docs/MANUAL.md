@@ -220,8 +220,11 @@ always KNOB 1. SELECT steps through them in this order.
 The slate: up to four chords in order, each for a set number of bars, in place of Drift. Press
 SELECT for the page.
 
-- **KNOB 1–4:** each step's chord, named as you turn (`Dm7`), from the chords of the scale. **Off**
-  skips that step. With all four off, the chord drifts as usual.
+- **KNOB 1–4:** each step's chord, named as you turn (`Dm7`), from the chords of the scale. Each
+  root comes in six shapes, in this order: seventh (`Dm7`), triad (`Dm`), `sus2`, `sus4`, `add9` and
+  sixth (`Dm6`). All of them keep to the scale, so nothing can clash; the bells, the arp and the bass
+  follow the shape. A pentatonic scale has fewer, and the knob skips the repeats. **Off** skips that
+  step. With all four off, the chord drifts as usual.
 - **Hold SELECT and turn KNOB 1–4:** that step's length: 1, 2, 3, 4, 6, 8, 12 or 16 bars. Short
   chords may not let the pad finish breathing in: at most tempos, try 4 bars or more.
 - **EDIT** goes to the next step on the next bar, and **REC** holds the step. Each piece keeps its
@@ -409,7 +412,7 @@ The defaults are Garden's; each piece has its own.
 | Garden | Evolve | 0–100 | 35 |
 | Garden | Motion | 0–100 | 50 |
 | Garden | Drift | 20 s – 5:00 | 25 (about 40 s) |
-| Chords | Chord 1–4 | Off, or a chord of the scale | Off |
+| Chords | Chord 1–4 | Off, or a chord of the scale in one of six shapes | Off |
 | Chords | Bars 1–4 (SELECT held) | 1, 2, 3, 4, 6, 8, 12, 16 | 4 |
 | Pad | Notes (SELECT held) | 2, 3, 4 | 4 |
 | Bells | Arp (SELECT held) | Off, Up, Down, Up/Dn, Dn/Up, Random, Converge, Diverge | Off |

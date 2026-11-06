@@ -58,6 +58,19 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         batt_host = (int8_t)(strcmp(a, "off") ? atoi(a) : -2);
         return 1;
     }
+    if (!strcmp(cmd, "storev6")) {               /* storev6 N: the project as the arp's build wrote it, Chord 1 degree N */
+        static project_t o;
+        int i;
+        o = proj;
+        o.format = 6u;
+        o.par[P_SLOT1] = (int16_t)atoi(a);
+        o.slot[proj.piece].par[P_SLOT1] = o.par[P_SLOT1];
+        for (i = 0; i < NPIECES; i++)
+            if (i != proj.piece)
+                o.slot[i].par[P_SLOT1] = 0;
+        plat_store_save(OBJ_PROJ, &o, sizeof o);
+        return 1;
+    }
     if (!strcmp(cmd, "storev5")) {               /* storev5 N: the project as the slate's build wrote it (format 5) */
         static project_v5_t o;
         int i, k;

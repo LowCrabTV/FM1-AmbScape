@@ -1,0 +1,54 @@
+# a chord's shapes: the Chords page's knob goes through them on each root. A short scale has fewer: the knob skips the
+# same notes. The slate's chord follows into the garden's name. A project from the arp's build keeps its chords.
+wait 300
+tap SEL
+wait 100
+expect par28 0
+spin K1 1
+expect par28 1
+wait 100
+shot seventh.png
+spin K1 1
+expect par28 2
+spin K1 1
+expect par28 3
+spin K1 1
+expect par28 4
+wait 100
+shot sus4.png
+spin K1 1
+expect par28 5
+wait 100
+shot add9.png
+spin K1 1
+expect par28 6
+spin K1 1
+expect par28 7
+wait 100
+shot next_root.png
+spin K1 -7
+expect par28 0
+# Shoreline: E pentatonic major
+turn PRESET 5
+wait 100
+expect piece 5
+spin K2 1
+expect par29 1
+spin K2 1
+expect par29 3
+spin K2 -1
+expect par29 1
+spin K2 -1
+expect par29 0
+# from the arp's build: the same chord
+turn PRESET -5
+wait 100
+storev6 4
+reboot
+wait 300
+expect par28 19
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par28 19
