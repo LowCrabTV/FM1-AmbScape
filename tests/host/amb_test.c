@@ -20,12 +20,14 @@ static int fails;
     } while (0)
 
 static uint32_t midi_count;
+static uint8_t bell_log[4000];                 /* the bells' notes, while logging */
+static int bell_n, bell_logging;
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
-    (void)st;
-    (void)d1;
     (void)d2;
     midi_count++;
+    if (bell_logging && st == 0x91u && bell_n < (int)sizeof bell_log)
+        bell_log[bell_n++] = (uint8_t)d1;
 }
 
 static uint32_t pat(const char *s)
@@ -363,6 +365,76 @@ int main(void)
             }
             CHECK(changes >= 3, "the slate empty, Drift did not return: %d", changes);
         }
+        en_init();
+        en_play(1);
+    }
+
+    /* the arp: only the chord's tones, in the style's order, at the rate; Density its steps */
+    {
+        int style, k, pcs[4], np, n4;
+        en_init();
+        for (i = 0; i < P_NPARAMS; i++)
+            en_set(i, en_param_info(i)->def);
+        run(0.05f);
+        en_set(P_MOTION, 0), en_set(P_EVOLVE, 0), en_set(P_DENSITY, 100), en_set(P_DRIFT, 100);
+        en_set(P_ARATE, 3), en_set(P_ARANGE, 2);
+        run(0.05f);
+        for (style = 1; style < EN_NARP; style++) {
+            int lo = 127, hi = 0, ups = 0, downs = 0, same = 0, out = 0, wraps;
+            en_play(0);
+            en_set(P_ARP, style);
+            run(0.05f);
+            en_play(1);
+            bell_logging = 1, bell_n = 0;
+            run(6.0f);
+            bell_logging = 0;
+            np = en_chord_n;
+            pcs[0] = en_chord[0] % 12, pcs[1] = en_chord[1] % 12, pcs[2] = en_chord[2] % 12, pcs[3] = en_chord[3] % 12;
+            CHECK(bell_n >= 20, "arp style %d: %d notes", style, bell_n);
+            for (k = 0; k < bell_n; k++) {
+                int pc = bell_log[k] % 12, in = 0, j;
+                for (j = 0; j < 4; j++)
+                    in |= pc == pcs[j];
+                out += !in;
+                lo = bell_log[k] < lo ? bell_log[k] : lo;
+                hi = bell_log[k] > hi ? bell_log[k] : hi;
+                if (k) {
+                    ups += bell_log[k] > bell_log[k - 1];
+                    downs += bell_log[k] < bell_log[k - 1];
+                    same += bell_log[k] == bell_log[k - 1];
+                }
+            }
+            CHECK(!out, "arp style %d: %d notes off the chord", style, out);
+            CHECK(hi - lo >= 12, "arp style %d: Range 2 spans only %d", style, hi - lo);
+            CHECK(!same, "arp style %d: the same note twice running, %d times", style, same);
+            wraps = style == 1 ? downs : style == 2 ? ups : 0;
+            CHECK(wraps <= bell_n / (2 * np - 1) + 1, "arp style %d: out of order (%d against it)", style, wraps);
+            if (style == 3 || style == 4)
+                CHECK(ups > bell_n / 3 && downs > bell_n / 3, "arp style %d: %d up, %d down", style, ups, downs);
+            if (style == 6 || style == 7)
+                CHECK(ups > bell_n / 4 && downs > bell_n / 4, "arp style %d: %d up, %d down", style, ups, downs);
+        }
+        en_set(P_ARP, 1);                      /* the rate, and Density */
+        en_play(0), run(0.05f), en_play(1);
+        bell_logging = 1, bell_n = 0;
+        run(8.0f);
+        n4 = bell_n;
+        en_set(P_ARATE, 0);
+        en_play(0), run(0.05f), en_play(1);
+        bell_n = 0;
+        run(8.0f);
+        CHECK(n4 > 3 * bell_n && bell_n > 0, "the arp's rate: %d at 1/16, %d at 1/4", n4, bell_n);
+        en_set(P_ARATE, 3), en_set(P_DENSITY, 25);
+        en_play(0), run(0.05f), en_play(1);
+        bell_n = 0;
+        run(8.0f);
+        CHECK(bell_n > n4 / 6 && bell_n < n4 / 2, "the arp's Density: %d of %d", bell_n, n4);
+        en_set(P_DENSITY, 0);
+        en_play(0), run(0.05f), en_play(1);
+        bell_n = 0;
+        run(4.0f);
+        CHECK(bell_n == 0, "the arp at Density 0: %d notes", bell_n);
+        bell_logging = 0;
         en_init();
         en_play(1);
     }

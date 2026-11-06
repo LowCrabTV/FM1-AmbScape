@@ -35,6 +35,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Chord 1", 0, 12, 0},    {"Chord 2", 0, 12, 0},    {"Chord 3", 0, 12, 0},    {"Chord 4", 0, 12, 0},
     {"Bars 1", 0, EN_NBARS - 1, 3}, {"Bars 2", 0, EN_NBARS - 1, 3}, {"Bars 3", 0, EN_NBARS - 1, 3},
     {"Bars 4", 0, EN_NBARS - 1, 3},
+    {"Arp", 0, EN_NARP - 1, 0}, {"Arp rate", 0, EN_NARATE - 1, 2}, {"Arp range", 1, 3, 2},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -66,6 +67,10 @@ void en_piece(int i, int16_t *par, uint16_t *pool)
     *pool = EN_MODE_POOL[PIECES[i].v[P_MODE]];
 }
 
+static const char *const ARP_NAME[EN_NARP] = {"Off", "Up", "Down", "Up/Dn", "Dn/Up", "Random", "Converge", "Diverge"};
+static const char *const ARATE_NAME[EN_NARATE] = {"1/4", "1/8.", "1/8", "1/16"};
+static const uint8_t ARATE_STEPS[EN_NARATE] = {4, 3, 2, 1};      /* sixteenths a step */
+static const float ARATE_DEC[EN_NARATE] = {1.0f, 0.8f, 0.6f, 0.4f};   /* the faster, the shorter the bell */
 static const char *const ETIME_NAME[6] = {"1/4.", "1/2", "1/2.", "1 bar", "2 bars", "4 bars"};
 static const float ETIME_BEATS[6] = {1.5f, 2.0f, 3.0f, 4.0f, 8.0f, 16.0f};
 
@@ -103,6 +108,10 @@ void en_param_text(int i, int v, char *b)
         s = EN_MODE_NAME[(unsigned)v < EN_NMODES ? v : 0];
     else if (i == P_ROOT)
         s = EN_NOTE_NAME[(unsigned)v < 12u ? v : 0];
+    else if (i == P_ARP)
+        s = ARP_NAME[(unsigned)v < EN_NARP ? v : 0];
+    else if (i == P_ARATE)
+        s = ARATE_NAME[(unsigned)v < EN_NARATE ? v : 0];
     if (s) {
         int k = 0;
         while (s[k] && k < 9) {
@@ -120,6 +129,14 @@ void en_param_text(int i, int v, char *b)
         int bars = EN_SLATE_BARS[(unsigned)v < EN_NBARS ? v : 0];
         b = itoa_s(bars, b);
         s = bars == 1 ? " bar" : " bars";
+        while (*s)
+            *b++ = *s++;
+        *b = 0;
+        return;
+    }
+    if (i == P_ARANGE) {
+        b = itoa_s(v, b);
+        s = " oct";
         while (*s)
             *b++ = *s++;
         *b = 0;
@@ -553,7 +570,7 @@ typedef struct {
     uint8_t on, note, loop;
 } bell_t;
 static bell_t bell[NBELL];
-static float bell_vol, btone;
+static float bell_vol, btone, bell_dec = 1.0f;   /* bell_dec: the next bell's ring, times this */
 static int8_t loop_note[EN_NLOOP][EN_LOOP_MAX];
 static uint8_t loop_vel[EN_NLOOP][EN_LOOP_MAX], loop_pos[EN_NLOOP];
 static const uint8_t LOOP_BASE[EN_NLOOP] = {72, 67, 79, 62};     /* each loop's register */
@@ -569,8 +586,8 @@ typedef struct {
 static drum_t drum[EN_NDRUM];
 static uint8_t drum_pos[EN_NDRUM];
 static uint32_t drum_pat[EN_NDRUM];
-static float pulse_vol, swing, hat_f = 0.9f, hat_open = 0.42f;
-static float step_len, pulse_left;               /* a sixteenth, in samples; to the next MIDI clock pulse */
+static float pulse_vol, hat_f = 0.9f, hat_open = 0.42f;
+static float pulse_left;                         /* to the next MIDI clock pulse */
 static uint32_t noise = 22222u;
 static const uint8_t DRUM_KMAX[EN_NDRUM] = {5, 7, 3};
 static const uint8_t DRUM_GM[EN_NDRUM] = {36, 42, 46};          /* kick, closed hat, open hat */
@@ -840,7 +857,7 @@ static void bell_voice(int l, int n, float vel, int32_t wait)
     v->minc = v->cinc * RATIO[ri < 0 ? 0 : ri > 4 ? 4 : ri];
     v->amp = vel;
     t60 = 4.2f - (float)(n - 60) * 0.06f;       /* the low bells ring longer */
-    t60 = fm_clampf(t60, 1.6f, 5.0f) * LOOP_DEC[l];
+    t60 = fm_clampf(t60, 1.6f, 5.0f) * LOOP_DEC[l] * bell_dec;
     v->adec = fm_expf(-6.9f / (t60 * EN_SR));
     /* Bell tone: 0 a round, nearly pure tone; 100 a long metallic clang (index in radians, as turns) */
     v->idx = (0.15f + 6.5f * btone * btone) * LOOP_IDX[l] * (0.6f + 0.4f * vel) * (1.0f / FM_TWO_PI);
@@ -862,6 +879,85 @@ static void bell_ring(int l, int slot)
     bell_voice(l, n, vel, wait);
     if (n + 12 <= 103 && frand() < 0.08f + 0.12f * fm_maxf(arcm, 0.0f))
         bell_voice(l, n + 12, vel * 0.4f, wait + 300 + irand(2000));   /* now and then, its octave */
+}
+
+/* -------------------------------------------------------------- the arp --- */
+/* In place of the loops' notes (they keep turning, silent, for when it's off): the chord's tones over Range, in
+ * the Style's order at the Rate. Density picks the steps that sound, of 16, as Hits does the pulse's; the arc
+ * thins them and Evolve turns the pattern and rests it. A step that doesn't sound doesn't move the order on. */
+static uint32_t sixteenth;
+static float swing, step_len;                   /* (the pulse's: below) */
+static uint8_t arp_left, arp_pos, arp_rot, arp_rest, arp_last;
+static uint16_t arp_seq;
+static uint32_t arp_pat;
+
+static void arp_reset(void)
+{
+    arp_left = arp_pos = arp_rot = arp_rest = 0;
+    arp_seq = 0;
+}
+
+static int arp_list(int *out)                   /* its notes, ascending, from the chord's root at middle C or above */
+{
+    int off[4], i, j, o, n = 0, r = 60 + chord_pcs[0] + 12 * par[P_BOCT];
+    for (i = 0; i < chord_nt; i++) {
+        int x = (chord_pcs[i] - chord_pcs[0] + 12) % 12;
+        for (j = i; j > 0 && off[j - 1] > x; j--)
+            off[j] = off[j - 1];
+        off[j] = x;
+    }
+    for (o = 0; o < par[P_ARANGE]; o++)
+        for (i = 0; i < chord_nt; i++)
+            if (r + off[i] + 12 * o <= 103)
+                out[n++] = r + off[i] + 12 * o;
+    return n;
+}
+
+static int arp_index(int n)                     /* where the Style is, of n notes */
+{
+    const int s = arp_seq, p = n > 1 ? 2 * n - 2 : 1, tri = s % p < n ? s % p : p - s % p;
+    int x = s % n, i;
+    switch (par[P_ARP]) {
+    case 2: return n - 1 - x;                   /* Down */
+    case 3: return tri;                         /* Up/Dn: the ends once */
+    case 4: return n - 1 - tri;                 /* Dn/Up */
+    case 5:                                     /* Random: never the same note twice running */
+        i = irand(n);
+        return n > 1 && i == arp_last ? (i + 1) % n : i;
+    case 6: return x & 1 ? n - 1 - x / 2 : x / 2;   /* Converge: in from both ends */
+    case 7:                                     /* Diverge: Converge backwards */
+        x = n - 1 - x;
+        return x & 1 ? n - 1 - x / 2 : x / 2;
+    default: return x;                          /* Up */
+    }
+}
+
+static void arp_step(void)                      /* a sixteenth */
+{
+    int list[12], n, i, pos;
+    if (arp_left > 1) {
+        arp_left--;
+        return;
+    }
+    arp_left = ARATE_STEPS[par[P_ARATE]];
+    if (arp_pos == 0) {                         /* its pattern: Density, swelled and thinned by the arc */
+        float k = (float)par[P_DENSITY] * 0.16f * (1.0f + 0.8f * arcm);
+        if (frand() < evolve * 0.25f)
+            arp_rot = (uint8_t)irand(16);
+        arp_pat = en_euclid((int)(fm_clampf(k, 0.0f, 16.0f) + frand()), 16, arp_rot);
+        arp_rest = frand() < evolve * 0.15f + 0.15f * fm_maxf(-arcm, 0.0f);
+    }
+    pos = arp_pos;
+    arp_pos = (arp_pos + 1u) & 15u;
+    if (!(arp_pat >> pos & 1u) || arp_rest || (n = arp_list(list)) == 0)
+        return;
+    i = arp_index(n);
+    arp_last = (uint8_t)i;
+    bell_dec = ARATE_DEC[par[P_ARATE]];         /* each step a loop's shade of bell, and its place */
+    bell_voice(arp_seq % EN_NLOOP, list[i], pos == 0 ? 0.9f : 0.55f + 0.25f * frand(),
+               (sixteenth & 1u ? (int32_t)(swing * step_len) : 0) + irand(300));
+    bell_dec = 1.0f;
+    arp_seq++;
 }
 
 /* ---------------------------------------------------------------- pulse --- */
@@ -961,7 +1057,6 @@ static void drums_wait_step(int32_t k)          /* k samples went by: hits whose
 }
 
 /* the grid: one call a sixteenth (MIDI clock: 6 ticks) */
-static uint32_t sixteenth;
 static void tick(void)
 {
     int d, l;
@@ -990,10 +1085,12 @@ static void tick(void)
         if (++drum_pos[d] >= EN_DRUM_N[d])
             drum_pos[d] = 0;
     }
+    if (par[P_ARP])
+        arp_step();
     if ((sixteenth & 3u) == 0u) {               /* the loops step in quarter notes */
         for (l = 0; l < EN_NLOOP; l++) {
             int s = loop_pos[l];
-            if (loop_note[l][s] >= 0 && !loop_rest[l])
+            if (loop_note[l][s] >= 0 && !loop_rest[l] && !par[P_ARP])
                 bell_ring(l, s);
             en_loop_pos[l] = (uint8_t)s;
             if (++loop_pos[l] >= EN_LOOP_LEN[l]) {
@@ -1345,6 +1442,7 @@ static void regrow(void)                        /* a new piece: fresh loops, hom
     drift_reset();
     change_pending = 0;
     slate_i = SLATE_NONE;                        /* from its first step, on the next bar */
+    arp_reset();
 }
 
 static void notes_off(void)
@@ -1433,6 +1531,7 @@ static void play_start(int from_top)
         pulse = 0;
         sixteenth = 0;
         slate_i = SLATE_NONE;
+        arp_reset();
         for (i = 0; i < EN_NDRUM; i++)
             drum_pos[i] = 0;
         for (i = 0; i < EN_NLOOP; i++)

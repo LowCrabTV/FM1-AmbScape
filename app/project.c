@@ -147,12 +147,48 @@ static void from_v4(const project_v4_t *o)
         proj.par[p] = p < V4_NPARAMS ? o->par[p] : r.par[p];
 }
 
+/* format 5 (the slate, before the arp): carried over the same way */
+#define V5_NPARAMS P_ARP
+typedef struct {
+    int16_t par[V5_NPARAMS];
+    uint16_t pool;
+} slot_v5_t;
+typedef struct {
+    uint32_t magic, format;
+    int16_t par[V5_NPARAMS];
+    uint16_t pool;
+    uint8_t leds, piece, rsv0[2];
+    slot_v5_t slot[NPIECES];
+    uint8_t rsv[16];
+} project_v5_t;
+
+static void from_v5(const project_v5_t *o)
+{
+    slot_t r;
+    int i, p;
+    proj.magic = PROJ_MAGIC;
+    proj.format = PROJ_FORMAT;
+    proj.pool = o->pool;
+    proj.leds = o->leds;
+    proj.piece = o->piece < NPIECES ? o->piece : 0;
+    for (i = 0; i < NPIECES; i++) {
+        recipe(i, &r);
+        for (p = 0; p < P_NPARAMS; p++)
+            proj.slot[i].par[p] = p < V5_NPARAMS ? o->slot[i].par[p] : r.par[p];
+        proj.slot[i].pool = o->slot[i].pool;
+    }
+    recipe(proj.piece, &r);
+    for (p = 0; p < P_NPARAMS; p++)
+        proj.par[p] = p < V5_NPARAMS ? o->par[p] : r.par[p];
+}
+
 int project_load(void)
 {
     static union {
         project_t now;
         project_v3_t v3;
         project_v4_t v4;
+        project_v5_t v5;
     } buf;
     int n;
     memset(&buf, 0, sizeof buf);
@@ -161,6 +197,8 @@ int project_load(void)
         from_v3(&buf.v3);
     else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 4u)
         from_v4(&buf.v4);
+    else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 5u)
+        from_v5(&buf.v5);
     else
         proj = buf.now;
     if (n >= 8 && project_valid())

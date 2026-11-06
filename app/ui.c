@@ -41,7 +41,27 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Root", "Tune", "MIDI out", "Lights"},
     {"Chord 1", "Chord 2", "Chord 3", "Chord 4"},
 };
-static const char *const LEN_LABEL[4] = {"Bars 1", "Bars 2", "Bars 3", "Bars 4"};
+/* SELECT held: a page's other knobs */
+static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
+    {K_NONE, K_NONE, K_NONE, K_NONE},
+    {K_NONE, K_NONE, K_NONE, K_NONE},
+    {P_ARP, P_ARATE, P_ARANGE, K_NONE},
+    {K_NONE, K_NONE, K_NONE, K_NONE},
+    {K_NONE, K_NONE, K_NONE, K_NONE},
+    {K_NONE, K_NONE, K_NONE, K_NONE},
+    {K_NONE, K_NONE, K_NONE, K_NONE},
+    {P_LEN1, P_LEN2, P_LEN3, P_LEN4},
+};
+static const char *const KNOB_LABEL2[NVIEWS][4] = {
+    {"", "", "", ""},
+    {"", "", "", ""},
+    {"Arp", "Rate", "Range", ""},
+    {"", "", "", ""},
+    {"", "", "", ""},
+    {"", "", "", ""},
+    {"", "", "", ""},
+    {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
+};
 
 /* the screen's colours: the cover of Ambient 1: Music for Airports (1978), as the web app and the site.
  * The map's paper, its ink; the land's greens for the pad (the chord) and the scale, its rivers for the
@@ -259,9 +279,13 @@ static void turn(int role, int k, int32_t e)
 }
 
 /* what a page's knob sets now: on the Chords page with SELECT held, the steps' bars */
-static int len_held(int view) { return view == V_CHORDS && (ui.btn >> B_SEL & 1u); }
-static int view_knob(int view, int i) { return len_held(view) ? P_LEN1 + i : VIEW_KNOB[view][i]; }
-static const char *view_label(int view, int i) { return len_held(view) ? LEN_LABEL[i] : KNOB_LABEL[view][i]; }
+static int layer_held(int view)                  /* SELECT held, on a page that has other knobs */
+{
+    const uint8_t *k = VIEW_KNOB2[view];
+    return (ui.btn >> B_SEL & 1u) && (k[0] != K_NONE || k[1] != K_NONE || k[2] != K_NONE || k[3] != K_NONE);
+}
+static int view_knob(int view, int i) { return layer_held(view) ? VIEW_KNOB2[view][i] : VIEW_KNOB[view][i]; }
+static const char *view_label(int view, int i) { return layer_held(view) ? KNOB_LABEL2[view][i] : KNOB_LABEL[view][i]; }
 
 /* ------------------------------------------------------------- the pool --- */
 static void toggle_note(int pc)                 /* a key: its note in or out of the scale */
@@ -957,7 +981,7 @@ static void draw_knobs(void)
     for (i = 0; i < 4; i++)
         h = hash(h, (uint32_t)knob_get(view_knob(ui.view, (int)i)));
     h = hash(h, (uint32_t)now_touch);
-    h = hash(h, (uint32_t)len_held(ui.view) | proj.pool << 1 | (uint32_t)proj.par[P_ROOT] << 13);   /* a slot names its chord */
+    h = hash(h, (uint32_t)layer_held(ui.view) | proj.pool << 1 | (uint32_t)proj.par[P_ROOT] << 13);   /* a slot names its chord */
     if (h == ui.sig[2])
         return;
     ui.sig[2] = h;
@@ -1329,7 +1353,7 @@ static void speak(void)
         int v = knob_get(view_knob(ui.view, i));
         if (v != sp.val[i]) {
             sp.val[i] = (int16_t)v;
-            if (changed < 0)
+            if (changed < 0 && view_knob(ui.view, i) != K_NONE)
                 changed = i;
         }
     }
