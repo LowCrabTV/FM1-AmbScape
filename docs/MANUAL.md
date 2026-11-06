@@ -326,7 +326,8 @@ Press ARP from the Bells page for the arp's own page, and again to go back.
 - **Level.**
 - **Hits:** how many beats the three rings play. 0: no pulse.
 - **Swing:** the off sixteenths later, from straight (50%) to a heavy lilt (75%).
-- **Hats:** from dark and long to bright and crisp.
+- **Hats:** the hats' colour, from dark and long to bright and crisp, about as loud all the way across.
+  It doesn't change how many play; that's Hits.
 
 ### FX: Space
 

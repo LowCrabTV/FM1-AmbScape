@@ -715,6 +715,45 @@ int main(void)
         en_play(1);
     }
 
+    /* Hats: dark to bright, and there all the way across, in the range a person hears as hats */
+    {
+        static const int16_t knob[3] = {0, 50, 100};
+        double lev[3];
+        int c;
+        for (c = 0; c < 3; c++) {
+            int j, s;
+            double lo[3] = {0.0, 0.0, 0.0}, e = 0.0, z[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+            en_init();
+            for (i = 0; i < P_NPARAMS; i++)
+                en_set(i, en_param_info(i)->def);
+            run(0.05f);
+            en_set(P_PAD, 0), en_set(P_BELLS, 0), en_set(P_BASS, 0), en_set(P_ECHO, 0), en_set(P_REVERB, 0);
+            en_set(P_MOTION, 0), en_set(P_EVOLVE, 0), en_set(P_TEMPO, 120), en_set(P_PULSE, 100), en_set(P_HITS, 50);
+            en_set(P_HATS, knob[c]);
+            run(0.05f);
+            en_play(1);
+            run(10.0f);
+            for (j = 0; j < 3445; j++) {          /* 20 s; the top's nulls take out 14 kHz and up, what few hear; the bottom, the thump */
+                en_render(buf, 256, 4096);
+                for (s = 0; s < 256; s++) {
+                    double x = ((double)buf[2 * s] + (double)buf[2 * s + 1]) / 16600000.0, y;
+                    y = (x + 4.0 * z[0] + 8.0 * z[1] + 10.0 * z[2] + 8.0 * z[3] + 4.0 * z[4] + z[5]) / 36.0;
+                    z[5] = z[4], z[4] = z[3], z[3] = z[2], z[2] = z[1], z[1] = z[0], z[0] = x;
+                    lo[0] += 0.35 * (y - lo[0]), y -= lo[0];
+                    lo[1] += 0.35 * (y - lo[1]), y -= lo[1];
+                    lo[2] += 0.35 * (y - lo[2]), y -= lo[2];
+                    e += y * y;
+                }
+            }
+            lev[c] = e;
+        }
+        printf("  Hats, in hearing, against 50: 0 %.1f dB, 100 %.1f dB\n", 10.0 * log10(lev[0] / lev[1]), 10.0 * log10(lev[2] / lev[1]));
+        CHECK(lev[0] < 4.0 * lev[1] && lev[1] < 4.0 * lev[0], "Hats 0 against 50: %g, %g", lev[0], lev[1]);
+        CHECK(lev[2] < 4.0 * lev[1] && lev[1] < 4.0 * lev[2], "Hats 100 against 50: %g, %g", lev[2], lev[1]);
+        en_init();
+        en_play(1);
+    }
+
     /* the bells' colours: each sounds, stays bounded and clean; the strike comes as it should */
     {
         static const char *const NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano"};

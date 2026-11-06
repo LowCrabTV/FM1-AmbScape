@@ -1857,8 +1857,15 @@ static void apply(int p, int v)
     case P_GLIDE: glide_k = 1.0f / ((0.02f + 0.012f * (float)v) * EN_SR); break;   /* 20 ms .. 1.2 s */
     case P_SWING: swing = (float)v * 0.005f; break;      /* the off sixteenths up to half a step late */
     case P_HATS:
-        hat_f = 0.55f + 0.0070f * (float)v;               /* the high-pass: ~4 kHz dark .. ~10 kHz bright */
-        hat_open = 0.6f - 0.0035f * (float)v;             /* the open hat: long and soft .. short and crisp */
+        /* dark to bright, with the hats there all the way across: the top stays in hearing, the bottom short of a
+         * wash. Both halves meet at 50 */
+        if (v <= 50) {
+            hat_f = 0.55f + 0.0070f * (float)v;           /* the high-pass */
+            hat_open = 0.5f - 0.0015f * (float)v;         /* the open hat */
+        } else {
+            hat_f = 0.9f + 0.0030f * (float)(v - 50);
+            hat_open = 0.425f - 0.0025f * (float)(v - 50);
+        }
         break;
     case P_DRIFT:
         if (drift_total > 0.0f) {                /* keep the progress, at the new pace */
