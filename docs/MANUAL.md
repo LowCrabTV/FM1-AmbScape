@@ -170,7 +170,7 @@ Over it all:
   pad, a quieter pulse, more reverb) and full. **Motion** sets how far it swings, and how far the
   smaller things wander: pitch, pan, the vowel, the echo's heads.
 - **Rests:** with **Evolve** up, the layers take breaths: the pulse sits out two to four bars,
-  the bass skips a chord, a bell loop goes quiet for a pass.
+  the held bass skips a chord, a bell loop goes quiet for a pass.
 
 ---
 
@@ -261,10 +261,11 @@ follows the Bells level. Turned up from 0, the first wave starts within a couple
 
 - **Pad, Notes (KNOB 2):** how much of the chord the pad sings. 4 is the whole chord; 3 its root,
   third and fifth; 2 its root and fifth, open. Under 4, the arc moves it by one as each chord comes.
-- **Bass, Notes (KNOB 2):** **Held** is the one long note. Turned up, the bass plays hits spread over
-  the bar, as Hits does the pulse: the root first, then the fifth (from 25), the octave (from 50),
-  and the third and seventh (from 75). Only the chord's tones, so it follows the slate and the
-  drift. Fifth is for the held bass; with Notes up, Glide is capped so each note arrives.
+- **Bass, Notes (KNOB 2):** **Held** is the one long note. Turned up, the bass keeps a steady speed:
+  1 note a bar (1 to 24), 2 (25 to 49), 4 (50 to 74) or 8 (75 to 100). The arc and Evolve never change
+  that speed. It plays the root first, then the fifth (from 25), the octave (from 50), and the third
+  and seventh (from 75). Only the chord's tones, so it follows the slate and the drift. Fifth is for
+  the held bass; with Notes up, Glide is capped so each note arrives.
 - **Bells, Colour (KNOB 1):** the bells' sound. **Bell** is the one they've always had; **Soft** is round,
   with no strike; **Wood** is hollow and holds; **Strings** swell slowly and hang; **Piano** strikes
   warm and mellows. Tone still shapes each one. The loops, the arp and Sparkle all play through it.
@@ -461,7 +462,7 @@ The defaults are Garden's; each piece has its own.
 | Arp | Rate | 1/4, 1/8., 1/8, 1/16 | 1/8 |
 | Arp | Range | 1–3 octaves | 2 |
 | Arp | Poly | Off, 3:4, 5:4, 3:2, 7:4 | Off |
-| Bass | Notes (SELECT held) | Held, 1–100 (1 to 8 hits a bar) | Held |
+| Bass | Notes (SELECT held) | Held, 1–100 (1, 2, 4 or 8 notes a bar) | Held |
 | Pad | Level | 0–100 | 60 |
 | Pad | Swell | 0–100 | 60 |
 | Pad | Bright | 0–100 | 40 |

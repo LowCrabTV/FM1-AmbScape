@@ -774,8 +774,8 @@ static void chord_to(int d)                     /* the chord on degree d: the pa
     pad_retarget();
     pad_leave();
     bass_to(chord_pcs[0]);
-    /* Evolve: the bass sometimes sits a chord out, more often when the arc is sparse */
-    bass.rest = frand() < evolve * 0.3f + 0.25f * fm_maxf(-arcm, 0.0f);
+    /* Evolve: the held bass sometimes sits a chord out, more often when the arc is sparse; with Notes, it keeps time */
+    bass.rest = !par[P_BASSN] && frand() < evolve * 0.3f + 0.25f * fm_maxf(-arcm, 0.0f);
     drift_reset();
 }
 
@@ -1160,17 +1160,19 @@ static void arp_step(void)                      /* a sixteenth: the steps that f
 }
 
 /* ------------------------------------------------------- the bass's notes --- */
-/* Bass notes above 0: hits spread over the bar as Hits does the pulse's, 1 to 8 of 16, the arc thinning and filling
- * them. The bar's first is the root; then, as Notes goes up, the fifth, the octave, the third and the seventh, in
- * a figure that Evolve now and then changes. The chord's tones only, so it follows the slate and Drift. */
+/* Bass notes above 0: a locked speed, 1, 2, 4 or 8 even hits a bar. Nothing else moves it: not the arc, not Evolve.
+ * The bar's first is the root; then, as Notes goes up, the fifth, the octave, the third and the seventh, in a
+ * figure that Evolve now and then changes (which note, never when). The chord's tones only, so it follows the
+ * slate and Drift. */
 static uint32_t bass_pat;
 static uint8_t bass_i, bass_k;
 
 static void bass_pattern(void)
 {
-    float k = (1.0f + (float)par[P_BASSN] * 0.07f) * (1.0f + 0.6f * arcm);
-    bass_k = (uint8_t)(fm_clampf(k, 1.0f, 8.0f) + 0.5f);
-    bass_pat = en_euclid(bass_k, 16, 0);
+    static const uint16_t EVEN[4] = {0x0001u, 0x0101u, 0x1111u, 0x5555u};
+    int i = par[P_BASSN] >= 100 ? 3 : par[P_BASSN] / 25;
+    bass_k = (uint8_t)(1u << i);
+    bass_pat = EVEN[i];
 }
 
 static void bass_sound(int n)
@@ -1768,6 +1770,7 @@ static void apply(int p, int v)
     case P_BASSN:
         if (v) {
             bass_pattern();
+            bass.rest = 0;
         } else {                                 /* back to one long note */
             bass.wait = 0;
             bass.env = bass.edec = 1.0f;

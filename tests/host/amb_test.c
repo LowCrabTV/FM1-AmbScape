@@ -505,6 +505,15 @@ int main(void)
             if (v == 100)
                 CHECK(j >= 3, "Bass notes 100: only %d notes", j);
         }
+        /* a locked speed: the arc and Evolve at full, still 4 a bar at Notes 50 (a chord change may add its own note) */
+        en_set(P_TEMPO, 120), en_set(P_MOTION, 100), en_set(P_EVOLVE, 100), en_set(P_BASSN, 50);
+        run(2.1f);
+        for (k = 0; k < 6; k++) {
+            bass_n = 0;
+            run(16.0f);                         /* 8 bars */
+            CHECK(bass_n >= 31 && bass_n <= 41, "Bass notes 50: %d hits in 8 bars, not 32", bass_n);
+        }
+        en_set(P_MOTION, 0), en_set(P_EVOLVE, 0);
         en_set(P_BASSN, 0);
         run(0.05f);
         bass_n = 0;
