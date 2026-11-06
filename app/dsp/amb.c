@@ -45,6 +45,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Root bars 1", 0, EN_NRBARS - 1, 3}, {"Root bars 2", 0, EN_NRBARS - 1, 3}, {"Root bars 3", 0, EN_NRBARS - 1, 3},
     {"Root bars 4", 0, EN_NRBARS - 1, 3},
     {"Bell colour", 0, EN_NBCOLOR - 1, 0},
+    {"Swoosh", 0, 100, 0},    {"Swsh length", 0, 100, 50}, {"Swsh often", 0, 100, 30}, {"Swsh tone", 0, 100, 50},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -107,6 +108,7 @@ static char *itoa_s(int v, char *b)
 
 static float splen_secs(int v) { return 5.0f * fm_exp2f((float)v * 0.03585f); }     /* 5 s .. 1 min */
 static float spoft_secs(int v) { return 10.0f * fm_exp2f((float)v * 0.04907f); }    /* 10 s .. 5 min */
+static float swlen_secs(int v) { return 2.0f * fm_exp2f((float)v * 0.03322f); }     /* 2 s .. 20 s */
 static float drift_secs(int v) { return 20.0f * fm_exp2f((float)v * 0.039069f); }   /* 20 s .. 5 min */
 
 void en_param_text(int i, int v, char *b)
@@ -181,8 +183,8 @@ void en_param_text(int i, int v, char *b)
         *b = 0;
         return;
     }
-    if (i == P_DRIFT || i == P_SPLEN || i == P_SPOFT) {
-        int sec = (int)((i == P_DRIFT ? drift_secs(v) : i == P_SPLEN ? splen_secs(v) : spoft_secs(v)) + 0.5f);
+    if (i == P_DRIFT || i == P_SPLEN || i == P_SPOFT || i == P_SWLEN || i == P_SWOFT) {
+        int sec = (int)((i == P_DRIFT ? drift_secs(v) : i == P_SPLEN ? splen_secs(v) : i == P_SWLEN ? swlen_secs(v) : spoft_secs(v)) + 0.5f);
         if (sec < 60) {
             b = itoa_s(sec, b);
             *b++ = 's';
@@ -381,6 +383,7 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
 /* ------------------------------------------------------------ commands --- */
 enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW };
 #define QN 64u
+typedef char qn_holds_a_whole_piece[P_NPARAMS + 1 + 4 <= (int)QN ? 1 : -1];   /* project_apply: every param and the pool, with room */
 static uint32_t q[QN];
 static volatile uint32_t q_w, q_r;
 static void post(uint32_t c, int a, int b)
@@ -1448,6 +1451,60 @@ static void drums_wait_step(int32_t k)          /* k samples went by: hits whose
     }
 }
 
+/* ---------------------------------------------------------------- swoosh --- */
+/* Falling stars of noise. For Length a pass swells and wanes on a gentle curve, its filter falling from bright to
+ * dark as it crosses the stereo field, into the echo and the reverb; then a rest for Often, each a little varied.
+ * Tone goes from white to brown. No pitch, so nothing to clash with. Its own noise and its own dice, so that the rest
+ * of the garden goes as it would without it; and nothing is computed between passes. */
+static uint32_t sw_left, sw_total, sw_rng;
+static uint8_t sw_in;
+static int8_t sw_side;
+static float sw_want, sw_lv, sw_play, sw_height, sw_width;
+static float sw_f, sw_low, sw_band, sw_brown, sw_mix, sw_gl, sw_gr, sw_tl, sw_tr;
+
+static float sw_dice(void)
+{
+    uint32_t r = sw_rng;
+    r ^= r << 13, r ^= r >> 17, r ^= r << 5;
+    sw_rng = r;
+    return (float)(r >> 8) * (1.0f / 16777216.0f);
+}
+
+static void swoosh_env(uint32_t n)              /* the slow part: where the pass is */
+{
+    const float k = (float)n * (1.0f / EN_SR);
+    float a = 0.0f, pan = 0.0f;
+    sw_play += ((en_playing ? 1.0f : 0.0f) - sw_play) * fm_minf(k * 0.5f, 1.0f);
+    sw_lv += (sw_want - sw_lv) * fm_minf(k * 20.0f, 1.0f);
+    if (en_playing && par[P_SWOOSH]) {
+        if (sw_left > n) {
+            sw_left -= n;
+        } else if (sw_in) {
+            sw_in = 0;
+            sw_left = (uint32_t)(spoft_secs(par[P_SWOFT]) * (0.7f + 0.6f * sw_dice()) * EN_SR);
+        } else {
+            sw_in = 1;
+            sw_total = sw_left = (uint32_t)(swlen_secs(par[P_SWLEN]) * (0.8f + 0.4f * sw_dice()) * EN_SR);
+            sw_side = sw_dice() < 0.5f ? -1 : 1;
+            sw_height = 0.7f + 0.3f * sw_dice();
+            sw_width = 0.6f + 0.35f * sw_dice();
+        }
+    }
+    if (sw_in) {
+        const float t = (float)par[P_SWTONE] * 0.01f, p = 1.0f - (float)sw_left / (float)sw_total;
+        const float q = p * (1.4f - 0.4f * p);  /* it reaches its height a little before the middle */
+        const float s = fm_sinf(FM_PI * q), oct = (1.0f - t) * 2.7f + 2.7f * sw_height * (1.0f - q);
+        a = s * s;
+        pan = (float)sw_side * sw_width * (2.0f * q - 1.0f);
+        sw_f = 2.0f * fm_sinf(FM_PI * 150.0f * fm_exp2f(oct) * (1.0f / EN_SR));   /* 150 Hz .. 6.3 kHz */
+        sw_mix = t;
+    }
+    a *= sw_lv * sw_play;
+    pan = 0.5f + 0.5f * pan;
+    sw_tl = a * sine((1.0f - pan) * 0.25f);
+    sw_tr = a * sine(pan * 0.25f);
+}
+
 /* the grid: one call a sixteenth (MIDI clock: 6 ticks) */
 static void tick(void)
 {
@@ -1766,6 +1823,17 @@ static void apply(int p, int v)
         if (!sp_in && (float)sp_left > spoft_secs(v) * EN_SR)
             sp_left = (uint32_t)(spoft_secs(v) * EN_SR);
         break;
+    case P_SWOOSH:                               /* 0.36 dB a click: at 1 barely there under a piece, at 100 as loud as it */
+        sw_want = v ? fm_exp2f((float)(v - 100) * 0.06f) : 0.0f;
+        if (!v) {                                /* turned up again, the first pass soon */
+            sw_in = 0;
+            sw_left = (uint32_t)(1.5f * EN_SR);
+        }
+        break;
+    case P_SWOFT:                                /* a shorter gap needn't wait out the long one it was in */
+        if (!sw_in && (float)sw_left > spoft_secs(v) * EN_SR)
+            sw_left = (uint32_t)(spoft_secs(v) * EN_SR);
+        break;
     case P_ARATE: case P_APOLY: arp_acc = 0; break;   /* the new rhythm from the next sixteenth */
     case P_BASSN:
         if (v) {
@@ -1938,6 +2006,10 @@ void en_init(void)
     }
     arcm = 0.0f;
     pad_gain = 0.0f;
+    sw_in = 0;
+    sw_left = (uint32_t)(1.5f * EN_SR);
+    sw_rng = 0x2545F491u;
+    sw_lv = sw_play = sw_gl = sw_gr = sw_tl = sw_tr = sw_low = sw_band = sw_brown = 0.0f;
     for (i = 0; i < P_NPARAMS; i++)
         apply(i, PARAMS[i].def);
     pool_set(EN_MODE_POOL[par[P_MODE]]);
@@ -2331,6 +2403,37 @@ static void render_drums(uint32_t n)
     render_hat(&drum[2], n, g * 0.14f, 1.0f, 0.7f);   /* open: a little left */
 }
 
+static void render_swoosh(uint32_t n)
+{
+    uint32_t j;
+    const float f = sw_f, w = 1.0f - sw_mix, b = sw_mix * 4.0f, k = 1.0f / (float)n;
+    const float dl = (sw_tl - sw_gl) * k, dr = (sw_tr - sw_gr) * k;
+    float low = sw_low, band = sw_band, brown = sw_brown, gl = sw_gl, gr = sw_gr;
+    uint32_t r = sw_rng;
+    if (sw_tl + sw_tr < 1e-6f && gl + gr < 1e-6f) {
+        sw_gl = sw_gr = 0.0f;
+        return;
+    }
+    for (j = 0; j < n; j++) {
+        float x, m;
+        r ^= r << 13, r ^= r >> 17, r ^= r << 5;
+        x = (float)(int32_t)r * (1.0f / 2147483648.0f);
+        brown += (x - brown) * 0.03f;
+        x = x * w + brown * b;
+        low += f * band;
+        band += f * (x - low - 1.2f * band);
+        x = band + 0.5f * low;
+        gl += dl;
+        gr += dr;
+        mixl[j] += x * gl;
+        mixr[j] += x * gr;
+        m = x * (gl + gr);
+        rsend[j] += m * 0.5f;
+        esend[j] += m * 0.4f;
+    }
+    sw_low = low, sw_band = band, sw_brown = brown, sw_gl = gl, sw_gr = gr, sw_rng = r;
+}
+
 static void render_chunk(int32_t *out, uint32_t n, float gain)
 {
     uint32_t j;
@@ -2341,6 +2444,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     render_bass(n);
     render_bells(n);
     render_drums(n);
+    render_swoosh(n);
     for (j = 0; j < n; j++) {
         float wl, wr, l, r, el, er, xl, xr;
         echoes(esend[j] * eg, &el, &er, &xl, &xr);
@@ -2370,6 +2474,7 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
     heads_step(n);
     if (par[P_SPARK] && en_playing)
         spark_env(n);
+    swoosh_env(n);
     if (arc_left <= n) {
         float r = frand() * 2.0f - 1.0f;
         arc_tgt = r * (0.6f + 0.4f * frand()) + (r > 0.0f ? 0.25f : -0.25f);   /* away from the middle */

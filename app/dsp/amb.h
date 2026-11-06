@@ -75,6 +75,7 @@ enum {
     P_RSLOT1, P_RSLOT2, P_RSLOT3, P_RSLOT4,           /* the root rotator's steps: 0 empty, n = pitch class n - 1 */
     P_RLEN1, P_RLEN2, P_RLEN3, P_RLEN4,               /* and how long each lasts: an index into EN_ROOT_BARS */
     P_BCOLOR,                                         /* the bells' colour: Bell, Soft, Wood, Strings, Piano */
+    P_SWOOSH, P_SWLEN, P_SWOFT, P_SWTONE,             /* Swoosh: how loud (0 off), each pass's length, the gap between, white to brown */
     P_NPARAMS
 };
 typedef struct {

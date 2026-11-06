@@ -730,6 +730,116 @@ int main(void)
         en_play(1);
     }
 
+    /* Swoosh: silence at 0; passes that cross the field; a knob with a real range; dark and bright */
+    {
+        int run_i, t, passes = 0, was = 0, left_first = 0, right_first = 0;
+        float hi[2];
+        for (run_i = 0; run_i < 2; run_i++) {     /* level: 100, then 1 */
+            en_init();
+            for (i = 0; i < P_NPARAMS; i++)
+                en_set(i, en_param_info(i)->def);
+            run(0.05f);
+            en_set(P_PAD, 0), en_set(P_BELLS, 0), en_set(P_BASS, 0), en_set(P_PULSE, 0), en_set(P_ECHO, 0), en_set(P_REVERB, 0);
+            run(0.05f);
+            en_play(1);
+            run(30.0f);
+            peak = 0.0f;
+            run(20.0f);
+            CHECK(peak < 0.001f, "Swoosh 0: not silent, %f", (double)peak);
+            en_set(P_SWOOSH, run_i ? 1 : 100), en_set(P_SWLEN, 0), en_set(P_SWOFT, 0);
+            peak = 0.0f;
+            bad = 0;
+            passes = was = 0;
+            for (t = 0; t < 1200; t++) {          /* a minute of 2 s passes, 10 s apart */
+                float p0 = peak;
+                peak = 0.0f;
+                run(0.05f);
+                {
+                    int on = peak > (run_i ? 0.00002f : 0.002f);
+                    passes += on && !was;
+                    was = on;
+                }
+                peak = peak > p0 ? peak : p0;
+            }
+            hi[run_i] = peak;
+            CHECK(!bad, "Swoosh: %d bad samples", bad);
+            CHECK(peak < 1.0f, "Swoosh: peak %f", (double)peak);
+            CHECK(passes >= 3 && passes <= 8, "Swoosh: %d passes in a minute", passes);
+        }
+        CHECK(hi[0] > 0.1f, "Swoosh 100: only %f", (double)hi[0]);
+        CHECK(hi[0] > 20.0f * hi[1] && hi[1] > 0.0005f, "Swoosh 1 against 100: %f, %f", (double)hi[1], (double)hi[0]);
+
+        /* a pass crosses: one side at its start, the other at its end; both directions turn up */
+        en_init();
+        for (i = 0; i < P_NPARAMS; i++)
+            en_set(i, en_param_info(i)->def);
+        run(0.05f);
+        en_set(P_PAD, 0), en_set(P_BELLS, 0), en_set(P_BASS, 0), en_set(P_PULSE, 0), en_set(P_ECHO, 0), en_set(P_REVERB, 0);
+        run(0.05f);
+        en_play(1);
+        run(30.0f);
+        en_set(P_SWOOSH, 100), en_set(P_SWLEN, 100), en_set(P_SWOFT, 0);
+        {
+            double l[200], r[200];
+            int w, j, start = -1;
+            for (w = 0; w < 200; w++) {           /* half a second a window: 100 s */
+                l[w] = r[w] = 0.0;
+                for (j = 0; j < 86; j++) {
+                    int s;
+                    en_render(buf, 256, 4096);
+                    for (s = 0; s < 256; s++) {
+                        double a = (double)buf[2 * s] / 8300000.0, b = (double)buf[2 * s + 1] / 8300000.0;
+                        l[w] += a * a, r[w] += b * b;
+                    }
+                }
+                if (l[w] + r[w] > 1e-6 && start < 0)
+                    start = w;
+                if (start >= 0 && l[w] + r[w] < 1e-9) {   /* a pass ended: its first and last few windows */
+                    double el = l[start + 1] + l[start + 2], er = r[start + 1] + r[start + 2];
+                    double ll = l[w - 2] + l[w - 3], lr = r[w - 2] + r[w - 3];
+                    CHECK((el > 2.0 * er && lr > 2.0 * ll) || (er > 2.0 * el && ll > 2.0 * lr),
+                          "Swoosh: no crossing: start %g/%g, end %g/%g", el, er, ll, lr);
+                    left_first += el > er;
+                    right_first += er > el;
+                    start = -1;
+                }
+            }
+            CHECK(left_first + right_first >= 3, "Swoosh: %d passes in 100 s", left_first + right_first);
+            CHECK(left_first && right_first, "Swoosh: always one way: %d, %d", left_first, right_first);
+        }
+
+        /* Tone: white is brighter than brown */
+        {
+            long zc[2];
+            int c;
+            for (c = 0; c < 2; c++) {
+                int j, s;
+                double last = 0.0;
+                en_set(P_SWTONE, c ? 100 : 0);
+                zc[c] = 0;
+                for (j = 0; j < 2000; j++) {
+                    en_render(buf, 256, 4096);
+                    for (s = 0; s < 256; s++) {
+                        double a = (double)buf[2 * s] + (double)buf[2 * s + 1];
+                        zc[c] += a * last < 0.0;
+                        last = a;
+                    }
+                }
+            }
+            CHECK(zc[0] > 3 * zc[1], "Swoosh tone: white %ld crossings, brown %ld", zc[0], zc[1]);
+        }
+
+        /* at rest it fades away with the rest */
+        en_play(0);
+        run(20.0f);
+        peak = 0.0f;
+        run(1.0f);
+        CHECK(peak < 0.001f, "Swoosh at rest: %f", (double)peak);
+
+        en_init();
+        en_play(1);
+    }
+
     /* stop: the tails die away */
     for (i = 0; i < P_NPARAMS; i++)
         en_set(i, en_param_info(i)->def);

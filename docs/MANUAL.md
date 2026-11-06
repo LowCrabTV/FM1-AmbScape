@@ -196,7 +196,7 @@ the same for all.
 
 ## 7. The pages
 
-**Hold SELECT** on the Garden, Pad, Bells, Bass, Chords or Roots page and the knobs change to that page's other
+**Hold SELECT** on the Garden, Pad, Bells, Bass, Space, Chords or Roots page and the knobs change to that page's other
 settings; let go and they're back. Holding and turning doesn't change the page.
 
 One page a layer, each on its own button, with four values on KNOB 1–4. A layer's level is
@@ -336,6 +336,20 @@ Press ARP from the Bells page for the arp's own page, and again to go back.
 - **Reverb:** how much goes to the plate.
 - **Size:** how long the plate rings, from a room to a long hall, and how many times the echo
   comes back.
+
+### Hold SELECT: Swoosh, on the Space page
+
+Falling stars of noise. Each pass swells and wanes on a gentle curve, falling from bright to dark as
+it crosses from one side to the other, into the echo and the reverb. It has no pitch, so it sits with
+any chord or root. The garden plays the same notes with it or without.
+
+- **Swoosh (KNOB 1):** how loud. 0 is off; 1 is barely there; 100 is as loud as the piece.
+- **Length (KNOB 2):** how long each pass lasts, 2 to 20 s.
+- **Often (KNOB 3):** the rest between passes, 10 s to 5 minutes.
+- **Tone (KNOB 4):** white noise at 0, airy and bright; brown noise at 100, dark and rumbling.
+
+Each pass varies a little in length, height and direction. Echo and Reverb set how much of a trail it
+leaves. Turned up from 0, the first pass starts within a couple of seconds.
 
 ### GLO: Setup
 
@@ -483,6 +497,10 @@ The defaults are Garden's; each piece has its own.
 | Space | Echo time | 1/4., 1/2, 1/2., 1 bar, 2 bars, 4 bars | 1 bar |
 | Space | Reverb | 0–100 | 65 |
 | Space | Size | 0–100 | 80 |
+| Space | Swoosh (SELECT held) | 0–100 | 0 |
+| Space | Length (SELECT held) | 2–20 s | 6 s |
+| Space | Often (SELECT held) | 10 s – 5 min | 28 s |
+| Space | Tone (SELECT held) | 0–100 (white to brown) | 50 |
 | Setup | Root | C – B | D |
 | Setup | Tune | −50 – +50 cents | 0 |
 | Setup | MIDI out | Off, On | On |

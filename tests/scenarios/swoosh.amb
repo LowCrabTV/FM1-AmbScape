@@ -1,0 +1,53 @@
+# Swoosh: SELECT held on the Space page. Off in every recipe; with the piece; gone with the recipe. A project from the
+# bells' colours' build (format 10) keeps its settings, Swoosh off.
+wait 300
+tap FX
+wait 100
+expect view 6
+expect par54 0
+press SEL
+wait 100
+shot off.png
+spin K1 4
+expect par54 4
+spin K2 -6
+expect par55 44
+spin K3 2
+expect par56 32
+spin K4 3
+expect par57 53
+wait 100
+shot on.png
+release SEL
+wait 100
+expect view 6
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par54 4
+expect par55 44
+expect par56 32
+expect par57 53
+press SAVE
+wait 1700
+release SAVE
+wait 100
+expect par54 0
+expect par55 50
+expect par56 30
+expect par57 50
+storev10 13
+reboot
+wait 300
+expect par0 13
+expect par54 0
+expect par55 50
+expect par56 30
+expect par57 50
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par0 13
+expect par54 0

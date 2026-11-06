@@ -287,6 +287,41 @@ static void from_v9(const project_v9_t *o)
         proj.par[p] = p < V9_NPARAMS ? o->par[p] : r.par[p];
 }
 
+/* format 10 (before Swoosh): carried over the same way */
+#define V10_NPARAMS P_SWOOSH
+typedef struct {
+    int16_t par[V10_NPARAMS];
+    uint16_t pool;
+} slot_v10_t;
+typedef struct {
+    uint32_t magic, format;
+    int16_t par[V10_NPARAMS];
+    uint16_t pool;
+    uint8_t leds, piece, rsv0[2];
+    slot_v10_t slot[NPIECES];
+    uint8_t rsv[16];
+} project_v10_t;
+
+static void from_v10(const project_v10_t *o)
+{
+    slot_t r;
+    int i, p;
+    proj.magic = PROJ_MAGIC;
+    proj.format = PROJ_FORMAT;
+    proj.pool = o->pool;
+    proj.leds = o->leds;
+    proj.piece = o->piece < NPIECES ? o->piece : 0;
+    for (i = 0; i < NPIECES; i++) {
+        recipe(i, &r);
+        for (p = 0; p < P_NPARAMS; p++)
+            proj.slot[i].par[p] = p < V10_NPARAMS ? o->slot[i].par[p] : r.par[p];
+        proj.slot[i].pool = o->slot[i].pool;
+    }
+    recipe(proj.piece, &r);
+    for (p = 0; p < P_NPARAMS; p++)
+        proj.par[p] = p < V10_NPARAMS ? o->par[p] : r.par[p];
+}
+
 /* before format 7, a slot held only its degree: now the seventh on that degree, the chord it always was */
 static void slots_up(void)
 {
@@ -310,6 +345,7 @@ int project_load(void)
         project_v7_t v7;
         project_v8_t v8;
         project_v9_t v9;
+        project_v10_t v10;
     } buf;
     int n;
     memset(&buf, 0, sizeof buf);
@@ -328,6 +364,8 @@ int project_load(void)
         from_v8(&buf.v8);
     else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 9u)
         from_v9(&buf.v9);
+    else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 10u)
+        from_v10(&buf.v10);
     else
         proj = buf.now;
     if (n >= 8 && project_valid())
