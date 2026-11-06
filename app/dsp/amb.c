@@ -709,9 +709,12 @@ static void slate_check(void)                   /* a slot changed: the slate on,
 }
 
 /* ------------------------------------------------------------- the loops --- */
+/* Density's other half: how often a new note is a passing note. None to 20, as AMB-1 always was from 60 */
+static float passing(void) { return 0.28f * fm_clampf(((float)par[P_DENSITY] - 20.0f) * (1.0f / 40.0f), 0.0f, 1.0f); }
+
 static int rand_offset(void)                    /* scale steps above the chord's degree */
 {
-    if (frand() < 0.72f) {                      /* a chord tone, sometimes an octave up */
+    if (frand() >= passing()) {                 /* a chord tone, sometimes an octave up */
         int o = 2 * irand(chord_nt);
         return o + (frand() < 0.3f ? nsteps : 0);
     }
@@ -755,6 +758,15 @@ static int loop_pick(int l)                     /* a random sounding slot, -1 no
     return -1;
 }
 
+static int loop_pick_passing(int l)             /* a random slot on a passing note, -1 none */
+{
+    int len = EN_LOOP_LEN[l], i, s = irand(len);
+    for (i = 0; i < len; i++, s = (s + 1) % len)
+        if (loop_note[l][s] >= 0 && loop_note[l][s] % nsteps & 1)
+            return s;
+    return -1;
+}
+
 static void loop_publish(int l)
 {
     int i;
@@ -777,8 +789,13 @@ static void loop_pass(int l)                    /* the end of a pass: grow, prun
     int c = loop_count(l), t = loop_target(), s;
     for (; c < t; c++)                          /* Density: to its count by the end of a pass */
         loop_add(l);
-    for (; c > t && (s = loop_pick(l)) >= 0; c--)
+    for (; c > t; c--) {                        /* fewer: the passing notes go first */
+        if ((s = loop_pick_passing(l)) < 0 && (s = loop_pick(l)) < 0)
+            break;
         loop_note[l][s] = -1;
+    }
+    if (passing() <= 0.0f && (s = loop_pick_passing(l)) >= 0)   /* Density turned low: one a pass to the chord */
+        loop_note[l][s] = (int8_t)rand_offset();
     loop_rest[l] = frand() < evolve * 0.15f + 0.15f * fm_maxf(-arcm, 0.0f);
     if (frand() < evolve * 0.7f && (s = loop_pick(l)) >= 0) {
         if (frand() < 0.5f) {
@@ -958,6 +975,14 @@ static void tick(void)
         if (frand() < evolve * 0.25f)
             drums_evolve();
     }
+    if ((sixteenth & 15u) == 0u && !en_frozen) {   /* chords move on the bar: first, so what sounds on it is of the new chord */
+        if (slate_on) {
+            slate_bar();
+        } else if (change_pending) {
+            change_pending = 0;
+            chord_change();
+        }
+    }
     for (d = 0; d < EN_NDRUM; d++) {
         if (drum_pat[d] >> drum_pos[d] & 1u && !pulse_rest)
             drum_hit(d, ((drum_pos[d] == 0 ? 0.95f : 0.6f) + 0.25f * frand()) * pa, (int)(sixteenth & 1u));
@@ -975,14 +1000,6 @@ static void tick(void)
                 loop_pos[l] = 0;
                 loop_pass(l);
             }
-        }
-    }
-    if ((sixteenth & 15u) == 0u && !en_frozen) {   /* chords move on the bar */
-        if (slate_on) {
-            slate_bar();
-        } else if (change_pending) {
-            change_pending = 0;
-            chord_change();
         }
     }
     sixteenth++;
