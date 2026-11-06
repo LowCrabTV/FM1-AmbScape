@@ -324,10 +324,12 @@ Press ARP from the Bells page for the arp's own page, and again to go back.
 ![The Pulse page: LEVEL 40, HITS 35, SWING 50%, HATS 50](img/screen-pulse.png "The Pulse page")
 
 - **Level.**
-- **Hits:** how many beats the three rings play. 0: no pulse.
+- **Hits:** how many beats the three rings play, the pattern's home. 0: no thump, and no hats until Hats goes
+  past 50.
 - **Swing:** the off sixteenths later, from straight (50%) to a heavy lilt (75%).
-- **Hats:** the hats' colour, from dark and long to bright and crisp, about as loud all the way across.
-  It doesn't change how many play; that's Hits.
+- **Hats:** how much hat, all at once: how many, how loud and how bright. **0** is none, and the thump plays
+  on. Up to **50** they come in, few, soft and dark. **50** is what Hits gives them. On up to **100** they
+  fill the ring, brighter and longer, with ghost notes between the hits and, near the top, quick rolls.
 
 ### FX: Space
 

@@ -24,10 +24,15 @@ static uint8_t bell_log[4000];                 /* the bells' notes, while loggin
 static int bell_n, bell_logging;
 static uint8_t bass_log[4000];
 static int bass_n;
+static int hat_midi, thump_midi;
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
     (void)d2;
     midi_count++;
+    if (st == 0x99u && (d1 == 42u || d1 == 46u))
+        hat_midi++;
+    if (st == 0x99u && d1 == 36u)
+        thump_midi++;
     if (bell_logging && st == 0x91u && bell_n < (int)sizeof bell_log)
         bell_log[bell_n++] = (uint8_t)d1;
     if (bell_logging && st == 0x92u && bass_n < (int)sizeof bass_log)
@@ -613,7 +618,7 @@ int main(void)
             CHECK(en_spark >= 0.0f && en_spark <= 1.0f, "Sparkle's wave %f", (double)en_spark);
         }
         nshort = bell_n;
-        CHECK(nshort > 30, "Sparkle at the top: %d notes in a minute", nshort);
+        CHECK(nshort > 10, "Sparkle at the top: %d notes in a minute", nshort);   /* by the dice alone, 14 to 40 */
         CHECK(wave_on > 60 && wave_off > 200, "Sparkle's waves: on %d, off %d", wave_on, wave_off);
         for (k = 0; k < bell_n; k++)               /* D Dorian */
             off += !(EN_MODE_POOL[MODE_DORIAN] >> ((bell_log[k] - 2 + 120) % 12) & 1u);
@@ -715,41 +720,68 @@ int main(void)
         en_play(1);
     }
 
-    /* Hats: dark to bright, and there all the way across, in the range a person hears as hats */
+    /* Hats: how much hat. Nothing at 0; more hits, louder and brighter on up; ghost notes and rolls near the top; with
+     * Hits at 0, none up to 50 and plenty at 100; the thump is the same throughout */
     {
-        static const int16_t knob[3] = {0, 50, 100};
-        double lev[3];
-        int c;
-        for (c = 0; c < 3; c++) {
-            int j, s;
-            double lo[3] = {0.0, 0.0, 0.0}, e = 0.0, z[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        static const int16_t knob[5] = {0, 25, 50, 75, 100};
+        double lev[5], dark[5];
+        long hits[5], thump[5];
+        int c, j, s;
+        for (c = 0; c < 7; c++) {
+            const int hts = c < 5 ? knob[c] : c == 5 ? 50 : 100;
+            double lo[3] = {0.0, 0.0, 0.0}, e = 0.0, low = 0.0, z[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, ll = 0.0;
             en_init();
             for (i = 0; i < P_NPARAMS; i++)
                 en_set(i, en_param_info(i)->def);
             run(0.05f);
             en_set(P_PAD, 0), en_set(P_BELLS, 0), en_set(P_BASS, 0), en_set(P_ECHO, 0), en_set(P_REVERB, 0);
-            en_set(P_MOTION, 0), en_set(P_EVOLVE, 0), en_set(P_TEMPO, 120), en_set(P_PULSE, 100), en_set(P_HITS, 50);
-            en_set(P_HATS, knob[c]);
+            en_set(P_MOTION, 0), en_set(P_EVOLVE, 0), en_set(P_TEMPO, 120), en_set(P_PULSE, 100);
+            en_set(P_HITS, c < 5 ? 50 : 0), en_set(P_HATS, hts);
             run(0.05f);
             en_play(1);
-            run(10.0f);
-            for (j = 0; j < 3445; j++) {          /* 20 s; the top's nulls take out 14 kHz and up, what few hear; the bottom, the thump */
+            run(5.0f);
+            hat_midi = thump_midi = 0;
+            bad = 0;
+            peak = 0.0f;
+            for (j = 0; j < 3445; j++) {          /* 20 s: what few hear (14 kHz up) and the thump filtered out */
                 en_render(buf, 256, 4096);
                 for (s = 0; s < 256; s++) {
                     double x = ((double)buf[2 * s] + (double)buf[2 * s + 1]) / 16600000.0, y;
                     y = (x + 4.0 * z[0] + 8.0 * z[1] + 10.0 * z[2] + 8.0 * z[3] + 4.0 * z[4] + z[5]) / 36.0;
                     z[5] = z[4], z[4] = z[3], z[3] = z[2], z[2] = z[1], z[1] = z[0], z[0] = x;
+                    ll += 0.35 * (y - ll);                /* the part under about 3 kHz, for the dark end */
+                    low += ll * ll;
                     lo[0] += 0.35 * (y - lo[0]), y -= lo[0];
                     lo[1] += 0.35 * (y - lo[1]), y -= lo[1];
                     lo[2] += 0.35 * (y - lo[2]), y -= lo[2];
                     e += y * y;
                 }
             }
-            lev[c] = e;
+            CHECK(peak < 1.0f, "Hats %d: peak %f", hts, (double)peak);
+            CHECK(!bad, "Hats %d: %d bad samples", hts, bad);
+            if (c < 5) {
+                lev[c] = e, dark[c] = low;
+                hits[c] = hat_midi, thump[c] = thump_midi;
+            } else if (c == 5) {
+                CHECK(!hat_midi, "Hits 0, Hats 50: %d hats", hat_midi);
+            } else {
+                CHECK(hat_midi > 200, "Hits 0, Hats 100: only %d hats", hat_midi);
+                CHECK(!thump_midi, "Hits 0, Hats 100: %d thumps", thump_midi);
+            }
         }
-        printf("  Hats, in hearing, against 50: 0 %.1f dB, 100 %.1f dB\n", 10.0 * log10(lev[0] / lev[1]), 10.0 * log10(lev[2] / lev[1]));
-        CHECK(lev[0] < 4.0 * lev[1] && lev[1] < 4.0 * lev[0], "Hats 0 against 50: %g, %g", lev[0], lev[1]);
-        CHECK(lev[2] < 4.0 * lev[1] && lev[1] < 4.0 * lev[2], "Hats 100 against 50: %g, %g", lev[2], lev[1]);
+        printf("  Hats 0, 25, 50, 75, 100: %ld, %ld, %ld, %ld, %ld hits in 20 s; in hearing %.1f, %.1f, 0, %.1f, %.1f dB against 50\n",
+               hits[0], hits[1], hits[2], hits[3], hits[4], 10.0 * log10((lev[0] + 1e-12) / lev[2]), 10.0 * log10(lev[1] / lev[2]),
+               10.0 * log10(lev[3] / lev[2]), 10.0 * log10(lev[4] / lev[2]));
+        CHECK(hits[0] == 0, "Hats 0: %ld hats", hits[0]);
+        for (c = 1; c < 5; c++) {
+            CHECK(hits[c] > hits[c - 1], "Hats %d: %ld hits, no more than %ld below it", knob[c], hits[c], hits[c - 1]);
+            CHECK(lev[c] > lev[c - 1], "Hats %d: %g, no louder than %g below it", knob[c], lev[c], lev[c - 1]);
+            CHECK(thump[c] == thump[0], "Hats %d moved the thump: %ld, %ld", knob[c], thump[c], thump[0]);
+        }
+        CHECK(lev[4] > 2.0 * lev[2], "Hats 100 against 50: %g, %g", lev[4], lev[2]);
+        /* a real change of colour: bright against dark, per unit of the darker band */
+        CHECK(lev[2] / dark[2] > 2.0 * lev[1] / dark[1], "Hats 25 is no darker than 50: %g, %g",
+              lev[1] / dark[1], lev[2] / dark[2]);
         en_init();
         en_play(1);
     }

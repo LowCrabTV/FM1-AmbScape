@@ -60,10 +60,10 @@ static const struct {
     {"Garden",       {60, 65, 45, 40, 40, 35, 25, 35, 45, 3, 65, 80, 40, 60, 50, 50, 0, 1, 72, 2, 1, 0, 0, 0, 20, 35, 0, 50}},
     {"Departures",   {35, 75, 0, 0, 35, 30, 40, 0, 30, 3, 70, 85, 20, 55, 5, 40, 0, 1, 60, 1, 0, -1, 0, 0, 30, 25, 0, 40}},
     {"Voices",       {85, 0, 25, 0, 30, 30, 50, 0, 20, 5, 80, 90, 67, 70, 30, 55, 0, 1, 56, 5, 5, 0, 1, -1, 45, 30, 0, 40}},
-    {"Afternoon",    {50, 65, 35, 25, 55, 45, 20, 30, 50, 2, 60, 75, 60, 50, 60, 55, 0, 1, 84, 7, 3, 0, 0, 0, 15, 40, 15, 65}},
-    {"Night Bus",    {45, 55, 55, 60, 45, 50, 15, 55, 55, 1, 55, 70, 35, 40, 75, 70, 0, 1, 96, 9, 5, 0, 0, 0, 10, 45, 30, 70}},
+    {"Afternoon",    {50, 65, 35, 25, 55, 45, 20, 30, 50, 2, 60, 75, 60, 50, 60, 55, 0, 1, 84, 7, 3, 0, 0, 0, 15, 40, 15, 50}},
+    {"Night Bus",    {45, 55, 55, 60, 45, 50, 15, 55, 55, 1, 55, 70, 35, 40, 75, 70, 0, 1, 96, 9, 5, 0, 0, 0, 10, 45, 30, 50}},
     {"Shoreline",    {40, 60, 30, 0, 30, 40, 40, 0, 85, 4, 55, 95, 30, 80, 0, 85, 0, 1, 64, 4, 6, 0, 0, 0, 40, 20, 0, 30}},
-    {"Glass",        {35, 80, 30, 20, 60, 55, 25, 25, 45, 2, 65, 80, 55, 45, 90, 50, 0, 1, 76, 3, 7, 1, 0, 1, 10, 30, 10, 85}},
+    {"Glass",        {35, 80, 30, 20, 60, 55, 25, 25, 45, 2, 65, 80, 55, 45, 90, 50, 0, 1, 76, 3, 7, 1, 0, 1, 10, 30, 10, 50}},
     {"Tides",        {55, 60, 40, 35, 45, 75, 10, 40, 50, 3, 65, 85, 60, 60, 55, 95, 0, 1, 70, 10, 4, 0, 1, 0, 25, 55, 10, 50}},
 };
 
@@ -668,7 +668,9 @@ typedef struct {
 static drum_t drum[EN_NDRUM];
 static uint8_t drum_pos[EN_NDRUM];
 static uint32_t drum_pat[EN_NDRUM];
-static float pulse_vol, hat_f = 0.9f, hat_open = 0.42f;
+static float pulse_vol, hat_f = 0.9f, hat_open = 0.42f, hat_closed = 0.06f, hat_choke = 0.02f;
+static float hat_lv = 1.0f, hat_hp = 1.0f, hat_bp = 0.0f;
+static uint8_t hat_roll;
 static float pulse_left;                         /* to the next MIDI clock pulse */
 static uint32_t noise = 22222u;
 static const uint8_t DRUM_KMAX[EN_NDRUM] = {5, 7, 3};
@@ -1361,11 +1363,23 @@ static void drum_publish(int d)
     en_drum_pat[d] = drum_pat[d];
 }
 
-static void drums_pattern(void)                 /* Hits: the patterns' home */
+/* Hats: how much hat. 0 none; up to 50 a share of what Hits gives them; 50 just that; on up to 100, toward a full
+ * ring, whatever Hits says */
+static int hat_hits(int d, int home)
+{
+    static const uint8_t FULL[EN_NDRUM] = {0, 10, 5};
+    const int v = par[P_HATS];
+    if (v <= 50)
+        return (home * v + 49) / 50;
+    return home + ((FULL[d] > home ? FULL[d] - home : 0) * (v - 50) + 25) / 50;
+}
+
+static void drums_pattern(void)                 /* Hits and Hats: the patterns' home */
 {
     int d;
     for (d = 0; d < EN_NDRUM; d++) {
-        drum_kb[d] = drum_k[d] = (par[P_HITS] * DRUM_KMAX[d] + 50) / 100;
+        int k = (par[P_HITS] * DRUM_KMAX[d] + 50) / 100;
+        drum_kb[d] = drum_k[d] = d ? hat_hits(d, k) : k;
         drum_rot[d] = DRUM_ROT[d];
         drum_publish(d);
     }
@@ -1403,8 +1417,9 @@ static void drum_fire(int d, float vel)
     }
     case 1:                                     /* closed hat: short; it chokes the open one */
         v->note = DRUM_GM[1];
-        v->adec = fm_expf(-6.9f / (0.06f * EN_SR));
-        drum[2].adec = fm_expf(-6.9f / (0.02f * EN_SR));
+        v->adec = fm_expf(-6.9f / (hat_closed * EN_SR));
+        if (vel >= 0.35f || par[P_HATS] <= 50)   /* a ghost note leaves it ringing */
+            drum[2].adec = fm_expf(-6.9f / (hat_choke * EN_SR));
         break;
     default:                                    /* open hat: a long, soft "tss" */
         v->note = DRUM_GM[2];
@@ -1507,6 +1522,26 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
     sw_tr = a * sine(pan * 0.25f);
 }
 
+/* Hats above 50, a closed hat's sixteenth: ghost notes between the hits; near the top, a roll, a soft hit half a
+ * step after this one and into the next */
+static void hats_more(float pa)
+{
+    const float more = (float)(par[P_HATS] - 50) * 0.02f;
+    const int hit = drum_pat[1] >> drum_pos[1] & 1u, off = (int)(sixteenth & 1u);
+    if (hat_roll) {
+        hat_roll = 0;
+        if (!hit)
+            drum_hit(1, 0.7f * pa, off);
+    } else if (!hit) {
+        if (frand() < more * 0.6f)
+            drum_hit(1, (0.16f + 0.12f * frand()) * pa, off);
+    } else if (!off && more > 0.5f && frand() < (more - 0.5f) * 0.3f) {
+        drum[1].wait = (int32_t)(0.5f * step_len);
+        drum[1].pend = 0.45f * pa;
+        hat_roll = 1;
+    }
+}
+
 /* the grid: one call a sixteenth (MIDI clock: 6 ticks) */
 static void tick(void)
 {
@@ -1531,6 +1566,8 @@ static void tick(void)
             chord_change();
         }
     }
+    if (par[P_HATS] > 50 && !pulse_rest)
+        hats_more(pa);
     for (d = 0; d < EN_NDRUM; d++) {
         if (drum_pat[d] >> drum_pos[d] & 1u && !pulse_rest)
             drum_hit(d, ((drum_pos[d] == 0 ? 0.95f : 0.6f) + 0.25f * frand()) * pa, (int)(sixteenth & 1u));
@@ -1857,15 +1894,26 @@ static void apply(int p, int v)
     case P_GLIDE: glide_k = 1.0f / ((0.02f + 0.012f * (float)v) * EN_SR); break;   /* 20 ms .. 1.2 s */
     case P_SWING: swing = (float)v * 0.005f; break;      /* the off sixteenths up to half a step late */
     case P_HATS:
-        /* dark to bright, with the hats there all the way across: the top stays in hearing, the bottom short of a
-         * wash. Both halves meet at 50 */
+        /* how much hat: at once how many (hat_hits), how loud and how bright. Both halves meet at 50 */
         if (v <= 50) {
-            hat_f = 0.55f + 0.0070f * (float)v;           /* the high-pass */
-            hat_open = 0.5f - 0.0015f * (float)v;         /* the open hat */
+            const float t = (float)v * 0.02f;
+            hat_f = 0.35f + 0.011f * (float)v;
+            hat_hp = t;                                   /* dark: the band; a high-pass alone leaves the noise bright */
+            hat_bp = 1.0f - t;
+            hat_open = 0.12f + 0.0061f * (float)v;
+            hat_closed = 0.06f;
+            hat_choke = 0.02f;
+            hat_lv = fm_exp2f((float)(v - 50) * 0.05f);
         } else {
             hat_f = 0.9f + 0.0030f * (float)(v - 50);
-            hat_open = 0.425f - 0.0025f * (float)(v - 50);
+            hat_hp = 1.0f;
+            hat_bp = 0.0f;
+            hat_open = 0.425f + 0.0055f * (float)(v - 50);
+            hat_closed = 0.06f + 0.0006f * (float)(v - 50);
+            hat_choke = 0.02f + 0.002f * (float)(v - 50);
+            hat_lv = 1.0f + 0.006f * (float)(v - 50);
         }
+        drums_pattern();
         break;
     case P_DRIFT:
         if (drift_total > 0.0f) {                /* keep the progress, at the new pace */
@@ -2345,7 +2393,7 @@ static void render_bells(uint32_t n)
     }
 }
 
-/* a hat: the metal and noise, high-passed (Chamberlin SVF, ~4 to 10 kHz by Hats); no pitch, little echo */
+/* a hat: the metal and noise through a Chamberlin SVF, dark to bright by Hats; no pitch, little echo */
 static void render_hat(drum_t *v, uint32_t n, float g, float pl, float pr)
 {
     uint32_t j;
@@ -2367,7 +2415,7 @@ static void render_hat(drum_t *v, uint32_t n, float g, float pl, float pr)
         hp = in - x2 - 0.8f * x1;
         x1 += hat_f * hp;
         x2 += hat_f * x1;
-        x = hp * amp * att * g;
+        x = (hat_hp * hp + hat_bp * x1) * amp * att * g;
         mixl[j] += x * pl;
         mixr[j] += x * pr;
         rsend[j] += x * 0.2f;
@@ -2408,8 +2456,8 @@ static void render_drums(uint32_t n)
         v->att = att;
         v->on = amp > 0.0005f;
     }
-    render_hat(&drum[1], n, g * 0.2f, 0.6f, 1.0f);    /* closed: a little right */
-    render_hat(&drum[2], n, g * 0.14f, 1.0f, 0.7f);   /* open: a little left */
+    render_hat(&drum[1], n, g * hat_lv * 0.2f, 0.6f, 1.0f);    /* closed: a little right */
+    render_hat(&drum[2], n, g * hat_lv * 0.14f, 1.0f, 0.7f);   /* open: a little left */
 }
 
 static void render_swoosh(uint32_t n)
