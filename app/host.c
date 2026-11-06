@@ -58,16 +58,25 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         batt_host = (int8_t)(strcmp(a, "off") ? atoi(a) : -2);
         return 1;
     }
-    if (!strcmp(cmd, "storev6")) {               /* storev6 N: the project as the arp's build wrote it, Chord 1 degree N */
-        static project_t o;
-        int i;
-        o = proj;
-        o.format = 6u;
+    /* storev6 N, storev7 N: the project as those builds wrote it; 6: Chord 1 on degree N; 7: Chord 1 as N */
+    if (!strcmp(cmd, "storev6") || !strcmp(cmd, "storev7")) {
+        static project_v7_t o;
+        int i, k;
+        memset(&o, 0, sizeof o);
+        o.magic = PROJ_MAGIC;
+        o.format = cmd[6] == '6' ? 6u : 7u;
+        for (k = 0; k < V7_NPARAMS; k++)
+            o.par[k] = proj.par[k];
         o.par[P_SLOT1] = (int16_t)atoi(a);
-        o.slot[proj.piece].par[P_SLOT1] = o.par[P_SLOT1];
-        for (i = 0; i < NPIECES; i++)
-            if (i != proj.piece)
-                o.slot[i].par[P_SLOT1] = 0;
+        o.pool = proj.pool;
+        o.leds = proj.leds;
+        o.piece = proj.piece;
+        for (i = 0; i < NPIECES; i++) {
+            for (k = 0; k < V7_NPARAMS; k++)
+                o.slot[i].par[k] = proj.slot[i].par[k];
+            o.slot[i].par[P_SLOT1] = i == proj.piece ? o.par[P_SLOT1] : 0;
+            o.slot[i].pool = proj.slot[i].pool;
+        }
         plat_store_save(OBJ_PROJ, &o, sizeof o);
         return 1;
     }

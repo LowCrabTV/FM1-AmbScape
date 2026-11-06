@@ -1,0 +1,45 @@
+# Sparkle: SELECT held on the Garden. Off in every recipe; with the piece; gone with the recipe. A project from the
+# colors' build (format 7) keeps its chords, Sparkle off.
+wait 300
+expect view 0
+expect par42 0
+press SEL
+wait 100
+shot off.png
+spin K1 4
+expect par42 4
+spin K2 -6
+expect par43 50
+spin K3 2
+expect par44 46
+wait 100
+shot on.png
+release SEL
+wait 100
+expect view 0
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par42 4
+expect par43 50
+expect par44 46
+press SAVE
+wait 1700
+release SAVE
+wait 100
+expect par42 0
+expect par43 56
+expect par44 44
+storev7 13
+reboot
+wait 300
+expect par28 13
+expect par42 0
+expect par43 56
+expect par44 44
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par28 13

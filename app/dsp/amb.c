@@ -39,6 +39,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Arp", 0, EN_NARP - 1, 0}, {"Arp rate", 0, EN_NARATE - 1, 2}, {"Arp range", 1, 3, 2},
     {"Pad notes", 2, 4, 4},   {"Bass notes", 0, 100, 0},
     {"Arp poly", 0, EN_NAPOLY - 1, 0},
+    {"Sparkle", 0, 100, 0},   {"Spk length", 0, 100, 56}, {"Spk often", 0, 100, 44},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -98,6 +99,8 @@ static char *itoa_s(int v, char *b)
     return b;
 }
 
+static float splen_secs(int v) { return 5.0f * fm_exp2f((float)v * 0.03585f); }     /* 5 s .. 1 min */
+static float spoft_secs(int v) { return 10.0f * fm_exp2f((float)v * 0.04907f); }    /* 10 s .. 5 min */
 static float drift_secs(int v) { return 20.0f * fm_exp2f((float)v * 0.039069f); }   /* 20 s .. 5 min */
 
 void en_param_text(int i, int v, char *b)
@@ -154,8 +157,8 @@ void en_param_text(int i, int v, char *b)
         *b = 0;
         return;
     }
-    if (i == P_DRIFT) {
-        int sec = (int)(drift_secs(v) + 0.5f);
+    if (i == P_DRIFT || i == P_SPLEN || i == P_SPOFT) {
+        int sec = (int)((i == P_DRIFT ? drift_secs(v) : i == P_SPLEN ? splen_secs(v) : spoft_secs(v)) + 0.5f);
         if (sec < 60) {
             b = itoa_s(sec, b);
             *b++ = 's';
@@ -387,6 +390,7 @@ volatile uint32_t en_drum_pat[EN_NDRUM];
 volatile float en_drum_glow[EN_NDRUM];
 volatile uint32_t en_bars;
 volatile float en_arc;
+volatile float en_spark;
 volatile uint8_t en_pulse_rest;
 volatile uint8_t en_pad_note[EN_NPAD];
 volatile float en_pad_amp[EN_NPAD];
@@ -1125,6 +1129,128 @@ static void bass_step(void)                     /* a sixteenth */
     }
 }
 
+/* ---------------------------------------------------------------- sparkle --- */
+/* Little flourishes on the bells, in waves: for Length it swells and wanes, then rests for Often, each a little
+ * varied. Sparkle sets how much at the peak; the arc leans on it. A run of the scale that ends on a chord tone, a
+ * grace note into one, the pad's note high up, and a rising chord when one comes. Quiet, short, sharing the bells'
+ * voices (it takes the quietest), of the chord and its scale only. */
+static float sp_env;
+static uint32_t sp_left = (uint32_t)(1.5f * EN_SR), sp_total;
+static uint8_t sp_in, sp_on, sp_busy, sp_shape;
+static int sp_deg = -1;
+
+static void spark_env(uint32_t n)               /* the slow part: where the wave is */
+{
+    if (sp_left > n) {
+        sp_left -= n;
+    } else if (sp_in) {
+        sp_in = 0;
+        sp_left = (uint32_t)(spoft_secs(par[P_SPOFT]) * (0.7f + 0.6f * frand()) * EN_SR);
+    } else {
+        sp_in = 1;
+        sp_total = sp_left = (uint32_t)(splen_secs(par[P_SPLEN]) * (0.8f + 0.4f * frand()) * EN_SR);
+    }
+    if (sp_in) {
+        float s = fm_sinf(FM_PI * (1.0f - (float)sp_left / (float)sp_total));
+        sp_env = s * s;
+    } else {
+        sp_env = 0.0f;
+    }
+    en_spark = sp_env;
+}
+
+static int spark_tone(void)                     /* a chord tone, as an offset an octave above the chord's degree */
+{
+    const int m = shape == 1 || shape == 2 || shape == 3 ? 3 : 4;
+    return nsteps + (shape ? SHAPE_OFF[shape][irand(m)] : 2 * irand(chord_nt));
+}
+
+static void spark_bell(int l, int n, float vel, float wait)
+{
+    bell_voice(l, n, vel, (int32_t)(wait * step_len) + 1 + irand(200));
+}
+
+static void spark_run(float vel)                /* three to five notes of the scale, ending on a chord tone */
+{
+    const int n = 3 + irand(3), e = spark_tone(), up = frand() < 0.6f, l = irand(EN_NLOOP);
+    int i;
+    for (i = 0; i < n; i++) {
+        int off = up ? e - (n - 1) + i : e + (n - 1) - i;
+        while (off < 0)
+            off += nsteps;
+        spark_bell(l, bell_note(2, off), vel * (0.65f + 0.35f * (float)i / (float)(n - 1)), (float)i * 0.5f);
+    }
+    sp_busy = (uint8_t)(n / 2 + 1);
+}
+
+static void spark_grace(float vel)              /* the scale's note beside a chord tone, then the tone */
+{
+    const int e = spark_tone(), l = irand(EN_NLOOP);
+    spark_bell(l, bell_note(2, e + (frand() < 0.5f ? -1 : 1)), vel * 0.5f, 0.0f);
+    spark_bell(l, bell_note(2, e), vel, 0.24f);
+    sp_busy = 1;
+}
+
+static void spark_high(float vel)               /* what the pad sings loudest, up high */
+{
+    int i, n = 60 + chord_pcs[0], in = 0;
+    float best = 0.0f;
+    for (i = 0; i < EN_NPAD; i++)
+        if (pad[i].amp > best) {
+            best = pad[i].amp;
+            n = pad[i].midi_note;
+        }
+    for (i = 0; i < chord_nt; i++)              /* (a voice may still hang on the last chord's note) */
+        in |= chord_pcs[i] == n % 12;
+    if (!in)
+        n = 60 + chord_pcs[0];
+    while (n < 79)
+        n += 12;
+    while (n > 103)
+        n -= 12;
+    spark_bell(irand(EN_NLOOP), n, vel, 0.0f);
+    sp_busy = 2;
+}
+
+static void spark_rise(float vel)               /* a new chord: its tones, rising */
+{
+    int list[12], n = arp_list(list), i, m = n < chord_nt ? n : chord_nt;
+    for (i = 0; i < m; i++) {
+        int note = list[i] + 12;
+        while (note > 103)
+            note -= 12;
+        spark_bell(i % EN_NLOOP, note, vel * (0.7f + 0.1f * (float)i), (float)i * 0.4f);
+    }
+    sp_busy = 2;
+}
+
+static void spark_tick(void)                    /* a sixteenth */
+{
+    const int changed = deg != sp_deg || shape != sp_shape;
+    const float amt = (float)par[P_SPARK] * 0.01f, vel = (0.3f + 0.45f * sp_env) * (0.6f + 0.4f * amt);
+    sp_deg = deg;
+    sp_shape = (uint8_t)shape;
+    if (sp_busy && !changed) {
+        sp_busy--;
+        return;
+    }
+    bell_late = 1;                              /* the MIDI notes with the sound */
+    bell_dec = 0.35f;                           /* and short */
+    if (changed && sp_env > 0.15f) {
+        spark_rise(vel);
+    } else if (frand() < amt * sp_env * 0.35f * (1.0f + 0.5f * arcm)) {
+        const float r = frand();
+        if (r < 0.45f)
+            spark_run(vel);
+        else if (r < 0.7f)
+            spark_grace(vel);
+        else
+            spark_high(vel);
+    }
+    bell_late = 0;
+    bell_dec = 1.0f;
+}
+
 /* ---------------------------------------------------------------- pulse --- */
 static const uint8_t DRUM_ROT[EN_NDRUM] = {0, 2, 3};
 static int drum_k[EN_NDRUM], drum_kb[EN_NDRUM], drum_rot[EN_NDRUM], pulse_rest;   /* rest: bars left */
@@ -1260,6 +1386,8 @@ static void tick(void)
         bass_step();
     if (par[P_ARP])
         arp_step();
+    if (par[P_SPARK])
+        spark_tick();
     if ((sixteenth & 3u) == 0u) {               /* the loops step in quarter notes */
         for (l = 0; l < EN_NLOOP; l++) {
             int s = loop_pos[l];
@@ -1527,6 +1655,19 @@ static void apply(int p, int v)
     case P_BASSOCT:
         if (nsteps)
             bass_to(bass.midi_note % 12);
+        break;
+    case P_SPARK:                                /* turned up: a wave soon, to hear it by */
+        if (v && !sp_on) {
+            sp_in = 0;
+            sp_left = (uint32_t)(1.5f * EN_SR);
+        }
+        sp_on = v != 0;
+        if (!v)
+            en_spark = sp_env = 0.0f;
+        break;
+    case P_SPOFT:                                /* a shorter gap needn't wait out the long one it was in */
+        if (!sp_in && (float)sp_left > spoft_secs(v) * EN_SR)
+            sp_left = (uint32_t)(spoft_secs(v) * EN_SR);
         break;
     case P_ARATE: case P_APOLY: arp_acc = 0; break;   /* the new rhythm from the next sixteenth */
     case P_BASSN:
@@ -2119,6 +2260,8 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
     int i;
     mods_step(n);
     heads_step(n);
+    if (par[P_SPARK] && en_playing)
+        spark_env(n);
     if (arc_left <= n) {
         float r = frand() * 2.0f - 1.0f;
         arc_tgt = r * (0.6f + 0.4f * frand()) + (r > 0.0f ? 0.25f : -0.25f);   /* away from the middle */

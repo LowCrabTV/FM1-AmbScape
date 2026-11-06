@@ -182,6 +182,41 @@ static void from_v5(const project_v5_t *o)
         proj.par[p] = p < V5_NPARAMS ? o->par[p] : r.par[p];
 }
 
+/* formats 7 and 6 (before Sparkle; 6 had no shapes): carried over the same way */
+#define V7_NPARAMS P_SPARK
+typedef struct {
+    int16_t par[V7_NPARAMS];
+    uint16_t pool;
+} slot_v7_t;
+typedef struct {
+    uint32_t magic, format;
+    int16_t par[V7_NPARAMS];
+    uint16_t pool;
+    uint8_t leds, piece, rsv0[2];
+    slot_v7_t slot[NPIECES];
+    uint8_t rsv[16];
+} project_v7_t;
+
+static void from_v7(const project_v7_t *o)
+{
+    slot_t r;
+    int i, p;
+    proj.magic = PROJ_MAGIC;
+    proj.format = PROJ_FORMAT;
+    proj.pool = o->pool;
+    proj.leds = o->leds;
+    proj.piece = o->piece < NPIECES ? o->piece : 0;
+    for (i = 0; i < NPIECES; i++) {
+        recipe(i, &r);
+        for (p = 0; p < P_NPARAMS; p++)
+            proj.slot[i].par[p] = p < V7_NPARAMS ? o->slot[i].par[p] : r.par[p];
+        proj.slot[i].pool = o->slot[i].pool;
+    }
+    recipe(proj.piece, &r);
+    for (p = 0; p < P_NPARAMS; p++)
+        proj.par[p] = p < V7_NPARAMS ? o->par[p] : r.par[p];
+}
+
 /* before format 7, a slot held only its degree: now the seventh on that degree, the chord it always was */
 static void slots_up(void)
 {
@@ -202,6 +237,7 @@ int project_load(void)
         project_v3_t v3;
         project_v4_t v4;
         project_v5_t v5;
+        project_v7_t v7;
     } buf;
     int n;
     memset(&buf, 0, sizeof buf);
@@ -212,11 +248,11 @@ int project_load(void)
         from_v4(&buf.v4);
     else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 5u)
         from_v5(&buf.v5), slots_up();
-    else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 6u) {   /* the same settings as now */
-        proj = buf.now;
-        proj.format = PROJ_FORMAT;
-        slots_up();
-    } else
+    else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 6u)
+        from_v7(&buf.v7), slots_up();
+    else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 7u)
+        from_v7(&buf.v7);
+    else
         proj = buf.now;
     if (n >= 8 && project_valid())
         return 0;

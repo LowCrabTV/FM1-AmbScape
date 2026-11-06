@@ -69,6 +69,7 @@ enum {
     P_ARP, P_ARATE, P_ARANGE,                         /* the bells' arpeggio: its style (0 off), rate, octaves */
     P_PADN, P_BASSN,                                  /* how many notes: the pad's chord, 2..4; the bass's, 0 held */
     P_APOLY,                                          /* the arp against the grid: Off, 3:4, 5:4, 3:2, 7:4 */
+    P_SPARK, P_SPLEN, P_SPOFT,                        /* Sparkle: how much at its peak (0 off), each wave's length, the gap between */
     P_NPARAMS
 };
 typedef struct {
@@ -112,6 +113,7 @@ extern volatile uint8_t en_drum_pos[EN_NDRUM];
 extern volatile uint32_t en_drum_pat[EN_NDRUM];/* bit i: a hit on step i */
 extern volatile float en_drum_glow[EN_NDRUM];
 extern volatile uint32_t en_bars;              /* sixteenths played since start (for tests) */
+extern volatile float en_spark;                /* 0..1: where the Sparkle's wave is */
 extern volatile float en_arc;                  /* the arc, -1 sparse .. +1 full (times Motion) */
 extern volatile uint8_t en_pulse_rest;         /* the pulse is sitting a few bars out */
 extern volatile uint8_t en_pad_note[EN_NPAD];  /* the note each voice sings now (MIDI) */

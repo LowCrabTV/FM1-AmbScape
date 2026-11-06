@@ -576,6 +576,64 @@ int main(void)
         en_play(1);
     }
 
+    /* Sparkle: nothing at 0; in waves, with rests between; of the scale; the third of no sus; faster when Often's short */
+    {
+        int k, n0, nshort, nlong, off = 0, wave_on = 0, wave_off = 0;
+        int t;
+        en_init();
+        for (i = 0; i < P_NPARAMS; i++)
+            en_set(i, en_param_info(i)->def);
+        run(0.05f);
+        en_set(P_DENSITY, 0), en_set(P_MOTION, 0), en_set(P_EVOLVE, 0), en_set(P_DRIFT, 100);
+        run(0.05f);
+        en_regrow();
+        en_play(0), run(0.05f), en_play(1);
+        run(0.1f);
+        bell_logging = 1, bell_n = 0;
+        run(20.0f);
+        n0 = bell_n;
+        CHECK(n0 == 0, "Sparkle 0: %d notes", n0);
+        en_set(P_SPARK, 100), en_set(P_SPLEN, 0), en_set(P_SPOFT, 0);
+        bell_n = 0;
+        for (t = 0; t < 600; t++) {                /* a minute of waves */
+            run(0.1f);
+            if (en_spark > 0.01f)
+                wave_on++;
+            else
+                wave_off++;
+            CHECK(en_spark >= 0.0f && en_spark <= 1.0f, "Sparkle's wave %f", (double)en_spark);
+        }
+        nshort = bell_n;
+        CHECK(nshort > 30, "Sparkle at the top: %d notes in a minute", nshort);
+        CHECK(wave_on > 60 && wave_off > 200, "Sparkle's waves: on %d, off %d", wave_on, wave_off);
+        for (k = 0; k < bell_n; k++)               /* D Dorian */
+            off += !(EN_MODE_POOL[MODE_DORIAN] >> ((bell_log[k] - 2 + 120) % 12) & 1u);
+        CHECK(!off, "Sparkle: %d notes off the scale", off);
+        en_set(P_SPOFT, 100);
+        run(0.05f);
+        bell_n = 0;
+        run(60.0f);
+        nlong = bell_n;
+        CHECK(nlong < nshort, "Often at its longest: %d notes, not fewer than %d", nlong, nshort);
+        /* over a sus, no third: Dsus4 has no F */
+        en_set(P_SPOFT, 0);
+        en_set(P_SLOT1, 3 + 1);
+        run(8.0f);
+        bell_n = 0;
+        run(60.0f);
+        off = 0;
+        for (k = 0; k < bell_n; k++)
+            off += bell_log[k] % 12 == 5;
+        CHECK(bell_n > 20, "Sparkle over Dsus4: %d notes", bell_n);
+        CHECK(!off, "Sparkle over Dsus4: the third %d of %d", off, bell_n);
+        en_set(P_SPARK, 0);
+        run(0.05f);
+        CHECK(en_spark == 0.0f, "Sparkle 0: the wave stays");
+        bell_logging = 0;
+        en_init();
+        en_play(1);
+    }
+
     /* stop: the tails die away */
     for (i = 0; i < P_NPARAMS; i++)
         en_set(i, en_param_info(i)->def);

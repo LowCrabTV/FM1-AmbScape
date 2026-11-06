@@ -196,7 +196,7 @@ the same for all.
 
 ## 7. The pages
 
-**Hold SELECT** on the Pad, Bells, Bass or Chords page and the knobs change to that page's other
+**Hold SELECT** on the Garden, Pad, Bells, Bass or Chords page and the knobs change to that page's other
 settings; let go and they're back. Holding and turning doesn't change the page.
 
 One page a layer, each on its own button, with four values on KNOB 1–4. A layer's level is
@@ -229,6 +229,18 @@ SELECT for the page.
   chords may not let the pad finish breathing in: at most tempos, try 4 bars or more.
 - **EDIT** goes to the next step on the next bar, and **REC** holds the step. Each piece keeps its
   own slate.
+
+### Hold SELECT: Sparkle, on the Garden page
+
+Little flourishes on the bells, coming and going in waves: a run of the scale, a grace note, the
+pad's note up high, and a rising chord when one comes. All of the chord and its scale.
+
+- **Sparkle (KNOB 1):** how much at the peak of a wave. 0 is off.
+- **Length (KNOB 2):** how long each wave swells and wanes, 5 s to 1 minute.
+- **Often (KNOB 3):** the rest between waves, 10 s to 5 minutes.
+
+Each wave varies a little, and the arc leans on it. It shares the bells' voices, and its volume
+follows the Bells level. Turned up from 0, the first wave starts within a couple of seconds.
 
 ### Hold SELECT: Pad, Bass and Bells
 
@@ -414,6 +426,9 @@ The defaults are Garden's; each piece has its own.
 | Garden | Drift | 20 s – 5:00 | 25 (about 40 s) |
 | Chords | Chord 1–4 | Off, or a chord of the scale in one of six shapes | Off |
 | Chords | Bars 1–4 (SELECT held) | 1, 2, 3, 4, 6, 8, 12, 16 | 4 |
+| Garden | Sparkle (SELECT held) | 0–100 | 0 |
+| Garden | Length (SELECT held) | 5 s – 1 min | 20 s |
+| Garden | Often (SELECT held) | 10 s – 5 min | 45 s |
 | Pad | Notes (SELECT held) | 2, 3, 4 | 4 |
 | Bells | Arp (SELECT held) | Off, Up, Down, Up/Dn, Dn/Up, Random, Converge, Diverge | Off |
 | Bells | Rate (SELECT held) | 1/4, 1/8., 1/8, 1/16 | 1/8 |

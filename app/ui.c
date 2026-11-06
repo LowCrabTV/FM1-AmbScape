@@ -43,7 +43,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
 };
 /* SELECT held: a page's other knobs */
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
-    {K_NONE, K_NONE, K_NONE, K_NONE},
+    {P_SPARK, P_SPLEN, P_SPOFT, K_NONE},
     {K_NONE, P_PADN, K_NONE, K_NONE},
     {P_ARP, P_ARATE, P_ARANGE, P_APOLY},
     {K_NONE, P_BASSN, K_NONE, K_NONE},
@@ -53,7 +53,7 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {P_LEN1, P_LEN2, P_LEN3, P_LEN4},
 };
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
-    {"", "", "", ""},
+    {"Sparkle", "Length", "Often", ""},
     {"", "Notes", "", ""},
     {"Arp", "Rate", "Range", "Poly"},
     {"", "Notes", "", ""},
