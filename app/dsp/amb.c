@@ -44,6 +44,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Root 1", 0, 12, 0},     {"Root 2", 0, 12, 0},     {"Root 3", 0, 12, 0},     {"Root 4", 0, 12, 0},
     {"Root bars 1", 0, EN_NRBARS - 1, 3}, {"Root bars 2", 0, EN_NRBARS - 1, 3}, {"Root bars 3", 0, EN_NRBARS - 1, 3},
     {"Root bars 4", 0, EN_NRBARS - 1, 3},
+    {"Bell colour", 0, EN_NBCOLOR - 1, 0},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -82,6 +83,7 @@ static const uint8_t ARATE_STEPS[EN_NARATE] = {4, 3, 2, 1};      /* sixteenths a
 static const char *const APOLY_NAME[EN_NAPOLY] = {"Off", "3:4", "5:4", "3:2", "7:4"};
 static const uint8_t APOLY_NUM[EN_NAPOLY] = {1, 3, 5, 3, 7}, APOLY_DEN[EN_NAPOLY] = {1, 4, 4, 2, 4};
 static const float ARATE_DEC[EN_NARATE] = {1.0f, 0.8f, 0.6f, 0.4f};   /* the faster, the shorter the bell */
+static const char *const BCOLOR_NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano"};
 static const char *const ETIME_NAME[6] = {"1/4.", "1/2", "1/2.", "1 bar", "2 bars", "4 bars"};
 static const float ETIME_BEATS[6] = {1.5f, 2.0f, 3.0f, 4.0f, 8.0f, 16.0f};
 
@@ -127,6 +129,8 @@ void en_param_text(int i, int v, char *b)
         s = ARATE_NAME[(unsigned)v < EN_NARATE ? v : 0];
     else if (i == P_APOLY)
         s = APOLY_NAME[(unsigned)v < EN_NAPOLY ? v : 0];
+    else if (i == P_BCOLOR)
+        s = BCOLOR_NAME[(unsigned)v < EN_NBCOLOR ? v : 0];
     if (s) {
         int k = 0;
         while (s[k] && k < 9) {
@@ -639,7 +643,7 @@ static float bass_vol, glide_k = 1.0f / (0.25f * EN_SR);      /* glide_k: 1 / th
 /* ----------------------------------------------------------------- bells --- */
 #define NBELL 6
 typedef struct {
-    float cph, mph, cinc, minc, amp, adec, idx, idec, att, gl, gr;
+    float cph, mph, cinc, minc, amp, adec, idx, idec, att, arate, gl, gr;
     int32_t wait;
     uint8_t on, note, loop, mvel;               /* mvel: its MIDI note waits with it (the arp, off the grid) */
 } bell_t;
@@ -999,11 +1003,25 @@ static void loop_pass(int l)                    /* the end of a pass: grow, prun
 static const float LOOP_IDX[EN_NLOOP] = {1.0f, 0.55f, 1.5f, 0.8f}, LOOP_DEC[EN_NLOOP] = {1.0f, 1.35f, 0.75f, 1.6f};
 static const int8_t LOOP_RAT[EN_NLOOP] = {0, 0, 1, -1};
 
+/* the bells' colours: the same two operators, set differently. ratio: the modulator's (0: Tone's, as the Bell);
+ * index: idx0 + idx1 Tone^2; it fades over isec0 + isec1 Tone (0: it holds); ring: the decay's length, times this;
+ * arate: the strike (0: Tone's, as the Bell); gain: to sit level with the Bell */
+static const struct {
+    float ratio, idx0, idx1, isec0, isec1, ring, arate, gain;
+} BCOLOR[EN_NBCOLOR] = {
+    {0.0f, 0.15f, 6.5f, 0.35f, 2.6f, 1.0f, 0.0f, 1.0f},          /* Bell */
+    {1.0f, 0.05f, 1.4f, 1.0f, 2.0f, 1.15f, 0.00025f, 1.1f},      /* Soft: round, no strike */
+    {2.0f, 0.55f, 2.0f, 0.0f, 0.0f, 1.7f, 0.0006f, 0.85f},       /* Wood: odd harmonics, hollow, holding */
+    {1.0f, 0.7f, 1.6f, 6.0f, 6.0f, 2.2f, 0.00007f, 0.8f},        /* Strings: a slow swell that hangs */
+    {1.0f, 1.3f, 3.0f, 0.22f, 0.5f, 0.95f, 0.008f, 1.0f},        /* Piano: a warm strike that mellows */
+};
+
 static void bell_voice(int l, int n, float vel, int32_t wait)
 {
     int i, best = 0, ri;
     float lo = 9.0f, t60, p;
     bell_t *v;
+    const int c = par[P_BCOLOR];
     for (i = 0; i < NBELL; i++) {               /* a free voice, or the quietest */
         float a = bell[i].on ? bell[i].amp : -1.0f;
         if (a < lo) {
@@ -1020,14 +1038,15 @@ static void bell_voice(int l, int n, float vel, int32_t wait)
     v->cph = v->mph = 0.0f;
     v->cinc = mtof((float)n) * (1.0f / EN_SR);
     ri = par[P_BTONE] * 5 / 101 + LOOP_RAT[l];
-    v->minc = v->cinc * RATIO[ri < 0 ? 0 : ri > 4 ? 4 : ri];
-    v->amp = vel;
+    v->minc = v->cinc * (BCOLOR[c].ratio > 0.0f ? BCOLOR[c].ratio : RATIO[ri < 0 ? 0 : ri > 4 ? 4 : ri]);
+    v->amp = vel * BCOLOR[c].gain;
     t60 = 4.2f - (float)(n - 60) * 0.06f;       /* the low bells ring longer */
-    t60 = fm_clampf(t60, 1.6f, 5.0f) * LOOP_DEC[l] * bell_dec;
+    t60 = fm_clampf(t60, 1.6f, 5.0f) * LOOP_DEC[l] * bell_dec * BCOLOR[c].ring;
     v->adec = fm_expf(-6.9f / (t60 * EN_SR));
     /* Bell tone: 0 a round, nearly pure tone; 100 a long metallic clang (index in radians, as turns) */
-    v->idx = (0.15f + 6.5f * btone * btone) * LOOP_IDX[l] * (0.6f + 0.4f * vel) * (1.0f / FM_TWO_PI);
-    v->idec = fm_expf(-6.9f / ((0.35f + 2.6f * btone) * EN_SR));
+    v->idx = (BCOLOR[c].idx0 + BCOLOR[c].idx1 * btone * btone) * LOOP_IDX[l] * (0.6f + 0.4f * vel) * (1.0f / FM_TWO_PI);
+    v->idec = BCOLOR[c].isec0 > 0.0f ? fm_expf(-6.9f / ((BCOLOR[c].isec0 + BCOLOR[c].isec1 * btone) * EN_SR)) : 1.0f;
+    v->arate = BCOLOR[c].arate > 0.0f ? BCOLOR[c].arate : 0.0004f + 0.0056f * fm_minf(btone * 2.0f, 1.0f);
     v->att = 0.0f;
     p = (LOOP_PAN[l] + 1.0f) * (FM_PI / 4.0f);
     v->gl = fm_cosf(p);
@@ -2192,10 +2211,11 @@ static void render_bass(uint32_t n)
 static void render_bells(uint32_t n)
 {
     int i;
-    const float g = bell_vol * 0.62f, arate = 0.0004f + 0.0056f * fm_minf(btone * 2.0f, 1.0f);
+    const float g = bell_vol * 0.62f;
     for (i = 0; i < NBELL; i++) {
         bell_t *v = &bell[i];
         float cph = v->cph, mph = v->mph, amp = v->amp, idx = v->idx, att = v->att;
+        const float arate = v->arate;
         uint32_t j = 0;
         if (!v->on)
             continue;

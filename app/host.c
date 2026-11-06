@@ -101,6 +101,27 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         plat_store_save(OBJ_PROJ, &o, sizeof o);
         return 1;
     }
+    if (!strcmp(cmd, "storev9")) {               /* storev9 N: the project as the root rotator's build wrote it (format 9) */
+        static project_v9_t o;
+        int i, k;
+        memset(&o, 0, sizeof o);
+        o.magic = PROJ_MAGIC;
+        o.format = 9u;
+        for (k = 0; k < V9_NPARAMS; k++)
+            o.par[k] = proj.par[k];
+        o.par[P_PAD] = (int16_t)atoi(a);
+        o.pool = proj.pool;
+        o.leds = proj.leds;
+        o.piece = proj.piece;
+        for (i = 0; i < NPIECES; i++) {
+            for (k = 0; k < V9_NPARAMS; k++)
+                o.slot[i].par[k] = proj.slot[i].par[k];
+            o.slot[i].pool = proj.slot[i].pool;
+        }
+        o.slot[proj.piece].par[P_PAD] = o.par[P_PAD];
+        plat_store_save(OBJ_PROJ, &o, sizeof o);
+        return 1;
+    }
     if (!strcmp(cmd, "storev5")) {               /* storev5 N: the project as the slate's build wrote it (format 5) */
         static project_v5_t o;
         int i, k;

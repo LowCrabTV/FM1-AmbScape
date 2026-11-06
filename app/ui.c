@@ -17,15 +17,16 @@
 #include "fastmath.h"
 
 /* the pages, one a layer (a button each); SELECT steps through them in this order */
-enum { V_GARDEN, V_PAD, V_BELLS, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, V_ROOTS, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Bass", "Pulse", "Space", "Setup", "Chords", "Roots"};
-static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL};
+enum { V_GARDEN, V_PAD, V_BELLS, V_ARP, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, V_ROOTS, NVIEWS };
+static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Roots"};
+static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL};
 /* the four knobs of each page: a parameter, or one of these; and what the knob is called there */
 enum { K_LEDS = 100, K_CPU, K_NONE };
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_TEMPO, P_EVOLVE, P_MOTION, P_DRIFT},
     {P_PAD, P_SWELL, P_BRIGHT, P_PADTONE},
     {P_BELLS, P_DENSITY, P_BTONE, P_BOCT},
+    {P_ARP, P_ARATE, P_ARANGE, P_APOLY},
     {P_BASS, P_BASSOCT, P_GLIDE, P_FIFTH},
     {P_PULSE, P_HITS, P_SWING, P_HATS},
     {P_ECHO, P_ETIME, P_REVERB, P_SIZE},
@@ -37,6 +38,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Tempo", "Evolve", "Motion", "Drift"},
     {"Level", "Swell", "Bright", "Colour"},
     {"Level", "Density", "Tone", "Octave"},
+    {"Arp", "Rate", "Range", "Poly"},
     {"Level", "Octave", "Glide", "Fifth"},
     {"Level", "Hits", "Swing", "Hats"},
     {"Echo", "Echo time", "Reverb", "Size"},
@@ -48,7 +50,8 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {P_SPARK, P_SPLEN, P_SPOFT, K_NONE},
     {K_NONE, P_PADN, K_NONE, K_NONE},
-    {P_ARP, P_ARATE, P_ARANGE, P_APOLY},
+    {P_BCOLOR, K_NONE, K_NONE, K_NONE},
+    {K_NONE, K_NONE, K_NONE, K_NONE},
     {K_NONE, P_BASSN, K_NONE, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
@@ -59,7 +62,8 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"Sparkle", "Length", "Often", ""},
     {"", "Notes", "", ""},
-    {"Arp", "Rate", "Range", "Poly"},
+    {"Colour", "", "", ""},
+    {"", "", "", ""},
     {"", "Notes", "", ""},
     {"", "", "", ""},
     {"", "", "", ""},
@@ -379,6 +383,10 @@ static void button(int b)
     int v;
     if (b == B_SEL) {                            /* the two rotators: Chords, then Roots, then Chords */
         set_view(ui.view == V_CHORDS ? V_ROOTS : V_CHORDS);
+        return;
+    }
+    if (b == B_ARP) {                            /* the bells, then their arpeggio, then the bells */
+        set_view(ui.view == V_BELLS ? V_ARP : V_BELLS);
         return;
     }
     for (v = 0; v < NVIEWS; v++)                 /* a page's button: its page */
@@ -938,7 +946,7 @@ static int help_lines(int b, const char *l[HELP_LINES])
     switch (b) {
     case B_HOME: L("THE GARDEN"); L("TEMPO, EVOLVE, MOTION, DRIFT"); L("+ SELECT: TEMPO"); break;
     case B_ENV: L("THE PAD"); L("LEVEL, SWELL, BRIGHT,"); L("COLOUR"); break;
-    case B_ARP: L("THE BELLS"); L("LEVEL, DENSITY, TONE,"); L("OCTAVE"); break;
+    case B_ARP: L("THE BELLS"); L("LEVEL, DENSITY, TONE,"); L("OCTAVE; AGAIN: THE ARP"); break;
     case B_LFO: L("THE BASS"); L("LEVEL, OCTAVE, GLIDE, FIFTH"); break;
     case B_SEQ: L("THE PULSE"); L("LEVEL, HITS, SWING, HATS"); break;
     case B_FX: L("THE SPACE"); L("ECHO, ECHO TIME, REVERB,"); L("SIZE"); break;

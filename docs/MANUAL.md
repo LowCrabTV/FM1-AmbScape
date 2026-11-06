@@ -196,7 +196,7 @@ the same for all.
 
 ## 7. The pages
 
-**Hold SELECT** on the Garden, Pad, Bells, Bass or Chords page and the knobs change to that page's other
+**Hold SELECT** on the Garden, Pad, Bells, Bass, Chords or Roots page and the knobs change to that page's other
 settings; let go and they're back. Holding and turning doesn't change the page.
 
 One page a layer, each on its own button, with four values on KNOB 1–4. A layer's level is
@@ -265,16 +265,25 @@ follows the Bells level. Turned up from 0, the first wave starts within a couple
   the bar, as Hits does the pulse: the root first, then the fifth (from 25), the octave (from 50),
   and the third and seventh (from 75). Only the chord's tones, so it follows the slate and the
   drift. Fifth is for the held bass; with Notes up, Glide is capped so each note arrives.
-- **Bells, Arp (KNOB 1):** **Off**, or an arpeggio of the chord's tones in place of the loops: **Up**,
+- **Bells, Colour (KNOB 1):** the bells' sound. **Bell** is the one they've always had; **Soft** is round,
+  with no strike; **Wood** is hollow and holds; **Strings** swell slowly and hang; **Piano** strikes
+  warm and mellows. Tone still shapes each one. The loops, the arp and Sparkle all play through it.
+  They are the same two operators set differently: impressions, not the instruments themselves.
+
+### ARP again: Arp
+
+Press ARP from the Bells page for the arp's own page, and again to go back.
+
+- **Arp (KNOB 1):** **Off**, or an arpeggio of the chord's tones in place of the loops: **Up**,
   **Down**, **Up/Dn**, **Dn/Up**, **Random**, **Converge** (in from both ends) or **Diverge** (out
   from the middle). The loops keep turning, silent, for when it's off.
-- **Bells, Rate (KNOB 2):** 1/4, 1/8., 1/8 or 1/16. Faster, the bells ring shorter.
-- **Bells, Range (KNOB 3):** 1 to 3 octaves, from the chord's root. Octave moves it up and down.
-- **Bells, Poly (KNOB 4):** **Off**, or the arp against the grid: **3:4**, **5:4**, **3:2** or **7:4**
+- **Rate (KNOB 2):** 1/4, 1/8., 1/8 or 1/16. Faster, the bells ring shorter.
+- **Range (KNOB 3):** 1 to 3 octaves, from the chord's root. Octave moves it up and down.
+- **Poly (KNOB 4):** **Off**, or the arp against the grid: **3:4**, **5:4**, **3:2** or **7:4**
   (so many notes in the time of so many Rate steps). It stays locked to the tempo, shifts against
   the pulse and comes back around. Every note takes the chord as it's struck.
-- **With the arp on, Density** picks which of 16 steps sound, spread as Hits does the pulse: 100
-  plays every step. The arc and Evolve act on it, and Swing does while Poly is off.
+- **With the arp on, Density** (on the Bells page) picks which of 16 steps sound, spread as Hits does
+  the pulse: 100 plays every step. The arc and Evolve act on it, and Swing does while Poly is off.
 
 ### ENV: Pad
 
@@ -447,10 +456,11 @@ The defaults are Garden's; each piece has its own.
 | Garden | Length (SELECT held) | 5 s – 1 min | 20 s |
 | Garden | Often (SELECT held) | 10 s – 5 min | 45 s |
 | Pad | Notes (SELECT held) | 2, 3, 4 | 4 |
-| Bells | Arp (SELECT held) | Off, Up, Down, Up/Dn, Dn/Up, Random, Converge, Diverge | Off |
-| Bells | Rate (SELECT held) | 1/4, 1/8., 1/8, 1/16 | 1/8 |
-| Bells | Range (SELECT held) | 1–3 octaves | 2 |
-| Bells | Poly (SELECT held) | Off, 3:4, 5:4, 3:2, 7:4 | Off |
+| Bells | Colour (SELECT held) | Bell, Soft, Wood, Strings, Piano | Bell |
+| Arp | Arp | Off, Up, Down, Up/Dn, Dn/Up, Random, Converge, Diverge | Off |
+| Arp | Rate | 1/4, 1/8., 1/8, 1/16 | 1/8 |
+| Arp | Range | 1–3 octaves | 2 |
+| Arp | Poly | Off, 3:4, 5:4, 3:2, 7:4 | Off |
 | Bass | Notes (SELECT held) | Held, 1–100 (1 to 8 hits a bar) | Held |
 | Pad | Level | 0–100 | 60 |
 | Pad | Swell | 0–100 | 60 |

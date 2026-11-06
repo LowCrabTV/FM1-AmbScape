@@ -682,6 +682,45 @@ int main(void)
         en_play(1);
     }
 
+    /* the bells' colours: each sounds, stays bounded and clean; the strike comes as it should */
+    {
+        static const char *const NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano"};
+        float early[EN_NBCOLOR], later[EN_NBCOLOR];
+        char t[12];
+        int c;
+        for (c = 0; c < EN_NBCOLOR; c++) {
+            en_param_text(P_BCOLOR, c, t);
+            CHECK(!strcmp(t, NAME[c]), "colour %d named %s", c, t);
+            en_init();
+            for (i = 0; i < P_NPARAMS; i++)
+                en_set(i, en_param_info(i)->def);
+            run(0.05f);
+            en_set(P_PAD, 0), en_set(P_BASS, 0), en_set(P_PULSE, 0), en_set(P_ECHO, 0), en_set(P_REVERB, 0);
+            en_set(P_MOTION, 0), en_set(P_EVOLVE, 0), en_set(P_DENSITY, 100), en_set(P_BELLS, 100);
+            en_set(P_ARP, 1), en_set(P_ARATE, 0), en_set(P_ARANGE, 1), en_set(P_BCOLOR, c);
+            run(0.05f);
+            en_play(0), en_panic(), run(0.5f), en_play(1);
+            peak = 0.0f;
+            run(0.03f);                            /* the first note's strike */
+            early[c] = peak;
+            peak = 0.0f;
+            run(0.8f);
+            later[c] = peak;
+            CHECK(later[c] > 0.005f, "colour %s silent: %f", NAME[c], (double)later[c]);
+            peak = 0.0f;
+            bad = 0;
+            run(30.0f);
+            CHECK(peak < 1.0f, "colour %s peak %f", NAME[c], (double)peak);
+            CHECK(!bad, "colour %s: %d bad samples", NAME[c], bad);
+        }
+        CHECK(early[3] / later[3] < 0.5f * early[4] / later[4], "Strings %f/%f should rise slower than Piano %f/%f",
+              (double)early[3], (double)later[3], (double)early[4], (double)later[4]);
+        CHECK(early[1] / later[1] < early[4] / later[4], "Soft should have no strike: %f/%f, Piano %f/%f",
+              (double)early[1], (double)later[1], (double)early[4], (double)later[4]);
+        en_init();
+        en_play(1);
+    }
+
     /* stop: the tails die away */
     for (i = 0; i < P_NPARAMS; i++)
         en_set(i, en_param_info(i)->def);

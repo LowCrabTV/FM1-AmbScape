@@ -3,7 +3,7 @@
 wait 300
 tap SEL
 wait 100
-expect view 7
+expect view 8
 expect par28 0
 spin K1 1
 expect par28 1
@@ -15,7 +15,7 @@ spin K1 2
 expect par32 5
 release SEL
 wait 100
-expect view 7
+expect view 8
 spin K3 3
 expect par30 3
 tap SAVE

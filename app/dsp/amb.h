@@ -48,6 +48,7 @@ extern const uint8_t EN_DRUM_N[EN_NDRUM];
 #define EN_NSLOT 4                     /* the slate's steps */
 #define EN_NBARS 8
 #define EN_NRBARS 8
+#define EN_NBCOLOR 5
 #define EN_NSHAPE 6                    /* a chord's shapes: seventh, triad, sus2, sus4, add9, sixth. A slot's value: 0 empty,
                                         * else 1 + degree * EN_NSHAPE + shape */
 #define EN_NARP 8                      /* the arp's styles, Off first */
@@ -73,6 +74,7 @@ enum {
     P_SPARK, P_SPLEN, P_SPOFT,                        /* Sparkle: how much at its peak (0 off), each wave's length, the gap between */
     P_RSLOT1, P_RSLOT2, P_RSLOT3, P_RSLOT4,           /* the root rotator's steps: 0 empty, n = pitch class n - 1 */
     P_RLEN1, P_RLEN2, P_RLEN3, P_RLEN4,               /* and how long each lasts: an index into EN_ROOT_BARS */
+    P_BCOLOR,                                         /* the bells' colour: Bell, Soft, Wood, Strings, Piano */
     P_NPARAMS
 };
 typedef struct {

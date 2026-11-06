@@ -3,16 +3,16 @@
 wait 300
 tap SEL
 wait 100
-expect view 7
+expect view 8
+tap SEL
+wait 100
+expect view 9
 tap SEL
 wait 100
 expect view 8
 tap SEL
 wait 100
-expect view 7
-tap SEL
-wait 100
-expect view 8
+expect view 9
 expect par45 0
 shot off.png
 spin K1 3
@@ -27,7 +27,7 @@ spin K1 -2
 expect par49 1
 release SEL
 wait 100
-expect view 8
+expect view 9
 wait 5000
 shot playing.png
 tap SAVE
