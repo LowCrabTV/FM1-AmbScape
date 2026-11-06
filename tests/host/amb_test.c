@@ -22,12 +22,16 @@ static int fails;
 static uint32_t midi_count;
 static uint8_t bell_log[4000];                 /* the bells' notes, while logging */
 static int bell_n, bell_logging;
+static uint8_t bass_log[4000];
+static int bass_n;
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
     (void)d2;
     midi_count++;
     if (bell_logging && st == 0x91u && bell_n < (int)sizeof bell_log)
         bell_log[bell_n++] = (uint8_t)d1;
+    if (bell_logging && st == 0x92u && bass_n < (int)sizeof bass_log)
+        bass_log[bass_n++] = (uint8_t)d1;
 }
 
 static uint32_t pat(const char *s)
@@ -435,6 +439,65 @@ int main(void)
         run(4.0f);
         CHECK(bell_n == 0, "the arp at Density 0: %d notes", bell_n);
         bell_logging = 0;
+        en_init();
+        en_play(1);
+    }
+
+    /* Notes: the bass's hits, only the chord's tones, more as it goes up, one long note at 0; the pad's chord thinned */
+    {
+        int k, j, v, last = 0, pcs[4], seen;
+        en_init();
+        for (i = 0; i < P_NPARAMS; i++)
+            en_set(i, en_param_info(i)->def);
+        run(0.05f);
+        en_set(P_MOTION, 0), en_set(P_EVOLVE, 0), en_set(P_DRIFT, 100), en_set(P_FIFTH, 0), en_set(P_BASS, 80);
+        run(0.05f);
+        bell_logging = 1, bass_n = 0;
+        run(10.0f);
+        CHECK(bass_n <= 1, "Bass notes 0: one long note, %d", bass_n);
+        for (v = 10; v <= 100; v += 30) {
+            float bp;
+            en_set(P_BASSN, v);
+            run(0.05f);
+            bass_n = 0;
+            peak = 0.0f;
+            run(12.0f);
+            bp = peak;
+            pcs[0] = en_chord[0] % 12, pcs[1] = en_chord[1] % 12, pcs[2] = en_chord[2] % 12, pcs[3] = en_chord[3] % 12;
+            CHECK(bass_n > last, "Bass notes %d: %d hits, no more than %d", v, bass_n, last);
+            CHECK(bp > 0.001f, "Bass notes %d silent", v);
+            last = bass_n;
+            seen = 0;
+            for (k = 0; k < bass_n; k++) {
+                int pc = bass_log[k] % 12, in = 0;
+                for (j = 0; j < 4; j++)
+                    in |= pc == pcs[j];
+                CHECK(in, "Bass notes %d: %d is off the chord", v, bass_log[k]);
+                seen |= 1 << pc;
+            }
+            for (k = j = 0; k < 12; k++)
+                j += seen >> k & 1;
+            if (v == 10)
+                CHECK(j == 1, "Bass notes 10: the root alone, not %d notes", j);
+            if (v == 100)
+                CHECK(j >= 3, "Bass notes 100: only %d notes", j);
+        }
+        en_set(P_BASSN, 0);
+        run(0.05f);
+        bass_n = 0;
+        run(8.0f);
+        CHECK(bass_n <= 1, "Bass notes back to 0: %d", bass_n);
+        bell_logging = 0;
+        en_set(P_PADN, 2);
+        run(40.0f);
+        seen = 0;
+        for (k = 0; k < EN_NPAD; k++)
+            seen |= 1 << (en_pad_note[k] % 12);
+        for (k = j = 0; k < 12; k++)
+            j += seen >> k & 1;
+        CHECK(j == 2, "Pad notes 2: %d notes", j);
+        CHECK(seen >> en_chord_root & 1, "Pad notes 2 without the root");
+        CHECK(en_chord_n >= 3, "the chord still whole for the screen: %d", en_chord_n);
         en_init();
         en_play(1);
     }

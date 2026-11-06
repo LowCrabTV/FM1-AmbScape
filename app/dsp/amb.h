@@ -64,6 +64,7 @@ enum {
     P_SLOT1, P_SLOT2, P_SLOT3, P_SLOT4,               /* the slate: each step's chord, 0 empty, n the scale's degree n */
     P_LEN1, P_LEN2, P_LEN3, P_LEN4,                   /* and how long it lasts: an index into EN_SLATE_BARS */
     P_ARP, P_ARATE, P_ARANGE,                         /* the bells' arpeggio: its style (0 off), rate, octaves */
+    P_PADN, P_BASSN,                                  /* how many notes: the pad's chord, 2..4; the bass's, 0 held */
     P_NPARAMS
 };
 typedef struct {

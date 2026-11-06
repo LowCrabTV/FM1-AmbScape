@@ -1,0 +1,82 @@
+# SELECT held: a page's other knobs. The arp on the Bells page (ARP), Notes on the Pad's (ENV) and the Bass's (LFO);
+# each with the piece, gone with the recipe. A project from the slate's build (format 5) keeps its settings.
+wait 300
+tap ARP
+wait 100
+expect view 2
+expect par36 0
+press SEL
+wait 100
+shot arp_off.png
+spin K1 1
+expect par36 1
+spin K1 5
+expect par36 6
+spin K2 1
+expect par37 3
+spin K3 -1
+expect par38 1
+wait 100
+shot arp.png
+spin K4 3
+release SEL
+wait 100
+expect view 2
+spin K2 2
+expect par36 6
+tap ENV
+wait 100
+expect view 1
+press SEL
+wait 100
+expect par39 4
+spin K2 -1
+expect par39 3
+shot pad_notes.png
+release SEL
+wait 100
+expect view 1
+tap LFO
+wait 100
+expect view 3
+press SEL
+wait 100
+expect par40 0
+shot bass_held.png
+spin K2 30
+wait 100
+shot bass_notes.png
+release SEL
+wait 100
+expect view 3
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par36 6
+expect par37 3
+expect par38 1
+expect par39 3
+press SAVE
+wait 1700
+release SAVE
+wait 100
+expect par36 0
+expect par37 2
+expect par38 2
+expect par39 4
+expect par40 0
+# from the slate's build
+turn PRESET 3
+storev5 44
+reboot
+wait 300
+expect piece 3
+expect par0 44
+expect par36 0
+expect par39 4
+expect par40 0
+tap SAVE
+reboot
+wait 300
+expect par0 44

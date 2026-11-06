@@ -196,6 +196,9 @@ the same for all.
 
 ## 7. The pages
 
+**Hold SELECT** on the Pad, Bells, Bass or Chords page and the knobs change to that page's other
+settings; let go and they're back. Holding and turning doesn't change the page.
+
 One page a layer, each on its own button, with four values on KNOB 1–4. A layer's level is
 always KNOB 1. SELECT steps through them in this order.
 
@@ -224,6 +227,22 @@ SELECT for the page.
 - **EDIT** goes to the next step on the next bar, and **REC** holds the step. Each piece keeps its
   own slate.
 
+### Hold SELECT: Pad, Bass and Bells
+
+- **Pad, Notes (KNOB 2):** how much of the chord the pad sings. 4 is the whole chord; 3 its root,
+  third and fifth; 2 its root and fifth, open. Under 4, the arc moves it by one as each chord comes.
+- **Bass, Notes (KNOB 2):** **Held** is the one long note. Turned up, the bass plays hits spread over
+  the bar, as Hits does the pulse: the root first, then the fifth (from 25), the octave (from 50),
+  and the third and seventh (from 75). Only the chord's tones, so it follows the slate and the
+  drift. Fifth is for the held bass; with Notes up, Glide is capped so each note arrives.
+- **Bells, Arp (KNOB 1):** **Off**, or an arpeggio of the chord's tones in place of the loops: **Up**,
+  **Down**, **Up/Dn**, **Dn/Up**, **Random**, **Converge** (in from both ends) or **Diverge** (out
+  from the middle). The loops keep turning, silent, for when it's off.
+- **Bells, Rate (KNOB 2):** 1/4, 1/8., 1/8 or 1/16. Faster, the bells ring shorter.
+- **Bells, Range (KNOB 3):** 1 to 3 octaves, from the chord's root. Octave moves it up and down.
+- **With the arp on, Density** picks which of 16 steps sound, spread as Hits does the pulse: 100
+  plays every step. Swing, the arc and Evolve all act on it.
+
 ### ENV: Pad
 
 ![The Pad page: LEVEL 60, SWELL 60, BRIGHT 40, COLOUR Rhodes](img/screen-pad.png "The Pad page")
@@ -239,7 +258,8 @@ SELECT for the page.
 ![The Bells page: LEVEL 65, DENSITY 40, TONE 50, OCTAVE 0](img/screen-bells.png "The Bells page")
 
 - **Level.**
-- **Density:** how many notes each loop holds, none at 0 to five at the top. A change shows up as
+- **Density:** how many notes each loop holds, none at 0 to five at the top. Low, they're the
+  chord's tones; from 20, passing notes come in. A change shows up as
   each loop comes round.
 - **Tone:** from round and soft-struck to a long metallic clang.
 - **Octave:** two down to two up (OCT− and OCT+ too).
@@ -388,6 +408,11 @@ The defaults are Garden's; each piece has its own.
 | Garden | Drift | 20 s – 5:00 | 25 (about 40 s) |
 | Chords | Chord 1–4 | Off, or a chord of the scale | Off |
 | Chords | Bars 1–4 (SELECT held) | 1, 2, 3, 4, 6, 8, 12, 16 | 4 |
+| Pad | Notes (SELECT held) | 2, 3, 4 | 4 |
+| Bells | Arp (SELECT held) | Off, Up, Down, Up/Dn, Dn/Up, Random, Converge, Diverge | Off |
+| Bells | Rate (SELECT held) | 1/4, 1/8., 1/8, 1/16 | 1/8 |
+| Bells | Range (SELECT held) | 1–3 octaves | 2 |
+| Bass | Notes (SELECT held) | Held, 1–100 (1 to 8 hits a bar) | Held |
 | Pad | Level | 0–100 | 60 |
 | Pad | Swell | 0–100 | 60 |
 | Pad | Bright | 0–100 | 40 |

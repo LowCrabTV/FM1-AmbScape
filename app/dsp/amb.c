@@ -36,6 +36,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Bars 1", 0, EN_NBARS - 1, 3}, {"Bars 2", 0, EN_NBARS - 1, 3}, {"Bars 3", 0, EN_NBARS - 1, 3},
     {"Bars 4", 0, EN_NBARS - 1, 3},
     {"Arp", 0, EN_NARP - 1, 0}, {"Arp rate", 0, EN_NARATE - 1, 2}, {"Arp range", 1, 3, 2},
+    {"Pad notes", 2, 4, 4},   {"Bass notes", 0, 100, 0},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -132,6 +133,10 @@ void en_param_text(int i, int v, char *b)
         while (*s)
             *b++ = *s++;
         *b = 0;
+        return;
+    }
+    if (i == P_BASSN && !v) {
+        b[0] = 'H', b[1] = 'e', b[2] = 'l', b[3] = 'd', b[4] = 0;
         return;
     }
     if (i == P_ARANGE) {
@@ -352,6 +357,7 @@ static uint32_t pool = 0xAADu;                  /* Ionian until told */
 static int nsteps, steps[12];                   /* the scale */
 static int deg;                                 /* the chord's scale degree */
 static int chord_pcs[4], chord_nt;
+static int pad_pcs[4], pad_nt;                 /* the tones the pad sings of it (Pad notes) */
 static float tunefac = 1.0f;
 static uint32_t rng = 0x9E3779B9u;
 
@@ -494,8 +500,8 @@ static void pad_leave(void)
     for (i = 0; i < EN_NPAD; i++) {
         pad_t *v = &pad[i];
         int pc = v->midi_note % 12, shared = 0;
-        for (k = 0; k < chord_nt; k++)
-            shared |= chord_pcs[k] == pc;
+        for (k = 0; k < pad_nt; k++)
+            shared |= pad_pcs[k] == pc;
         if (v->amp > 0.002f && !shared && !v->hand)
             v->hand = 1;
         else if (v->amp <= 0.002f && !v->hand)
@@ -558,7 +564,10 @@ static inline float blep_saw(float t, float dt)
 /* ------------------------------------------------------------------ bass --- */
 static struct {
     float ph, inc, note, target, amp;
-    uint8_t midi_note, rest;                    /* rest: sitting this chord out */
+    float env, lvl, edec;                       /* Bass notes: each its own ring (env falls by edec; lvl follows it,
+                                                 * so no clicks); held, both stay at 1 */
+    int32_t wait;                               /* swing: samples until a note that waits (pend) */
+    uint8_t midi_note, rest, pend;              /* rest: sitting this chord out */
 } bass;
 static float bass_vol, glide_k = 1.0f / (0.25f * EN_SR);      /* glide_k: 1 / the glide's time in samples */
 
@@ -616,16 +625,39 @@ static int bell_note(int l, int off)            /* a loop slot's note, from the 
     return n;
 }
 
+/* Pad notes: all of the chord; or its root, third and fifth; or its root and fifth, open across the voices. Under
+ * four, the arc moves it by one as each chord comes */
+static void pad_tones(void)
+{
+    int i, n = par[P_PADN];
+    if (n < 4)
+        n = (int)fm_clampf((float)(n + (arcm > 0.4f) - (arcm < -0.4f)), 2.0f, 4.0f);
+    pad_nt = chord_nt;
+    for (i = 0; i < chord_nt; i++)
+        pad_pcs[i] = chord_pcs[i];
+    if (chord_nt >= 3 && n == 3) {
+        pad_nt = 3;
+    } else if (chord_nt >= 3 && n == 2) {
+        pad_pcs[1] = chord_pcs[2];
+        pad_pcs[2] = chord_pcs[0];
+        pad_pcs[3] = chord_pcs[2];
+        pad_nt = 4;
+    }
+}
+
 static void pad_retarget(void)                  /* the chord's tones to the four voices */
 {
-    int from[4], to[4], i;
+    int from[4], to[4], all[4], i;
     chord_nt = en_chord_tones(pool, par[P_ROOT], deg, chord_pcs);
+    pad_tones();
     for (i = 0; i < EN_NPAD; i++)
         from[i] = (int)(pad[i].target + 0.5f);
-    en_voice_lead(from, chord_pcs, chord_nt, to, 48, 77);
+    en_voice_lead(from, pad_pcs, pad_nt, to, 48, 77);
+    if (par[P_PADN] < 4)                        /* the screen names the whole chord, whatever the pad leaves out */
+        en_voice_lead(from, chord_pcs, chord_nt, all, 48, 77);
     for (i = 0; i < EN_NPAD; i++) {             /* each voice takes its note at its next breath */
         pad[i].target = (float)to[i];
-        en_chord[i] = (uint8_t)to[i];
+        en_chord[i] = (uint8_t)(par[P_PADN] < 4 ? all[i] : to[i]);
     }
     en_chord_root = (uint8_t)chord_pcs[0];
     en_chord_n = (uint8_t)chord_nt;
@@ -960,6 +992,69 @@ static void arp_step(void)                      /* a sixteenth */
     arp_seq++;
 }
 
+/* ------------------------------------------------------- the bass's notes --- */
+/* Bass notes above 0: hits spread over the bar as Hits does the pulse's, 1 to 8 of 16, the arc thinning and filling
+ * them. The bar's first is the root; then, as Notes goes up, the fifth, the octave, the third and the seventh, in
+ * a figure that Evolve now and then changes. The chord's tones only, so it follows the slate and Drift. */
+static uint32_t bass_pat;
+static uint8_t bass_i, bass_k;
+
+static void bass_pattern(void)
+{
+    float k = (1.0f + (float)par[P_BASSN] * 0.07f) * (1.0f + 0.6f * arcm);
+    bass_k = (uint8_t)(fm_clampf(k, 1.0f, 8.0f) + 0.5f);
+    bass_pat = en_euclid(bass_k, 16, 0);
+}
+
+static void bass_sound(int n)
+{
+    /* it rings until about the next hit: longer the fewer they are */
+    float t60 = fm_clampf(24.0f / (float)bass_k * step_len * (1.0f / EN_SR), 0.3f, 4.0f);
+    if (en_playing) {
+        midi(0x82, bass.midi_note, 0);
+        midi(0x92, (uint32_t)n, 80);
+    }
+    bass.midi_note = (uint8_t)n;
+    bass.target = (float)n;
+    bass.env = 1.0f;
+    bass.edec = fm_expf(-6.9f / (t60 * EN_SR));
+}
+
+static void bass_step(void)                     /* a sixteenth */
+{
+    int pos = (int)(sixteenth & 15u), up[5], m = 1, j, r, n;
+    int32_t w;
+    if (pos == 0) {
+        bass_pattern();
+        bass_i = 0;
+    }
+    if (!(bass_pat >> pos & 1u) || bass.rest)
+        return;
+    r = 36 + chord_pcs[0] % 12 + 12 * par[P_BASSOCT];
+    up[0] = 0;                                  /* above the root: its figure's notes, as Notes opens them */
+    if (par[P_BASSN] >= 25 && chord_nt >= 3)
+        up[m++] = (chord_pcs[2] - chord_pcs[0] + 12) % 12;
+    if (par[P_BASSN] >= 50)
+        up[m++] = 12;
+    if (par[P_BASSN] >= 75) {
+        up[m++] = (chord_pcs[1] - chord_pcs[0] + 12) % 12;
+        if (chord_nt >= 4)
+            up[m++] = (chord_pcs[3] - chord_pcs[0] + 12) % 12;
+    }
+    j = bass_i % m;
+    if (bass_i && frand() < evolve * 0.25f)
+        j = irand(m);
+    n = r + up[j];
+    bass_i++;
+    w = sixteenth & 1u ? (int32_t)(swing * step_len) : 0;
+    if (w > 0) {
+        bass.wait = w;
+        bass.pend = (uint8_t)n;
+    } else {
+        bass_sound(n);
+    }
+}
+
 /* ---------------------------------------------------------------- pulse --- */
 static const uint8_t DRUM_ROT[EN_NDRUM] = {0, 2, 3};
 static int drum_k[EN_NDRUM], drum_kb[EN_NDRUM], drum_rot[EN_NDRUM], pulse_rest;   /* rest: bars left */
@@ -1043,6 +1138,8 @@ static int32_t drums_wait(void)                 /* samples to the next hit that 
     for (d = 0; d < EN_NDRUM; d++)
         if (drum[d].wait > 0 && (!m || drum[d].wait < m))
             m = drum[d].wait;
+    if (bass.wait > 0 && (!m || bass.wait < m))
+        m = bass.wait;
     return m;
 }
 
@@ -1054,6 +1151,10 @@ static void drums_wait_step(int32_t k)          /* k samples went by: hits whose
             drum[d].wait = 0;
             drum_fire(d, drum[d].pend);
         }
+    if (bass.wait > 0 && (bass.wait -= k) <= 0) {
+        bass.wait = 0;
+        bass_sound(bass.pend);
+    }
 }
 
 /* the grid: one call a sixteenth (MIDI clock: 6 ticks) */
@@ -1085,6 +1186,8 @@ static void tick(void)
         if (++drum_pos[d] >= EN_DRUM_N[d])
             drum_pos[d] = 0;
     }
+    if (par[P_BASSN])
+        bass_step();
     if (par[P_ARP])
         arp_step();
     if ((sixteenth & 3u) == 0u) {               /* the loops step in quarter notes */
@@ -1355,6 +1458,22 @@ static void apply(int p, int v)
         if (nsteps)
             bass_to(bass.midi_note % 12);
         break;
+    case P_BASSN:
+        if (v) {
+            bass_pattern();
+        } else {                                 /* back to one long note */
+            bass.wait = 0;
+            bass.env = bass.edec = 1.0f;
+            if (nsteps)
+                bass_to(chord_pcs[0]);
+        }
+        break;
+    case P_PADN:
+        if (nsteps) {
+            pad_retarget();
+            pad_leave();
+        }
+        break;
     case P_GLIDE: glide_k = 1.0f / ((0.02f + 0.012f * (float)v) * EN_SR); break;   /* 20 ms .. 1.2 s */
     case P_SWING: swing = (float)v * 0.005f; break;      /* the off sixteenths up to half a step late */
     case P_HATS:
@@ -1477,6 +1596,8 @@ void en_init(void)
     for (i = 0; i < PLEX_N; i++)
         plex[i] = 0;
     tape_w = plex_w = tape_ph = 0;
+    bass.env = bass.lvl = bass.edec = 1.0f;
+    bass.wait = 0;
     head2 = head2_t = 0.75f;
     head2_v = 0.0f;
     echo_len = 0.0f;
@@ -1558,6 +1679,7 @@ static void play_stop(void)
     int d;
     for (d = 0; d < EN_NDRUM; d++)
         drum[d].wait = 0;                        /* a swung hit still waiting stays unplayed */
+    bass.wait = 0;
     en_playing = 0;
     pad_gate = 0.0f;
     if (!en_ext)
@@ -1738,13 +1860,16 @@ static void render_bass(uint32_t n)
     uint32_t j;
     const float g = bass_vol * 0.42f, tgt = en_playing && !bass.rest ? 1.0f : 0.0f,
                 rate = tgt > 0.0f ? 1.0f / (2.5f * EN_SR) : 1.0f / (4.0f * EN_SR);
-    float ph = bass.ph, amp = bass.amp, inc;
+    const float edec = bass.edec;
+    float ph = bass.ph, amp = bass.amp, env = bass.env, lvl = bass.lvl, inc;
     if (amp < 1e-5f && !en_playing) {
         bass.amp = 0.0f;
         en_bass_level = 0.0f;
         return;
     }
-    bass.note += (bass.target - bass.note) * fm_minf((float)n * glide_k, 1.0f);   /* Glide */
+    /* Glide; with Bass notes, never so slow that a note doesn't arrive */
+    bass.note += (bass.target - bass.note) *
+                 fm_minf((float)n * (par[P_BASSN] ? fm_maxf(glide_k, 4.0f / step_len) : glide_k), 1.0f);
     inc = mtof(bass.note) * (1.0f / EN_SR);
     for (j = 0; j < n; j++) {
         float x = sine(ph) * 0.75f + sine(ph * 0.5f + 0.25f) * 0.45f + sine(ph * 2.0f) * 0.12f;
@@ -1752,14 +1877,18 @@ static void render_bass(uint32_t n)
         if (ph >= 2.0f)                          /* two turns: the sub-octave's period */
             ph -= 2.0f;
         amp += (tgt - amp) * rate;
-        x *= amp * g;
+        env *= edec;
+        lvl += (env - lvl) * 0.006f;             /* ~4 ms */
+        x *= amp * lvl * g;
         mixl[j] += x;
         mixr[j] += x;
         rsend[j] += x * 0.08f;
     }
     bass.ph = ph;
     bass.amp = amp;
-    en_bass_level = amp;
+    bass.env = env;
+    bass.lvl = lvl;
+    en_bass_level = amp * lvl;
 }
 
 static void render_bells(uint32_t n)
@@ -1933,7 +2062,7 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
             drift_left -= (float)n;
         if (!fifth_done && (slate_on ? slate_done() >= 0.5f : drift_left < 0.5f * drift_total)) {
             fifth_done = 1;                      /* halfway: the bass may lean on the fifth */
-            if (frand() < (float)par[P_FIFTH] * 0.01f && chord_nt >= 3)
+            if (frand() < (float)par[P_FIFTH] * 0.01f && chord_nt >= 3 && !par[P_BASSN])
                 bass_to(chord_pcs[2]);
         }
         if (!slate_on && drift_left <= 0.0f)
