@@ -285,11 +285,16 @@ sound. Everything it deals shows on its own page and can be turned by hand after
 - **Range (KNOB 2):** how far the sound may move from the piece's recipe. At 0 only the notes, the chords and
   the keys are dealt. On up, the levels, Density, Evolve, Motion, Hits, Hats, Swing, the echo and reverb, the
   pad's Swell and Bright, the bells' tone, Glide, Fifth, Sparkle and Swoosh move too, each within a window round
-  the recipe, so the piece stays itself. The tempo moves at most 15%.
+  the recipe, so the piece stays itself. The tempo moves at most 15%. The instruments and voicings come
+  too, more often the higher it is: the pad's Colour (Rhodes, Voices, Strings, Noir), the bells' Colour
+  (Lead less often, and with it Density no higher than 45, so the solo sings), the pad's Notes (from 30)
+  and the bells' octave, one either way.
 - **Spice cap (KNOB 3):** the most Spice either dealer may be given.
 - **What it never does:** turn on a part the recipe has off, or turn one down to nothing; change the scale, the
   piece's root, the tuning or MIDI.
-- Wild deals over your knobs at each PLAY. To keep a version you've changed, turn up to its number first.
+- **Your hand comes first.** Turn any knob, an instrument, a voicing, a level, at any time: it stays as you
+  set it until Dream deals again, at the next turn of Dream, Range or Spice cap, or, in Wild, the next PLAY.
+  To keep a version you've changed, turn up to its number first, then save.
 
 ### Hold SELECT: Sparkle, on the Garden page
 

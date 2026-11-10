@@ -441,6 +441,35 @@ static void dream_deal(int num)
                 v = 10;                              /* on in the recipe: still heard */
             put(p, v);
         }
+    if (range > 0) {                             /* the instruments and voicings: more often away as Range grows */
+        const float r = (float)range * 0.01f;
+        if (rec[P_PAD]) {
+            const int away = dream_f() < 0.6f * r, other = (rec[P_PADTONE] + 1 + (int)(dream_r() % 3u)) % 4;
+            const int notes = range >= 30 && dream_f() < 0.5f * r ? 2 + (int)(dream_r() % 3u) : rec[P_PADN];
+            put(P_PADTONE, away ? other : rec[P_PADTONE]);
+            put(P_PADN, notes);
+        }
+        if (rec[P_BELLS]) {
+            static const float W[EN_NBCOLOR] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.5f};   /* Lead, less often */
+            int c = rec[P_BCOLOR], o = rec[P_BOCT], k;
+            if (dream_f() < 0.6f * r) {
+                float sum = 0.0f, x;
+                for (k = 0; k < EN_NBCOLOR; k++)
+                    sum += k == rec[P_BCOLOR] ? 0.0f : W[k];
+                x = dream_f() * sum;
+                for (k = 0; k < EN_NBCOLOR; k++)
+                    if (k != rec[P_BCOLOR] && (x -= W[k]) < 0.0f)
+                        break;
+                c = k < EN_NBCOLOR ? k : EN_NBCOLOR - 1;
+            }
+            if (dream_f() < 0.35f * r)
+                o += dream_f() < 0.5f ? -1 : 1;
+            put(P_BCOLOR, c);
+            put(P_BOCT, o < -2 ? -2 : o > 2 ? 2 : o);
+            if (c == 5 && proj.par[P_DENSITY] > 45)
+                put(P_DENSITY, 45);                 /* the solo sings rather than runs */
+        }
+    }
     ui.dream_now = (uint16_t)num;
     deal_chords();
     itoa_u((uint32_t)num, head + 6);

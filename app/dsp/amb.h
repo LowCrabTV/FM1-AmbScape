@@ -63,7 +63,7 @@ enum {
     P_ECHO, P_ETIME, P_REVERB, P_SIZE,                /* space */
     P_BRIGHT, P_SWELL, P_BTONE, P_MOTION,             /* tone */
     P_TUNE, P_MIDI, P_TEMPO, P_ROOT, P_MODE, P_BOCT,  /* setup, panel encoders, bell octave */
-    P_PADTONE,                                        /* the pad's colour, set by the piece: Rhodes, Voices */
+    P_PADTONE,                                        /* the pad's colour, set by the piece: Rhodes, Voices, Strings, Noir */
     P_BASSOCT, P_GLIDE, P_FIFTH,                      /* bass: its octave, its glide, how often it leans on the fifth */
     P_SWING, P_HATS,                                  /* pulse: swing, the hats' colour */
     P_SLOT1, P_SLOT2, P_SLOT3, P_SLOT4,               /* the slate: each step's chord, 0 empty, n the scale's degree n */
@@ -74,7 +74,7 @@ enum {
     P_SPARK, P_SPLEN, P_SPOFT,                        /* Sparkle: how much at its peak (0 off), each wave's length, the gap between */
     P_RSLOT1, P_RSLOT2, P_RSLOT3, P_RSLOT4,           /* the root rotator's steps: 0 empty, n = pitch class n - 1 */
     P_RLEN1, P_RLEN2, P_RLEN3, P_RLEN4,               /* and how long each lasts: an index into EN_ROOT_BARS */
-    P_BCOLOR,                                         /* the bells' colour: Bell, Soft, Wood, Strings, Piano */
+    P_BCOLOR,                                         /* the bells' colour: Bell, Soft, Wood, Strings, Piano; Lead, a solo synth */
     P_SWOOSH, P_SWLEN, P_SWOFT, P_SWTONE,             /* Swoosh: how loud (0 off), each pass's length, the gap between, white to brown */
     P_SEED,                                           /* the garden's dice: 0 Wild, or a number, the same garden each PLAY */
     P_DEAL, P_DCOUNT, P_DSPICE, P_DFORM,              /* the chord dealer: Off or a number, 2-4 chords, Spice, Form */
