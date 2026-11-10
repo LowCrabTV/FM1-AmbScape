@@ -76,6 +76,7 @@ enum {
     P_RLEN1, P_RLEN2, P_RLEN3, P_RLEN4,               /* and how long each lasts: an index into EN_ROOT_BARS */
     P_BCOLOR,                                         /* the bells' colour: Bell, Soft, Wood, Strings, Piano */
     P_SWOOSH, P_SWLEN, P_SWOFT, P_SWTONE,             /* Swoosh: how loud (0 off), each pass's length, the gap between, white to brown */
+    P_SEED,                                           /* the garden's dice: 0 Wild, or a number, the same garden each PLAY */
     P_NPARAMS
 };
 typedef struct {
@@ -121,6 +122,7 @@ extern volatile float en_drum_glow[EN_NDRUM];
 extern volatile uint32_t en_bars;              /* sixteenths played since start (for tests) */
 extern volatile uint8_t en_root;               /* the root playing: the rotator's, or Root */
 extern volatile float en_spark;                /* 0..1: where the Sparkle's wave is */
+extern volatile uint16_t en_seed_now;          /* the number the garden growing now grew from, 1..999 */
 extern volatile float en_arc;                  /* the arc, -1 sparse .. +1 full (times Motion) */
 extern volatile uint8_t en_pulse_rest;         /* the pulse is sitting a few bars out */
 extern volatile uint8_t en_pad_note[EN_NPAD];  /* the note each voice sings now (MIDI) */

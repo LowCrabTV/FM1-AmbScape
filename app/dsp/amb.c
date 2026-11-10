@@ -46,6 +46,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Root bars 4", 0, EN_NRBARS - 1, 3},
     {"Bell colour", 0, EN_NBCOLOR - 1, 0},
     {"Swoosh", 0, 100, 0},    {"Swsh length", 0, 100, 50}, {"Swsh often", 0, 100, 30}, {"Swsh tone", 0, 100, 50},
+    {"Seed", 0, 999, 0},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -418,6 +419,7 @@ volatile float en_drum_glow[EN_NDRUM];
 volatile uint32_t en_bars;
 volatile float en_arc;
 volatile float en_spark;
+volatile uint16_t en_seed_now;
 volatile uint8_t en_root;
 volatile uint8_t en_pulse_rest;
 volatile uint8_t en_pad_note[EN_NPAD];
@@ -443,6 +445,16 @@ static uint32_t rnd(void)                       /* Marsaglia's xorshift (Xorshif
 }
 static float frand(void) { return (float)(rnd() >> 8) * (1.0f / 16777216.0f); }
 static int irand(int n) { return n > 0 ? (int)((rnd() >> 8) % (uint32_t)n) : 0; }
+/* the sound's own dice (the pad's breaths, the slow modulators, the echo's heads), apart from the garden's: so a
+ * Seed grows the same garden, whenever they happen to roll */
+static uint32_t trng = 0x6D2B79F5u;
+static float tfrand(void)
+{
+    uint32_t x = trng;
+    x ^= x << 13, x ^= x >> 17, x ^= x << 5;
+    trng = x;
+    return (float)(x >> 8) * (1.0f / 16777216.0f);
+}
 
 static void midi(uint32_t st, uint32_t d1, uint32_t d2)
 {
@@ -476,8 +488,8 @@ static void mods_step(uint32_t n)
     int i;
     for (i = 0; i < NMOD; i++) {
         if (mod[i].left <= n) {
-            float secs = 7.0f + 33.0f * frand();
-            mod[i].tgt = frand() * 2.0f - 1.0f;
+            float secs = 7.0f + 33.0f * tfrand();
+            mod[i].tgt = tfrand() * 2.0f - 1.0f;
             mod[i].left = (uint32_t)(secs * EN_SR);
             mod[i].rate = (float)n / (secs * EN_SR * 0.5f);
         } else {
@@ -536,9 +548,9 @@ static void svf_coefs(float *c, float f, float k)
 static void midi(uint32_t st, uint32_t d1, uint32_t d2);
 static void pad_breathe(pad_t *v, int i)        /* a new breath: its length, its strength, its note */
 {
-    float secs = (4.0f + 0.12f * swell) * BREATH[i] * (0.85f + 0.3f * frand());
+    float secs = (4.0f + 0.12f * swell) * BREATH[i] * (0.85f + 0.3f * tfrand());
     v->rate = 32.0f / (secs * EN_SR);
-    v->peak = 0.6f + 0.4f * frand();
+    v->peak = 0.6f + 0.4f * tfrand();
     if (en_playing && v->midi_note)
         midi(0x80, v->midi_note, 0);
     v->note = v->target;
@@ -1293,19 +1305,9 @@ static void spark_grace(float vel)              /* the scale's note beside a cho
     sp_busy = 1;
 }
 
-static void spark_high(float vel)               /* what the pad sings loudest, up high */
+static void spark_high(float vel)               /* a tone the pad sings, up high: by the garden's dice, not its breath */
 {
-    int i, n = 60 + chord_pcs[0], in = 0;
-    float best = 0.0f;
-    for (i = 0; i < EN_NPAD; i++)
-        if (pad[i].amp > best) {
-            best = pad[i].amp;
-            n = pad[i].midi_note;
-        }
-    for (i = 0; i < chord_nt; i++)              /* (a voice may still hang on the last chord's note) */
-        in |= chord_pcs[i] == n % 12;
-    if (!in)
-        n = 60 + chord_pcs[0];
+    int n = 60 + chord_pcs[chord_nt > 0 ? irand(chord_nt) : 0];
     while (n < 79)
         n += 12;
     while (n > 103)
@@ -1770,9 +1772,9 @@ static void heads_step(uint32_t n)
     }
     fb_lean = 0.25f * motion * (1.0f + mod[8].v);
     if (head_left <= n) {
-        head_left = (uint32_t)((20.0f + 40.0f * frand()) * EN_SR);
-        if (en_playing && !en_frozen && frand() < motion)
-            head2_t = HEAD2[(int)(frand() * 4.999f)];
+        head_left = (uint32_t)((20.0f + 40.0f * tfrand()) * EN_SR);
+        if (en_playing && !en_frozen && tfrand() < motion)
+            head2_t = HEAD2[(int)(tfrand() * 4.999f)];
     } else {
         head_left -= n;
     }
@@ -1831,6 +1833,7 @@ static uint32_t ext_age;
 
 static void tempo_set(void) { step_len = EN_SR * 60.0f / ((float)par[P_TEMPO] * 4.0f); }
 
+static void regrow(void);
 static void apply(int p, int v)
 {
     const en_param_t *pi = &PARAMS[p];
@@ -1893,6 +1896,10 @@ static void apply(int p, int v)
         break;
     case P_GLIDE: glide_k = 1.0f / ((0.02f + 0.012f * (float)v) * EN_SR); break;   /* 20 ms .. 1.2 s */
     case P_SWING: swing = (float)v * 0.005f; break;      /* the off sixteenths up to half a step late */
+    case P_SEED:                                 /* a number: that garden, now; the one growing kept: nothing */
+        if (v && v != en_seed_now)
+            regrow();
+        break;
     case P_HATS:
         /* how much hat: at once how many (hat_hits), how loud and how bright. Both halves meet at 50 */
         if (v <= 50) {
@@ -1983,19 +1990,39 @@ static void pool_set(uint32_t p)
     bass_to(chord_pcs[0]);
 }
 
+static uint32_t seed_mix(uint32_t n)            /* a Seed's number to the dice's state */
+{
+    n = n * 2654435761u ^ 0x5BD1E995u;
+    n ^= n >> 15;
+    n *= 0x2C1B3C6Du;
+    n ^= n >> 12;
+    return n ? n : 1u;
+}
+
+static void arc_home(void);
 static void regrow(void)                        /* a new piece: fresh loops, home chord, patterns home */
 {
     int l;
-    for (l = 0; l < EN_NLOOP; l++) {
-        loop_regrow(l);
-        loop_rest[l] = 0;
-    }
+    /* the garden's number: the Seed's, or in Wild a new one, kept where the Seed's knob can find it. From it, the
+     * dice; and what they work on, the arc and Sparkle's waves, from their start */
+    en_seed_now = (uint16_t)(par[P_SEED] ? par[P_SEED] : 1 + irand(999));
+    rng = seed_mix(en_seed_now);
+    arc_home();
+    sp_left = (uint32_t)(1.5f * EN_SR);
+    sp_in = sp_busy = 0;
+    sp_env = 0.0f;
+    en_spark = 0.0f;
+    sp_deg = -1;
     deg = 0;
     shape = 0;
     pad_retarget();
     pad_handoff();
     bass_to(chord_pcs[0]);
     bass.rest = 0;
+    for (l = 0; l < EN_NLOOP; l++) {             /* on the home chord, which they'll begin on */
+        loop_regrow(l);
+        loop_rest[l] = 0;
+    }
     pulse_rest = 0;
     en_pulse_rest = 0;
     drums_pattern();
@@ -2080,6 +2107,7 @@ void en_init(void)
     drums_pattern();
     drift_reset();
     pl_decay = pl_decay_t;
+    regrow();                                    /* the first garden has its number too */
 }
 
 /* ------------------------------------------------------------ transport --- */
@@ -2150,10 +2178,13 @@ static void drain(void)
             break;
         case C_POOL: pool_set((uint32_t)b & 0xFFFu); break;
         case C_PLAY:
-            if (a && !en_playing)
+            if (a && !en_playing) {
+                if (par[P_SEED])                 /* a Seed: its garden again, from the start */
+                    regrow();
                 play_start(1);
-            else if (!a && en_playing)
+            } else if (!a && en_playing) {
                 play_stop();
+            }
             break;
         case C_NEXT:
             if (en_playing)
@@ -2176,6 +2207,8 @@ static void drain(void)
                 if (en_playing)
                     clock_pulse();
             } else if (a == EN_CLK_START) {
+                if (par[P_SEED])
+                    regrow();
                 play_start(1);
             } else if (a == EN_CLK_CONTINUE) {
                 if (!en_playing)
@@ -2523,6 +2556,13 @@ static float slate_done(void)                   /* 0..1: how far through this st
 /* the arc: a slow tide, minutes long, between sparse (-1) and full (+1); Motion sets how far it goes */
 static float arc, arc_tgt;
 static uint32_t arc_left;
+
+static void arc_home(void)
+{
+    arc = arc_tgt = arcm = 0.0f;
+    en_arc = 0.0f;
+    arc_left = 0;
+}
 
 static void control(uint32_t n)                 /* once a chunk: the slow things */
 {

@@ -1,0 +1,44 @@
+# Seed: SELECT held on the Garden page, KNOB 4. Wild in every recipe; turned up from Wild, the number of the garden
+# growing; with the piece; gone with the recipe. A project from Swoosh's build (format 11) keeps its settings, Wild.
+wait 300
+expect view 0
+expect par58 0
+press SEL
+wait 100
+shot wild.png
+spin K4 1
+wait 100
+expect seedkept 1
+shot kept.png
+spin K4 -1
+wait 100
+expect seedkept 1
+spin K4 -999
+wait 100
+expect par58 0
+spin K4 1
+wait 100
+expect seedkept 1
+release SEL
+wait 100
+tap SAVE
+wait 200
+reboot
+wait 300
+expect seedkept 1
+press SAVE
+wait 1700
+release SAVE
+wait 100
+expect par58 0
+storev11 13
+reboot
+wait 300
+expect par0 13
+expect par58 0
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par0 13
+expect par58 0

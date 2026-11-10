@@ -343,6 +343,19 @@ Press ARP from the Bells page for the arp's own page, and again to go back.
 - **Size:** how long the plate rings, from a room to a long hall, and how many times the echo
   comes back.
 
+### Hold SELECT: Seed, on the Garden page
+
+**KNOB 4**, beside Sparkle's three. A piece's knobs are its personality; the dice decide the rest: which notes
+the bells' loops hold, how the patterns turn, where the chords drift, how the arc rises and falls.
+
+- **Wild** (all the way down) is a new garden each time, as it always was.
+- **A number, 1 to 999,** grows the same garden each time you press PLAY. It still grows and changes as
+  Evolve says, the same way each time, so long as you leave the knobs alone; turn one, and it goes its own way
+  from there.
+- **Turned up from Wild,** the knob lands on the number of the garden growing now, and keeps it. Nothing starts
+  again; the next PLAY grows it from its beginning, the loops it began with. Turn on from there to try others.
+- SAVE keeps it with the piece. The pad's breathing, the echo's drift and Swoosh's passes stay free.
+
 ### Hold SELECT: Swoosh, on the Space page
 
 Falling stars of noise. Each pass swells and wanes on a gentle curve, falling from bright to dark as
@@ -507,6 +520,7 @@ The defaults are Garden's; each piece has its own.
 | Space | Length (SELECT held) | 2–20 s | 6 s |
 | Space | Often (SELECT held) | 10 s – 5 min | 28 s |
 | Space | Tone (SELECT held) | 0–100 (white to brown) | 50 |
+| Garden | Seed (SELECT held) | Wild, 1–999 | Wild |
 | Setup | Root | C – B | D |
 | Setup | Tune | −50 – +50 cents | 0 |
 | Setup | MIDI out | Off, On | On |

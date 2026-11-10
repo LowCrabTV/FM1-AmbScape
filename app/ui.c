@@ -48,7 +48,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
 };
 /* SELECT held: a page's other knobs */
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
-    {P_SPARK, P_SPLEN, P_SPOFT, K_NONE},
+    {P_SPARK, P_SPLEN, P_SPOFT, P_SEED},
     {K_NONE, P_PADN, K_NONE, K_NONE},
     {P_BCOLOR, K_NONE, K_NONE, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
@@ -60,7 +60,7 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {P_RLEN1, P_RLEN2, P_RLEN3, P_RLEN4},
 };
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
-    {"Sparkle", "Length", "Often", ""},
+    {"Sparkle", "Length", "Often", "Seed"},
     {"", "Notes", "", ""},
     {"Colour", "", "", ""},
     {"", "", "", ""},
@@ -236,7 +236,11 @@ static const char *knob_name(int k)
 static void knob_text(int k, char *b)
 {
     int v = knob_get(k);
-    if (k == P_SLOT1 && !any_step(P_SLOT1)) {    /* an empty page says who's driving */
+    if (k == P_SEED && !v) {                     /* a new garden each time */
+        const char *n = "Wild";
+        while ((*b++ = *n++))
+            ;
+    } else if (k == P_SLOT1 && !any_step(P_SLOT1)) {    /* an empty page says who's driving */
         const char *n = "Drift";
         while ((*b++ = *n++))
             ;
@@ -344,6 +348,11 @@ static void turn(int role, int k, int32_t e)
         return;
     }
     knob_range(k, &lo, &hi);
+    if (k == P_SEED && !knob_get(k)) {           /* up from Wild: the garden growing now, kept */
+        if (e > 0)
+            knob_set(k, en_seed_now ? en_seed_now : 1);
+        return;
+    }
     if (is_rslot(k)) {
         int pos = rslot_pos(knob_get(k)) + accel(role, e, hi - lo);
         knob_set(k, rslot_val(pos < 0 ? 0 : pos > 12 ? 12 : pos));

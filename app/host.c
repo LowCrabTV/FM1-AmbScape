@@ -33,6 +33,8 @@ int app_expect(const char *what, int *got)
         g = (int)(en_pad_level * 100.0f);
     else if (!strcmp(what, "bass_level"))
         g = (int)(en_bass_level * 100.0f);
+    else if (!strcmp(what, "seedkept"))          /* the Seed is the number of the garden growing */
+        g = proj.par[P_SEED] && proj.par[P_SEED] == en_seed_now;
     else if (!strcmp(what, "chordroot"))
         g = en_chord_root;
     else if (!strncmp(what, "chord", 5))          /* chordN: pad voice N's note */
@@ -115,6 +117,27 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         o.piece = proj.piece;
         for (i = 0; i < NPIECES; i++) {
             for (k = 0; k < V9_NPARAMS; k++)
+                o.slot[i].par[k] = proj.slot[i].par[k];
+            o.slot[i].pool = proj.slot[i].pool;
+        }
+        o.slot[proj.piece].par[P_PAD] = o.par[P_PAD];
+        plat_store_save(OBJ_PROJ, &o, sizeof o);
+        return 1;
+    }
+    if (!strcmp(cmd, "storev11")) {              /* storev11 N: the project as Swoosh's build wrote it (format 11) */
+        static project_v11_t o;
+        int i, k;
+        memset(&o, 0, sizeof o);
+        o.magic = PROJ_MAGIC;
+        o.format = 11u;
+        for (k = 0; k < V11_NPARAMS; k++)
+            o.par[k] = proj.par[k];
+        o.par[P_PAD] = (int16_t)atoi(a);
+        o.pool = proj.pool;
+        o.leds = proj.leds;
+        o.piece = proj.piece;
+        for (i = 0; i < NPIECES; i++) {
+            for (k = 0; k < V11_NPARAMS; k++)
                 o.slot[i].par[k] = proj.slot[i].par[k];
             o.slot[i].pool = proj.slot[i].pool;
         }

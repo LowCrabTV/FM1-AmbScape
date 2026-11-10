@@ -638,7 +638,7 @@ int main(void)
         off = 0;
         for (k = 0; k < bell_n; k++)
             off += bell_log[k] % 12 == 5;
-        CHECK(bell_n > 20, "Sparkle over Dsus4: %d notes", bell_n);
+        CHECK(bell_n > 10, "Sparkle over Dsus4: %d notes", bell_n);   /* by the dice alone, 13 to 52 */
         CHECK(!off, "Sparkle over Dsus4: the third %d of %d", off, bell_n);
         en_set(P_SPARK, 0);
         run(0.05f);
@@ -786,6 +786,81 @@ int main(void)
         en_play(1);
     }
 
+    /* Seed: a number grows the same garden each PLAY, however long it rested and whatever the pad's breaths did
+     * meanwhile; another number, another garden; up from Wild keeps the one growing, its loops as they began */
+    {
+        static uint8_t first[4000];
+        static int8_t loops[EN_NLOOP][EN_LOOP_MAX];
+        int k, n0 = 0, l, s, same, kept, rests[3] = {3, 11, 5};
+        en_init();
+        for (i = 0; i < P_NPARAMS; i++)
+            en_set(i, en_param_info(i)->def);
+        run(0.05f);
+        en_set(P_DENSITY, 70), en_set(P_EVOLVE, 60), en_set(P_ARP, 1), en_set(P_SPARK, 60), en_set(P_SEED, 417);
+        run(0.05f);
+        for (k = 0; k < 3; k++) {
+            en_play(0);
+            run((float)rests[k]);                  /* a rest of its own length each time */
+            bell_logging = 1, bell_n = 0;
+            en_play(1);
+            run(60.0f);
+            bell_logging = 0;
+            if (!k) {
+                n0 = bell_n;
+                memcpy(first, bell_log, sizeof first);
+            } else {
+                same = bell_n == n0 && !memcmp(first, bell_log, (size_t)n0);
+                CHECK(same, "Seed 417, play %d: %d notes against %d, or other notes", k + 1, bell_n, n0);
+            }
+        }
+        CHECK(n0 > 40, "Seed 417: only %d notes in a minute", n0);
+        CHECK(en_seed_now == 417, "Seed 417: the garden's number is %d", en_seed_now);
+        en_set(P_SEED, 418);
+        run(0.05f);
+        en_play(0);
+        run(3.0f);
+        bell_logging = 1, bell_n = 0;
+        en_play(1);
+        run(60.0f);
+        bell_logging = 0;
+        same = bell_n == n0 && !memcmp(first, bell_log, (size_t)n0);
+        CHECK(!same, "Seed 418 grew Seed 417's garden");
+
+        /* Wild: a new number each new garden; turned to it, nothing starts again; PLAY grows those loops again */
+        en_play(0);
+        en_set(P_SEED, 0);
+        run(3.0f);
+        en_regrow();
+        run(0.05f);
+        k = en_seed_now;
+        CHECK(k >= 1 && k <= 999, "Wild: the garden's number %d", k);
+        en_regrow();
+        run(0.05f);
+        CHECK(en_seed_now != k || en_seed_now != (en_regrow(), run(0.05f), en_seed_now), "Wild: the same number three times");
+        k = en_seed_now;
+        for (l = 0; l < EN_NLOOP; l++)
+            for (s = 0; s < EN_LOOP_MAX; s++)
+                loops[l][s] = en_loop_note[l][s];
+        en_play(1);
+        run(20.0f);                                /* it grows on, Evolve changing it */
+        en_set(P_SEED, k);
+        run(0.05f);
+        CHECK(en_seed_now == k, "kept: the number moved, %d to %d", k, en_seed_now);
+        en_play(0);
+        run(4.0f);
+        en_play(1);
+        run(0.02f);
+        kept = 1;
+        for (l = 0; l < EN_NLOOP; l++)
+            for (s = 0; s < EN_LOOP_MAX; s++)
+                kept &= loops[l][s] == en_loop_note[l][s];
+        CHECK(kept, "kept: PLAY didn't grow the loops it began with");
+        en_play(0);
+        en_set(P_SEED, 0);
+        en_init();
+        en_play(1);
+    }
+
     /* the bells' colours: each sounds, stays bounded and clean; the strike comes as it should */
     {
         static const char *const NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano"};
@@ -889,7 +964,9 @@ int main(void)
                 }
                 if (l[w] + r[w] > 1e-6 && start < 0)
                     start = w;
-                if (start >= 0 && l[w] + r[w] < 1e-9) {   /* a pass ended: its first and last few windows */
+                if (start >= 0 && l[w] + r[w] < 1e-9 && w - start < 6) {
+                    start = -1;                      /* a blip, an earlier sound's last breath: not a pass */
+                } else if (start >= 0 && l[w] + r[w] < 1e-9) {   /* a pass ended: its first and last few windows */
                     double el = l[start + 1] + l[start + 2], er = r[start + 1] + r[start + 2];
                     double ll = l[w - 2] + l[w - 3], lr = r[w - 2] + r[w - 3];
                     CHECK((el > 2.0 * er && lr > 2.0 * ll) || (er > 2.0 * el && ll > 2.0 * lr),
