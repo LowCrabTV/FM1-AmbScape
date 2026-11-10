@@ -30,6 +30,10 @@ enum { OBJ_PROJ, OBJ_PANEL, OBJ_NOBJ };
 #define APP_BACKUP_MAGIC 0x31424D41u     /* "AMB1" */
 #define APP_BACKUP_VERSION 1u
 #define APP_BACKUP_WHAT "replaces all 8 pieces"
+int app_backup_playing(void);           /* (the platform calls these before app.c: declared here) */
+void app_backup_flush(void);
+void app_backup_hold(int on);
+void app_backup_restored(void);
 
 typedef struct {
     int16_t par[P_NPARAMS];
@@ -62,6 +66,8 @@ void ui_frame(void);
 void ui_input_only(void);
 int ui_dirty(void);
 void ui_say(const char *a, const char *b);
+void ui_backup_flush(void);
+void ui_backup_hold(int on);
 
 /* the contract: the platform calls these */
 void app_init(void);                     /* boot: the engine, then the saved project (or the defaults) */
