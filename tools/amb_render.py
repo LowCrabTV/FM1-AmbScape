@@ -146,7 +146,7 @@ def fetch(out):
         import mido  # noqa: F401
         import rtmidi  # noqa: F401
     except ImportError:
-        for p in (os.environ.get("AMB_TOOLS_PY", ""), os.path.expanduser(r"~m1-tools\Scripts\python.exe"),
+        for p in (os.environ.get("AMB_TOOLS_PY", ""), os.path.join(os.path.expanduser("~"), "fm1-tools", "Scripts", "python.exe"),
                   os.path.expanduser("~/fm1-tools/bin/python")):
             if p and os.path.isfile(p):
                 py = p
