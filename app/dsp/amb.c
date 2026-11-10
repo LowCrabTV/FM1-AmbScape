@@ -1319,29 +1319,38 @@ static const struct {
     {1.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.001f, 1.0f},          /* Lead: (not a bell: its own voice, below) */
 };
 
-/* Lead: a solo synth. With the bells' colour on Lead, their notes go to one voice instead, gliding from each to
- * the next: two saws a hair apart through a low-pass that opens as it sounds, a vibrato that comes in late, into
- * the echo and the reverb. It holds a note a while, then lets go slowly, darkening as it trails off, unlike a bell.
- * Bell tone is its brightness. */
+/* Lead: a solo synth. With the bells' colour on Lead, their notes go to it instead: two voices taking turns, so
+ * each note starts clean on its own pitch while the one before trails off. Each: two saws a hair apart through a
+ * low-pass that opens as it sounds, a vibrato that comes in late, into the echo and the reverb. A note holds a while,
+ * or until the next comes, then lets go slowly, darkening as it trails off, unlike a bell. Bell tone is its
+ * brightness. */
 #define LEAD_COLOUR 5
+typedef struct {
+    float ph[2], inc, env, vel, vt, s[2], c[4], tgt, k;
+    int32_t hold;
+    uint8_t on, note;
+} lead_v;
 static struct {
-    float ph[2], inc, tinc, env, vel, vt, s[2], c[4];
-    int32_t wait, hold;
-    uint8_t on, note, pend, pnote, pvel, midi;
+    lead_v v[2];
+    int32_t wait;
+    uint8_t cur, pend, pnote, pvel, midi;
 } lead;
 
 static void lead_start(int n, float vel)
 {
+    lead_v *w;
     if (lead.midi)
         midi(0x81, lead.midi, 0);
-    lead.note = (uint8_t)n;
-    lead.tinc = mtof((float)n) * (1.0f / EN_SR);
-    if (!lead.on || lead.env < 0.01f)
-        lead.inc = lead.tinc;                   /* from silence: no glide in */
-    lead.vel = vel;
-    lead.on = 1;
-    lead.hold = (int32_t)(1.4f * EN_SR);
-    lead.vt = 0.0f;
+    lead.v[lead.cur].hold = 0;                  /* the last note lets go */
+    lead.cur ^= 1u;
+    w = &lead.v[lead.cur];
+    w->note = (uint8_t)n;
+    w->inc = mtof((float)n) * (1.0f / EN_SR);   /* on its pitch at once: no glide */
+    w->k = w->inc;
+    w->vel = vel;
+    w->on = 1;
+    w->hold = (int32_t)(1.4f * EN_SR);
+    w->vt = 0.0f;
     lead.midi = (uint8_t)n;
     midi(0x91, (uint32_t)n, (uint32_t)(vel * 110.0f));
 }
@@ -2787,56 +2796,65 @@ static void render_bells(uint32_t n)
 static void render_lead(uint32_t n)
 {
     const float g = bell_vol * 0.62f * 0.55f;
-    float tgt = 0.0f, k = 0.0f;
     uint32_t j;
-    if (!lead.on && !lead.pend)
+    int i;
+    if (!lead.v[0].on && !lead.v[1].on && !lead.pend)
         return;
     for (j = 0; j < n; j++) {
-        float x, v1, v2, v3, y;
         if (lead.pend && --lead.wait <= 0) {
             lead.pend = 0;
             lead_start(lead.pnote, (float)lead.pvel * (1.0f / 110.0f));
         }
-        if (!(j & 31u)) {
-            const float depth = fm_minf(lead.vt * (1.0f / (0.6f * EN_SR)), 1.0f) * 0.15f;   /* late, then a semitone's sixth */
-            float f = mtof((float)lead.note);
-            lead.vt += 32.0f;
-            k = f * (1.0f / EN_SR) * (1.0f + depth * 0.0578f * sine(lead.vt * (5.2f / EN_SR)));
-            svf_coefs(lead.c, f * (1.5f + (1.5f + 6.0f * btone) * lead.env), 0.75f);
-            if (lead.hold > 0) {
-                lead.hold -= 32;
-                tgt = lead.vt < 0.15f * EN_SR ? 1.0f : 0.75f;   /* a swell, then held a little lower */
-            } else {
-                tgt = 0.0f;
+        for (i = 0; i < 2; i++) {
+            lead_v *w = &lead.v[i];
+            float x, v1, v2, v3, y;
+            if (!w->on)
+                continue;
+            if (!(j & 31u)) {
+                const float depth = fm_minf(w->vt * (1.0f / (0.6f * EN_SR)), 1.0f) * 0.15f;   /* late, then a semitone's sixth */
+                const float f = mtof((float)w->note);
+                w->vt += 32.0f;
+                w->k = f * (1.0f / EN_SR) * (1.0f + depth * 0.0578f * sine(w->vt * (5.2f / EN_SR)));
+                svf_coefs(w->c, f * (1.5f + (1.5f + 6.0f * btone) * w->env), 0.75f);
+                if (w->hold > 0) {
+                    w->hold -= 32;
+                    w->tgt = w->vt < 0.15f * EN_SR ? 1.0f : 0.75f;   /* a swell, then held a little lower */
+                } else {
+                    w->tgt = 0.0f;
+                }
             }
+            w->env += (w->tgt - w->env) * (w->tgt > w->env ? 0.004f : w->tgt > 0.0f ? 0.00008f : 0.000025f);   /* let go: ~0.9 s */
+            w->inc += (w->k - w->inc) * 0.05f;   /* (only the vibrato's sway: ~0.5 ms) */
+            x = blep_saw(w->ph[0], w->inc) + 0.7f * blep_saw(w->ph[1], w->inc * 1.003f);
+            w->ph[0] += w->inc;
+            if (w->ph[0] >= 1.0f)
+                w->ph[0] -= 1.0f;
+            w->ph[1] += w->inc * 1.003f;
+            if (w->ph[1] >= 1.0f)
+                w->ph[1] -= 1.0f;
+            v3 = x - w->s[1];                    /* a low-pass: TPT SVF */
+            v1 = w->c[0] * w->s[0] + w->c[1] * v3;
+            v2 = w->s[1] + w->c[1] * w->s[0] + w->c[2] * v3;
+            w->s[0] = 2.0f * v1 - w->s[0];
+            w->s[1] = 2.0f * v2 - w->s[1];
+            y = v2 * w->env * w->vel * g;
+            mixl[j] += y * 0.8f;
+            mixr[j] += y * 0.8f;
+            rsend[j] += y * 0.8f;
+            esend[j] += y;
         }
-        lead.env += (tgt - lead.env) * (tgt > lead.env ? 0.004f : tgt > 0.0f ? 0.00008f : 0.000025f);   /* let go: ~0.9 s, a long trail */
-        lead.inc += (k - lead.inc) * 0.0004f;   /* the glide: ~55 ms */
-        x = blep_saw(lead.ph[0], lead.inc) + 0.7f * blep_saw(lead.ph[1], lead.inc * 1.003f);
-        lead.ph[0] += lead.inc;
-        if (lead.ph[0] >= 1.0f)
-            lead.ph[0] -= 1.0f;
-        lead.ph[1] += lead.inc * 1.003f;
-        if (lead.ph[1] >= 1.0f)
-            lead.ph[1] -= 1.0f;
-        v3 = x - lead.s[1];                      /* a low-pass: TPT SVF */
-        v1 = lead.c[0] * lead.s[0] + lead.c[1] * v3;
-        v2 = lead.s[1] + lead.c[1] * lead.s[0] + lead.c[2] * v3;
-        lead.s[0] = 2.0f * v1 - lead.s[0];
-        lead.s[1] = 2.0f * v2 - lead.s[1];
-        y = v2 * lead.env * lead.vel * g;
-        mixl[j] += y * 0.8f;
-        mixr[j] += y * 0.8f;
-        rsend[j] += y * 0.8f;
-        esend[j] += y;
     }
-    lead.s[0] = fm_flush(lead.s[0]);
-    lead.s[1] = fm_flush(lead.s[1]);
-    if (!lead.pend && lead.hold <= 0 && lead.env < 1e-4f) {
-        lead.on = 0;
-        lead.env = 0.0f;
-        if (lead.midi)
-            midi(0x81, lead.midi, 0);
+    for (i = 0; i < 2; i++) {
+        lead_v *w = &lead.v[i];
+        w->s[0] = fm_flush(w->s[0]);
+        w->s[1] = fm_flush(w->s[1]);
+        if (w->on && w->hold <= 0 && w->env < 1e-4f) {
+            w->on = 0;
+            w->env = 0.0f;
+        }
+    }
+    if (lead.midi && !lead.v[0].on && !lead.v[1].on && !lead.pend) {
+        midi(0x81, lead.midi, 0);
         lead.midi = 0;
     }
 }

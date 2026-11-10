@@ -321,8 +321,9 @@ follows the Bells level. Turned up from 0, the first wave starts within a couple
   with no strike; **Wood** is hollow and holds; **Strings** swell slowly and hang; **Piano** strikes
   warm and mellows. Tone still shapes each one. The loops, the arp and Sparkle all play through it.
   They are the same two operators set differently: impressions, not the instruments themselves.
-  **Lead** is not a bell: a solo synth, one voice that takes all their notes and glides from each to the
-  next, two saws through a filter that opens as it sounds, a late vibrato, into the echo and reverb.
+  **Lead** is not a bell: a solo synth that takes all their notes, two voices in turn, so each starts clean on its
+  pitch while the one before trails off:
+  two saws through a filter that opens as it sounds, a late vibrato, into the echo and reverb.
   Bell tone is its brightness. With busy loops it runs; with few, it sings.
 
 ### ARP again: Arp
