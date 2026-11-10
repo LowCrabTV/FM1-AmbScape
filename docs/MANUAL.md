@@ -475,6 +475,24 @@ the tempo, the pad's colour and the bells' octave, plus Tune, MIDI out and Light
 - **Hold SAVE** for 1.5 s: the piece goes back to its recipe. That isn't saved until the next save,
   so switching off before then brings your version back.
 
+### Rendering on a computer
+
+Set a piece up on the FM-1, then let the computer play it into a file, many times faster than real time (an hour
+in under a minute): the same firmware, run in the simulator, so a Seed or a Dream number grows the same garden there
+as on the FM-1, from PLAY. 24-bit, 44.1 kHz, stereo. From this repository, with Python and the ziglang, Pillow, mido
+and python-rtmidi packages:
+
+1. Press **SAVE** on the FM-1, plug it in, and fetch its eight pieces:
+   `python tools/amb_render.py fetch` (to `renders/pieces.amb1`; the FM-1 may keep playing).
+2. Render: `python tools/amb_render.py render --piece Glass --minutes 30 --dream 417`. Or a batch to audition,
+   one file each: `--dream 1-20 --minutes 5`. Without a Dream, each render takes a new Seed and says which, to
+   find it again on the FM-1 (Garden page, SELECT held). `--range`, `--cap`, and any knob after Dream has dealt:
+   `--set padtone=3 --set hats=0`. A fade-in (`--fade`, 6 s), and at the end the tails ring out (`--tail`, 30 s).
+   The files go to `renders/`.
+
+Without fetched pieces it renders the stock recipes. What it doesn't take: knobs turned while it plays. It renders
+the piece as set, left alone to grow.
+
 ---
 
 ## 10. Troubleshooting

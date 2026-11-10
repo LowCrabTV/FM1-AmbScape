@@ -114,6 +114,7 @@ static struct {
     uint32_t frame;
     uint32_t sig[3];                   /* what each band shows: redrawn when it changes */
     uint16_t dream_now;                /* the number of the dream playing (Dream); 0: none */
+    uint8_t hold;                      /* a backup streams: no saving */
 } ui;
 
 /* the screen reader (announce.c; speak() below): a message went to it this frame, so speak() leaves what it
@@ -1350,13 +1351,21 @@ static void leds(void)
 static void autosave(void)
 {
     uint32_t now = plat_ms();
-    if (!ui.dirty || en_playing || ui.btn || ui.keys || now - ui.act_t < AUTOSAVE_QUIET || en_pad_level > 0.01f)
+    if (!ui.dirty || ui.hold || en_playing || ui.btn || ui.keys || now - ui.act_t < AUTOSAVE_QUIET || en_pad_level > 0.01f)
         return;
     if (project_save() == 0) {
         ui.dirty = 0;
         ui.saved_t = now;
     }
 }
+void ui_backup_flush(void)                      /* a backup starts: what is unsaved, saved */
+{
+    if (ui.dirty && project_save() == 0) {
+        ui.dirty = 0;
+        ui.saved_t = plat_ms();
+    }
+}
+void ui_backup_hold(int on) { ui.hold = (uint8_t)(on != 0); }
 
 /* ------------------------------------------------------ screen reader --- */
 /* The screen as text for a screen reader on the computer (announce.c; fm1-reader): a page once it settles,

@@ -24,6 +24,13 @@ enum { OBJ_PROJ, OBJ_PANEL, OBJ_NOBJ };
                                           * carried over; older formats give the recipes) */
 #define NPIECES EN_NPIECES
 
+/* backup and restore over USB (fm1.toml backup = true): the eight pieces, to the computer for tools/amb_render.py
+ * or kept safe. The project inside carries its own format, so the backup's version stays 1 */
+#define APP_BACKUP_OBJS {OBJ_PROJ}
+#define APP_BACKUP_MAGIC 0x31424D41u     /* "AMB1" */
+#define APP_BACKUP_VERSION 1u
+#define APP_BACKUP_WHAT "replaces all 8 pieces"
+
 typedef struct {
     int16_t par[P_NPARAMS];
     uint16_t pool;

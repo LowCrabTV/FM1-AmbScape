@@ -57,9 +57,117 @@ int app_expect(const char *what, int *got)
     return 1;
 }
 
+/* render FILE SECONDS [FADEIN] [TAIL]: the piece as set, played from its start straight into a 24-bit 44.1 kHz WAV,
+ * as fast as the computer goes (no screen meanwhile). FADEIN seconds of fade at the head; after SECONDS it stops and
+ * the tails ring on, up to TAIL seconds or until two seconds of near silence (-89 dB). The output as the synth gives
+ * it at full volume; a sample past full scale is held there and counted. */
+static void put24(FILE *f, int32_t v)
+{
+    fputc(v & 255, f);
+    fputc((v >> 8) & 255, f);
+    fputc((v >> 16) & 255, f);
+}
+static void hdr24(FILE *f, uint32_t frames)
+{
+    uint32_t v;
+    uint16_t s;
+    fseek(f, 0, SEEK_SET);
+    fwrite("RIFF", 1, 4, f);
+    v = 36u + frames * 6u;
+    fwrite(&v, 4, 1, f);
+    fwrite("WAVEfmt ", 1, 8, f);
+    v = 16u;
+    fwrite(&v, 4, 1, f);
+    s = 1u;
+    fwrite(&s, 2, 1, f);
+    s = 2u;
+    fwrite(&s, 2, 1, f);
+    v = 44100u;
+    fwrite(&v, 4, 1, f);
+    v = 44100u * 6u;
+    fwrite(&v, 4, 1, f);
+    s = 6u;
+    fwrite(&s, 2, 1, f);
+    s = 24u;
+    fwrite(&s, 2, 1, f);
+    fwrite("data", 1, 4, f);
+    v = frames * 6u;
+    fwrite(&v, 4, 1, f);
+}
+static int render_wav(const char *path, double secs, double fade, double tail)
+{
+    static int32_t blk[2 * APP_BLOCK];
+    static const uint8_t blank[44] = {0};
+    const uint32_t play = (uint32_t)(secs * 44100.0), fade_n = (uint32_t)(fade * 44100.0),
+                   tail_n = (uint32_t)(tail * 44100.0);
+    uint32_t frames = 0, quiet = 0, clipped = 0, k;
+    int32_t peak = 0;
+    int stopped = 0;
+    FILE *f = fopen(path, "wb");
+    if (!f) {
+        printf("render: can't write %s\n", path);
+        return 0;
+    }
+    fwrite(blank, 1, 44, f);
+    if (!en_playing)
+        en_play(1);                                  /* (from its start: a Seed grows its garden from here) */
+    while (frames < play + tail_n) {
+        if (!stopped && frames >= play) {
+            en_play(0);                              /* the end: the tails ring on */
+            stopped = 1;
+        }
+        app_render(blk, APP_BLOCK, 4096u);
+        for (k = 0; k < APP_BLOCK; k++) {
+            const uint32_t t = frames + k;
+            float g = 1.0f;
+            int32_t c[2];
+            int ch;
+            if (t < fade_n) {
+                const float x = (float)t / (float)fade_n;
+                g = x * x * (3.0f - 2.0f * x);       /* a smooth rise */
+            }
+            for (ch = 0; ch < 2; ch++) {
+                int32_t v = (int32_t)((float)blk[2 * k + ch] * g);
+                if (v > 8388607 || v < -8388608) {
+                    clipped++;
+                    v = v > 0 ? 8388607 : -8388608;
+                }
+                peak = (v < 0 ? -v : v) > peak ? (v < 0 ? -v : v) : peak;
+                c[ch] = v;
+                put24(f, v);
+            }
+            if (stopped)
+                quiet = (c[0] < 300 && c[0] > -300 && c[1] < 300 && c[1] > -300) ? quiet + 1 : 0;
+        }
+        frames += APP_BLOCK;
+        if (stopped && quiet > 2u * 44100u)
+            break;
+    }
+    hdr24(f, frames);
+    fclose(f);
+    printf("render: %s, %.1f s, peak %.1f dB, %u samples held at full scale\n", path, (double)frames / 44100.0,
+           peak ? 20.0 * log10((double)peak / 8388607.0) : -144.0, clipped);
+    return 1;
+}
+
 int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d)
 {
     (void)b, (void)c, (void)d;
+    if (!strcmp(cmd, "render"))                  /* render FILE SECONDS [FADEIN] [TAIL] (above) */
+        return render_wav(a, atof(b), *c ? atof(c) : 0.0, *d ? atof(d) : 30.0);
+    if (!strcmp(cmd, "piece")) {                 /* piece N: piece N (0..7), as PRESETS takes it */
+        set_piece(atoi(a));
+        return 1;
+    }
+    if (!strcmp(cmd, "knob")) {                  /* knob P V: parameter P (amb.h P_*) to V, as a knob turned to it */
+        knob_set(atoi(a), atoi(b));
+        return 1;
+    }
+    if (!strcmp(cmd, "transport")) {             /* transport 1|0: growing or resting, as PLAY (no Dream dealt) */
+        en_play(atoi(a));
+        sp_tp.playing = (uint8_t)(atoi(a) != 0);
+        return 1;
+    }
     if (!strcmp(cmd, "battery")) {               /* battery N: plat_battery as N (-1..4), "battery off" its own */
         batt_host = (int8_t)(strcmp(a, "off") ? atoi(a) : -2);
         return 1;

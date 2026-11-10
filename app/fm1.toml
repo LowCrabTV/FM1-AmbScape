@@ -6,6 +6,8 @@ usb_product = "AMB-1 FM-1"
 ble = false                    # AMB-1 never uses the radio
 usb_audio_in = true            # the music recordable over USB
 usb_audio_out = false
+backup = true                  # the eight pieces over USB (base tools/fm1_backup.py): for the PC's renderer
+                               # (tools/amb_render.py), or a copy kept safe
 words = "words.tsv"
 include = ["dsp"]
 o2 = ["dsp/amb.c"]             # the engine, at -O2

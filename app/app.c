@@ -27,6 +27,17 @@ void app_frame(void) { ui_frame(); }
 void app_input_only(void) { ui_input_only(); }
 void app_say(const char *a, const char *b) { ui_say(a, b); }
 
+/* backup and restore over USB (device/backup.c): not while playing; what is unsaved saved first; no saving while it
+ * streams; afterwards everything from the flash again (the screen then starts over, app_ui_init) */
+int app_backup_playing(void) { return en_playing; }
+void app_backup_flush(void) { ui_backup_flush(); }
+void app_backup_hold(int on) { ui_backup_hold(on); }
+void app_backup_restored(void)
+{
+    project_load();
+    project_apply();
+}
+
 #ifdef PLAT_HOST
 #include "host.c"                        /* the host simulator's part: checks and commands */
 #endif
