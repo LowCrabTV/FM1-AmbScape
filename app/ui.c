@@ -1329,8 +1329,10 @@ static void draw_knobs(void)
         int32_t xd = 237 - NVIEWS * 6, xt;
         caps(t, VIEW_NAME[ui.view], sizeof t);
         if (ui.btn >> B_SEL & 1u) {              /* SELECT held: the other knobs (+), or none here (-) */
-            size_t n = strlen(t);
-            if (n + 2 < sizeof t)
+            int n = 0;                           /* (no libc on the device: the end found by hand) */
+            while (t[n])
+                n++;
+            if (n + 2 < (int)sizeof t)
                 t[n] = ' ', t[n + 1] = layer_held(ui.view) ? '+' : '-', t[n + 2] = 0;
         }
         xt = xd - 5 - text_w(&FONT_XS, t);
