@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "amb.h"
+static const uint8_t EN_ROOT_BARS_T[8] = {1, 2, 4, 8, 12, 16, 24, 32};   /* the rotator's bars */
 
 static int fails;
 #define CHECK(c, ...)                                                                                              \
@@ -784,6 +785,107 @@ int main(void)
               lev[1] / dark[1], lev[2] / dark[2]);
         en_init();
         en_play(1);
+    }
+
+    /* the dealers: every guardrail, over every scale, count, Spice and Form, for 300 numbers */
+    {
+        static const int SP[5] = {0, 25, 50, 75, 100};
+        int md, num, cnt, si, fm, k, bad_c = 0, bad_r = 0, bad_det = 0, iii = 0, deals = 0, kinds = 0;
+        static uint32_t seen[300];
+        for (md = 0; md < EN_NMODES; md++) {
+            int st[12], m = en_scale(EN_MODE_POOL[md], st);
+            for (num = 1; num <= 300; num++)
+                for (cnt = 2; cnt <= 4; cnt++)
+                    for (si = 0; si < 5; si++)
+                        for (fm = 0; fm < EN_NDFORM; fm++) {
+                            int16_t s[4], l[4], s2[4], l2[4];
+                            int n = cnt > m ? m : cnt, tot, sum = 0, mx = 0, d[4], ok = 1, j;
+                            tot = en_deal_chords(EN_MODE_POOL[md], num, cnt, SP[si], fm, s, l);
+                            en_deal_chords(EN_MODE_POOL[md], num, cnt, SP[si], fm, s2, l2);
+                            bad_det += memcmp(s, s2, sizeof s) || memcmp(l, l2, sizeof l);
+                            for (k = 0; k < 4; k++) {
+                                if (k >= n) {
+                                    ok &= !s[k];
+                                    continue;
+                                }
+                                ok &= s[k] >= 1 && s[k] <= m * EN_NSHAPE && l[k] >= 0 && l[k] < EN_NBARS;
+                                d[k] = (s[k] - 1) / EN_NSHAPE;
+                                sum += EN_SLATE_BARS[l[k]];
+                                mx = EN_SLATE_BARS[l[k]] > mx ? EN_SLATE_BARS[l[k]] : mx;
+                            }
+                            ok &= d[0] == 0 && sum == tot && tot == 8 << (fm % 3);
+                            for (k = 0; k < n; k++) {
+                                int pcs[4], next = d[(k + 1) % n];
+                                for (j = 0; j < k; j++)
+                                    ok &= d[j] != d[k];                   /* no chord twice */
+                                en_chord_tones(EN_MODE_POOL[md], 0, d[k], pcs);
+                                if (m >= 5 && (pcs[2] - pcs[0] + 12) % 12 == 6)   /* diminished: with Spice, never longest */
+                                    ok &= SP[si] >= 50 && EN_SLATE_BARS[l[k]] < mx;
+                                if (SP[si] < 70)
+                                    ok &= (st[next] - st[d[k]] + 12) % 12 != 6;   /* no tritone, plain */
+                            }
+                            if (md == 0 && cnt == 4 && si == 0) {
+                                deals++;
+                                for (k = 1; k < n; k++)
+                                    iii += d[k] == 2;
+                            }
+                            if (md == 1 && cnt == 4 && si == 1 && fm == 1) {
+                                uint32_t h = (uint32_t)s[1] << 16 | (uint32_t)s[2] << 8 | (uint32_t)s[3];
+                                for (j = 0; j < kinds && seen[j] != h; j++)
+                                    ;
+                                if (j == kinds && kinds < 300)
+                                    seen[kinds++] = h;
+                            }
+                            bad_c += !ok;
+                        }
+        }
+        CHECK(!bad_c, "Deal: %d progressions break a guardrail", bad_c);
+        CHECK(!bad_det, "Deal: %d numbers dealt two ways", bad_det);
+        CHECK(iii * 10 < deals, "Deal: the mediant %d times in %d plain deals", iii, deals);
+        CHECK(kinds >= 60, "Deal: only %d progressions from 300 numbers", kinds);
+
+        for (num = 1; num <= 300; num++)
+            for (cnt = 2; cnt <= 4; cnt++)
+                for (si = 0; si < 5; si++)
+                    for (fm = 0; fm < EN_NRFORM; fm++)
+                        for (k = 0; k < 3; k++) {
+                            static const int CYC[3] = {8, 16, 32};
+                            int16_t r[4], l[4];
+                            int key[4], ok = 1, j, i, mv[4], sp = SP[si];
+                            en_deal_roots(2, num, cnt, sp, fm, CYC[k], r, l);
+                            for (i = 0; i < 4; i++) {
+                                if (i >= cnt) {
+                                    ok &= !r[i];
+                                    continue;
+                                }
+                                ok &= r[i] >= 1 && r[i] <= 12 && l[i] >= 0 && l[i] < EN_NRBARS;
+                                key[i] = (r[i] - 1 - 2 + 12) % 12;
+                                ok &= !(EN_ROOT_BARS_T[l[i]] % CYC[k]);   /* whole passes of the chords */
+                                for (j = 0; j < i; j++)
+                                    ok &= key[j] != key[i];               /* home once, no key twice */
+                            }
+                            ok &= key[0] == 0;
+                            for (i = 0; i < cnt; i++) {
+                                int iv = (key[(i + 1) % cnt] - key[i] + 12) % 12, home = i == cnt - 1;
+                                mv[i] = iv;
+                                if (fm == 3 && i == cnt - 2) {
+                                    ok &= iv == 2;                        /* Lift: up a whole step at the last */
+                                    continue;
+                                }
+                                if (fm == 3 && home)
+                                    continue;                             /* (and from there, the drop home) */
+                                ok &= iv == 5 || iv == 7 || iv == 2 || iv == 10 || (sp >= 35 && (iv == 3 || iv == 9)) ||
+                                      (sp >= 60 && (iv == 4 || iv == 8)) || (sp >= 85 && (iv == 1 || iv == 11 || iv == 6));
+                            }
+                            if (sp < 85 && fm != 3)
+                                for (i = 0; i < cnt; i++) {
+                                    int a = mv[i], b = mv[(i + 1) % cnt];
+                                    int fa = a == 4 || a == 8 || a == 1 || a == 11 || a == 6, fb = b == 4 || b == 8 || b == 1 || b == 11 || b == 6;
+                                    ok &= !(fa && fb && cnt > 2);         /* never two far moves running */
+                                }
+                            bad_r += !ok;
+                        }
+        CHECK(!bad_r, "Deal keys: %d journeys break a guardrail", bad_r);
     }
 
     /* Seed: a number grows the same garden each PLAY, however long it rested and whatever the pad's breaths did

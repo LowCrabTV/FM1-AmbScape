@@ -248,6 +248,32 @@ root, and so do your chords: Dm7 and G7 in D become Gm7 and C7 in G.
 - The change lands on a bar line; the pad's voices fade in about a second and come back on the new
   root. **REC** holds it. Each piece keeps its own.
 
+### SELECT a third time: Deal
+
+The dealers: a number writes the Chords page's four steps, or (SELECT held) the Roots page's, the same each time
+for that number. What they deal is yours to turn like anything you set; a toast names it (**DEALT** Dm7 Em7 F
+G7, **KEYS** D G C). Press SELECT from the Roots page, and again to go back to Chords.
+
+- **Deal (KNOB 1):** **Off**, or 1 to 999. Off leaves the steps as they are, dealt or your own.
+- **Chords (KNOB 2):** 2, 3 or 4.
+- **Spice (KNOB 3):** how far it roams. Low keeps to the old order: home, then a chord that leads away, then one
+  that leads back (I IV V, I vi IV V, ii V, and each scale's own: i VII VI, I bVII IV), as plain sevenths and
+  triads. On up come the softer and the surprising turns, the sus, add9 and sixth colours, and at the top the
+  weaker, dreamier moves. Always in the scale.
+- **Form (KNOB 4):** how long each chord lasts, the whole always 8, 16 or 32 bars, as phrases go. **Even**:
+  equal (three chords: the last held). **Home**: the first longest. **Turn**: the last short, turning back.
+- **Guardrails, at every Spice:** the first chord is home; no chord twice; the last leads home well; the
+  diminished chord only with Spice, and never the longest.
+
+**Hold SELECT: the keys.** The same four knobs for the Roots page: **Key deal**, **Keys** (2 to 4), **Spice**
+and **Form**. Keys feel near or far by the notes they share: a fourth or fifth shares six of seven, a whole
+step five, a minor third four, a major third three, a half step or the tritone two. Low Spice keeps to fifths
+and whole steps; on up, minor thirds, then major, then the far ones. The journey starts at the piece's root
+and comes home; two far moves never run together (below the top); and each key lasts whole passes of the
+chords, so a progression is never cut off. Form: **Even** (one pass each), **Slow** (two), **Home** (home
+two), **Lift** (home long, then the last key a whole step above the one before: the last chorus's lift).
+Turning the chord dealer deals the keys again too, to fit the new length.
+
 ### Hold SELECT: Sparkle, on the Garden page
 
 Little flourishes on the bells, coming and going in waves: a run of the scale, a grace note, the
@@ -521,6 +547,8 @@ The defaults are Garden's; each piece has its own.
 | Space | Often (SELECT held) | 10 s – 5 min | 28 s |
 | Space | Tone (SELECT held) | 0–100 (white to brown) | 50 |
 | Garden | Seed (SELECT held) | Wild, 1–999 | Wild |
+| Deal | Deal, Chords, Spice, Form | Off, 1–999; 2–4; 0–100; Even, Home, Turn over 8, 16, 32 bars | Off, 4, 30, Even 16 |
+| Deal | Key deal, Keys, Spice, Form (SELECT held) | Off, 1–999; 2–4; 0–100; Even, Slow, Home, Lift | Off, 3, 30, Even |
 | Setup | Root | C – B | D |
 | Setup | Tune | −50 – +50 cents | 0 |
 | Setup | MIDI out | Off, On | On |

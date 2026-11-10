@@ -9,6 +9,9 @@ wait 100
 expect view 9
 tap SEL
 wait 100
+expect view 10
+tap SEL
+wait 100
 expect view 8
 tap SEL
 wait 100

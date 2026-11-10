@@ -47,6 +47,8 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Bell colour", 0, EN_NBCOLOR - 1, 0},
     {"Swoosh", 0, 100, 0},    {"Swsh length", 0, 100, 50}, {"Swsh often", 0, 100, 30}, {"Swsh tone", 0, 100, 50},
     {"Seed", 0, 999, 0},
+    {"Deal", 0, 999, 0},     {"Deal count", 2, 4, 4}, {"Spice", 0, 100, 30}, {"Form", 0, EN_NDFORM - 1, 1},
+    {"Key deal", 0, 999, 0}, {"Key count", 2, 4, 3}, {"Key spice", 0, 100, 30}, {"Key form", 0, EN_NRFORM - 1, 0},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -112,6 +114,9 @@ static float spoft_secs(int v) { return 10.0f * fm_exp2f((float)v * 0.04907f); }
 static float swlen_secs(int v) { return 2.0f * fm_exp2f((float)v * 0.03322f); }     /* 2 s .. 20 s */
 static float drift_secs(int v) { return 20.0f * fm_exp2f((float)v * 0.039069f); }   /* 20 s .. 5 min */
 
+static const char *const DFORM_NAME[EN_NDFORM] = {"Even 8", "Even 16", "Even 32", "Home 8", "Home 16",
+                                                  "Home 32", "Turn 8", "Turn 16", "Turn 32"};
+static const char *const RFORM_NAME[EN_NRFORM] = {"Even", "Slow", "Home", "Lift"};
 void en_param_text(int i, int v, char *b)
 {
     static const char *const ONOFF[2] = {"Off", "On"};
@@ -134,6 +139,12 @@ void en_param_text(int i, int v, char *b)
         s = APOLY_NAME[(unsigned)v < EN_NAPOLY ? v : 0];
     else if (i == P_BCOLOR)
         s = BCOLOR_NAME[(unsigned)v < EN_NBCOLOR ? v : 0];
+    else if (i == P_DFORM)
+        s = DFORM_NAME[(unsigned)v < EN_NDFORM ? v : 0];
+    else if (i == P_RDFORM)
+        s = RFORM_NAME[(unsigned)v < EN_NRFORM ? v : 0];
+    else if ((i == P_DEAL || i == P_RDEAL) && !v)
+        s = "Off";
     if (s) {
         int k = 0;
         while (s[k] && k < 9) {
@@ -141,6 +152,14 @@ void en_param_text(int i, int v, char *b)
             k++;
         }
         b[k] = 0;
+        return;
+    }
+    if (i == P_DCOUNT || i == P_RDCOUNT) {
+        b = itoa_s(v, b);
+        s = i == P_DCOUNT ? " chords" : " keys";
+        while (*s)
+            *b++ = *s++;
+        *b = 0;
         return;
     }
     if (((i >= P_SLOT1 && i < P_SLOT1 + EN_NSLOT) || (i >= P_RSLOT1 && i < P_RSLOT1 + EN_NSLOT)) && !v) {
@@ -381,9 +400,253 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
     return buf;
 }
 
+/* ------------------------------------------------------------ the dealers --- */
+/* A number deals the same each time: its own dice, apart from the garden's. The guardrails hold at every Spice:
+ * home first; no chord twice; the last leads home; a diminished chord only with Spice, and never the longest. The
+ * cycle comes to 8, 16 or 32 bars, as phrases do. Spice: low, the near, strong moves in their old order (home, then
+ * the chords that lead away, then those that lead back); on up, the weaker moves and the colours too. */
+static uint32_t deal_rng = 1u;
+static float deal_rand(void)
+{
+    uint32_t x = deal_rng;
+    x ^= x << 13, x ^= x >> 17, x ^= x << 5;
+    deal_rng = x;
+    return (float)(x >> 8) * (1.0f / 16777216.0f);
+}
+static void deal_seed(uint32_t num, uint32_t salt)
+{
+    uint32_t x = num * 2654435761u ^ salt;
+    int i;
+    x ^= x >> 15;
+    x *= 0x2C1B3C6Du;
+    x ^= x >> 12;
+    deal_rng = x ? x : 1u;
+    for (i = 0; i < 4; i++)
+        deal_rand();
+}
+static int deal_pick(const float *w, int n)    /* an index by weight; -1: none */
+{
+    float s = 0.0f, r;
+    int i, last = -1;
+    for (i = 0; i < n; i++)
+        if (w[i] > 0.0f)
+            s += w[i], last = i;
+    if (last < 0)
+        return -1;
+    r = deal_rand() * s;
+    for (i = 0; i < n; i++)
+        if (w[i] > 0.0f && (r -= w[i]) < 0.0f)
+            return i;
+    return last;
+}
+static int bars_index(const uint8_t *table, int n, int bars)
+{
+    int i;
+    for (i = 0; i < n; i++)
+        if (table[i] == bars)
+            return i;
+    return -1;
+}
+
+/* the chords' Form: each chord's share, in units; the cycle 8, 16 or 32 bars */
+static const uint8_t DFORM_UNITS[3][3][4] = {
+    {{1, 1}, {1, 1, 2}, {1, 1, 1, 1}},          /* Even (three: the last held, to round the phrase) */
+    {{3, 1}, {2, 1, 1}, {4, 2, 1, 1}},          /* Home: the first longest */
+    {{3, 1}, {3, 3, 2}, {2, 2, 3, 1}},          /* Turn: the last short, to turn back */
+};
+
+static float chord_move(const int *st, int m, const uint8_t *dim, int d, int e, float sp)
+{
+    static const int8_t FUNC[7] = {0, 1, 0, 1, 2, 0, 2};   /* home, leading away, leading back (I ii iii IV V vi vii) */
+    const int iv = (st[e] - st[d] + 12) % 12;
+    float w;
+    if (iv == 5 || iv == 7)
+        w = 5.0f;                               /* by a fourth or a fifth: the strongest */
+    else if (iv == 3 || iv == 4 || iv == 8 || iv == 9)
+        w = 3.5f;                               /* by a third: two notes kept */
+    else if (iv == 6)
+        w = sp >= 0.7f ? 0.8f : 0.0f;           /* the tritone, only with Spice */
+    else
+        w = 2.5f;                               /* by a step */
+    if (w <= 0.0f)
+        return 0.0f;
+    if (m == 7) {
+        const int f = FUNC[d], g = FUNC[e];
+        if ((f == 0 && g == 1) || (f == 1 && g == 2) || (f == 2 && g == 0))
+            w *= 1.0f + 1.5f * (1.0f - sp);     /* the old order, strongest when plain */
+        if (e == 2)
+            w *= sp < 0.3f ? 0.05f : 0.35f + 0.65f * sp;   /* the mediant: a colour of Spice */
+    }
+    if (dim[e] && sp < 0.5f)
+        return 0.0f;
+    return w * (1.0f - 0.6f * sp) + 3.0f * 0.6f * sp;     /* Spice evens the odds */
+}
+
+int en_deal_chords(uint32_t pool, int num, int count, int spice, int form, int16_t *slot, int16_t *len)
+{
+    int st[12], m = en_scale(pool, st), n, i, e, seq[4], bars[4], total, longest = 0, attempt, ok = 0, shape, f;
+    uint8_t dim[12], used[12];
+    float w[12], sp = (float)(spice < 0 ? 0 : spice > 100 ? 100 : spice) * 0.01f;
+    n = count < 2 ? 2 : count > 4 ? 4 : count;
+    if (n > m)
+        n = m;
+    f = form < 0 ? 0 : form >= EN_NDFORM ? EN_NDFORM - 1 : form;
+    total = 8 << (f % 3);
+    {
+        const uint8_t *u = DFORM_UNITS[f / 3][n - 2];
+        int sum = 0, good = 1;
+        for (i = 0; i < n; i++)
+            sum += u[i];
+        for (i = 0; i < n; i++) {
+            bars[i] = total * u[i] / sum;
+            good &= total * u[i] % sum == 0 && bars_index(EN_SLATE_BARS, EN_NBARS, bars[i]) >= 0;
+        }
+        if (!good)                              /* (two, the first longest, over 32: 24 bars is too long a step) */
+            for (i = 0; i < n; i++)
+                bars[i] = total / n;
+    }
+    for (i = 0; i < n; i++)
+        longest = bars[i] > longest ? bars[i] : longest;
+    for (e = 0; e < m; e++) {
+        int pcs[4];
+        en_chord_tones(pool, 0, e, pcs);
+        dim[e] = (uint8_t)(m >= 5 && (pcs[2] - pcs[0] + 12) % 12 == 6);
+    }
+    for (attempt = 0; attempt < 64 && !ok; attempt++) {
+        deal_seed((uint32_t)num, 0xC40D5u + (uint32_t)attempt * 0x9E3779B9u);
+        for (e = 0; e < m; e++)
+            used[e] = 0;
+        seq[0] = 0;
+        used[0] = 1;
+        ok = 1;
+        for (i = 1; i < n && ok; i++) {
+            for (e = 0; e < m; e++) {
+                w[e] = used[e] ? 0.0f : chord_move(st, m, dim, seq[i - 1], e, sp);
+                if (dim[e] && bars[i] >= longest)
+                    w[e] = 0.0f;
+                if (i == n - 1)
+                    w[e] *= chord_move(st, m, dim, e, 0, sp);   /* the last: a good way home */
+            }
+            if ((e = deal_pick(w, m)) < 0)
+                ok = 0;
+            else
+                seq[i] = e, used[e] = 1;
+        }
+    }
+    if (!ok)                                    /* (never, with seven notes: the plainest, step by step) */
+        for (i = 1; i < n; i++)
+            seq[i] = i;
+    for (i = 0; i < EN_NSLOT; i++) {
+        if (i >= n) {
+            slot[i] = 0;
+            len[i] = 3;
+            continue;
+        }
+        if (dim[seq[i]]) {
+            shape = deal_rand() < 0.5f ? 0 : 1;
+        } else {
+            float col = sp < 0.35f ? 0.0f : sp < 0.7f ? 0.3f : 0.55f;
+            if (!i)
+                col *= 0.5f;
+            shape = deal_rand() < col ? 2 + (int)(deal_rand() * 3.999f) : deal_rand() < 0.5f ? 0 : 1;
+        }
+        slot[i] = (int16_t)(1 + seq[i] * EN_NSHAPE + shape);
+        len[i] = (int16_t)bars_index(EN_SLATE_BARS, EN_NBARS, bars[i]);
+    }
+    for (i = 0, e = 0; i < n; i++)
+        e += bars[i];
+    return e;
+}
+
+/* the keys: how near by the notes two keys share. A fourth or fifth, six of seven; a whole step, five; a minor
+ * third, four; a major third, three; a half step or the tritone, two. Spice opens them in that order (fifths alone
+ * never come home by other keys, so the whole step is there from the start, seldom) */
+static float key_move(int iv, float sp)
+{
+    if (iv == 5 || iv == 7)
+        return 6.0f;
+    if (iv == 2)                                /* the lift; and down a step: plain, the way round home again */
+        return sp >= 0.25f ? 3.0f : 1.0f;
+    if (iv == 10)
+        return sp >= 0.25f ? 1.5f : 1.0f;
+    if (iv == 3 || iv == 9)
+        return sp >= 0.35f ? 2.5f : 0.0f;
+    if (iv == 4 || iv == 8)
+        return sp >= 0.6f ? 2.5f : 0.0f;
+    if (iv == 1 || iv == 11 || iv == 6)
+        return sp >= 0.85f ? 1.0f : 0.0f;
+    return 0.0f;
+}
+static int key_far(int iv) { return iv == 4 || iv == 8 || iv == 1 || iv == 11 || iv == 6; }
+
+void en_deal_roots(int home, int num, int count, int spice, int form, int cycle, int16_t *rslot, int16_t *rlen)
+{
+    int n, i, iv, k[4], pass[4], attempt, ok = 0, last, lift;
+    float w[12], sp = (float)(spice < 0 ? 0 : spice > 100 ? 100 : spice) * 0.01f;
+    n = count < 2 ? 2 : count > 4 ? 4 : count;
+    lift = form == 3;
+    last = lift ? n - 2 : n - 1;                /* Lift: the last key a whole step above the one before */
+    if (cycle <= 0)
+        cycle = 8;
+    for (attempt = 0; attempt < 64 && !ok; attempt++) {
+        deal_seed((uint32_t)num, 0x7E75u + (uint32_t)attempt * 0x9E3779B9u);
+        k[0] = 0;
+        ok = 1;
+        for (i = 1; i <= last && ok; i++) {
+            for (iv = 0; iv < 12; iv++) {
+                int to = (k[i - 1] + iv) % 12, j, dup = !to;
+                for (j = 1; j < i; j++)
+                    dup |= k[j] == to;
+                w[iv] = dup ? 0.0f : key_move(iv, sp);
+                if (sp < 0.85f && i >= 2 && key_far((k[i - 1] - k[i - 2] + 12) % 12) && key_far(iv))
+                    w[iv] = 0.0f;               /* never two far moves running */
+                if (i == n - 1 && !lift) {      /* the last: home again, as near */
+                    const int back = (12 - to) % 12;
+                    w[iv] *= key_move(back, sp) > 0.0f ? 1.0f : 0.0f;
+                    if (sp < 0.85f && key_far(back) && (key_far(iv) || key_far(k[1])))
+                        w[iv] = 0.0f;           /* (round the loop too: home, then away again) */
+                }
+            }
+            if ((iv = deal_pick(w, 12)) < 0)
+                ok = 0;
+            else
+                k[i] = (k[i - 1] + iv) % 12;
+        }
+        if (ok && lift) {
+            int j, to = (k[n - 2] + 2) % 12;
+            ok = to != 0;
+            for (j = 1; j < n - 1; j++)
+                ok &= k[j] != to;
+            k[n - 1] = to;
+        }
+    }
+    if (!ok)                                    /* (only at the plainest, with four keys: round the fifths) */
+        for (i = 1; i < n; i++)
+            k[i] = lift && i == n - 1 ? (k[i - 1] + 2) % 12 : (k[i - 1] + 7) % 12;
+    for (i = 0; i < n; i++)
+        pass[i] = form == 1 ? 2 : form == 2 && !i ? 2 : lift && !i ? 3 : 1;
+    for (i = 0; i < EN_NSLOT; i++) {
+        int b;
+        if (i >= n) {
+            rslot[i] = 0;
+            rlen[i] = 3;
+            continue;
+        }
+        rslot[i] = (int16_t)((home + k[i]) % 12 + 1);
+        while (pass[i] > 1 && bars_index(EN_ROOT_BARS, EN_NRBARS, pass[i] * cycle) < 0)
+            pass[i]--;
+        b = bars_index(EN_ROOT_BARS, EN_NRBARS, pass[i] * cycle);
+        if (b < 0) {                            /* chords that come to an odd length: the nearest above, or the longest */
+            for (b = 0; b < EN_NRBARS - 1 && EN_ROOT_BARS[b] < cycle; b++)
+                ;
+        }
+        rlen[i] = (int16_t)b;
+    }
+}
+
 /* ------------------------------------------------------------ commands --- */
 enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW };
-#define QN 64u
+#define QN 128u
 typedef char qn_holds_a_whole_piece[P_NPARAMS + 1 + 4 <= (int)QN ? 1 : -1];   /* project_apply: every param and the pool, with room */
 static uint32_t q[QN];
 static volatile uint32_t q_w, q_r;

@@ -77,6 +77,8 @@ enum {
     P_BCOLOR,                                         /* the bells' colour: Bell, Soft, Wood, Strings, Piano */
     P_SWOOSH, P_SWLEN, P_SWOFT, P_SWTONE,             /* Swoosh: how loud (0 off), each pass's length, the gap between, white to brown */
     P_SEED,                                           /* the garden's dice: 0 Wild, or a number, the same garden each PLAY */
+    P_DEAL, P_DCOUNT, P_DSPICE, P_DFORM,              /* the chord dealer: Off or a number, 2-4 chords, Spice, Form */
+    P_RDEAL, P_RDCOUNT, P_RDSPICE, P_RDFORM,          /* the key dealer: Off or a number, 2-4 keys, Spice, Form */
     P_NPARAMS
 };
 typedef struct {
@@ -122,6 +124,13 @@ extern volatile float en_drum_glow[EN_NDRUM];
 extern volatile uint32_t en_bars;              /* sixteenths played since start (for tests) */
 extern volatile uint8_t en_root;               /* the root playing: the rotator's, or Root */
 extern volatile float en_spark;                /* 0..1: where the Sparkle's wave is */
+/* the dealers (pure): from a number, a progression for the slate's four steps (slot values, EN_SLATE_BARS
+ * indices) or a journey for the rotator's (root values, its bars' indices). Steps not dealt are emptied. The
+ * chords' one returns the bars they come to; the keys' one takes them, each key lasting whole passes of them */
+#define EN_NDFORM 9                    /* Even, Home, Turn: each over 8, 16 or 32 bars */
+#define EN_NRFORM 4                    /* Even, Slow, Home, Lift */
+int en_deal_chords(uint32_t pool, int num, int count, int spice, int form, int16_t *slot, int16_t *len);
+void en_deal_roots(int home, int num, int count, int spice, int form, int cycle, int16_t *rslot, int16_t *rlen);
 extern volatile uint16_t en_seed_now;          /* the number the garden growing now grew from, 1..999 */
 extern volatile float en_arc;                  /* the arc, -1 sparse .. +1 full (times Motion) */
 extern volatile uint8_t en_pulse_rest;         /* the pulse is sitting a few bars out */

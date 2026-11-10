@@ -17,9 +17,9 @@
 #include "fastmath.h"
 
 /* the pages, one a layer (a button each); SELECT steps through them in this order */
-enum { V_GARDEN, V_PAD, V_BELLS, V_ARP, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, V_ROOTS, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Roots"};
-static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL};
+enum { V_GARDEN, V_PAD, V_BELLS, V_ARP, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, V_ROOTS, V_DEAL, NVIEWS };
+static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Roots", "Deal"};
+static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL, B_SEL};
 /* the four knobs of each page: a parameter, or one of these; and what the knob is called there */
 enum { K_LEDS = 100, K_CPU, K_NONE };
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
@@ -33,6 +33,7 @@ static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_ROOT, P_TUNE, P_MIDI, K_LEDS},
     {P_SLOT1, P_SLOT2, P_SLOT3, P_SLOT4},
     {P_RSLOT1, P_RSLOT2, P_RSLOT3, P_RSLOT4},
+    {P_DEAL, P_DCOUNT, P_DSPICE, P_DFORM},
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Tempo", "Evolve", "Motion", "Drift"},
@@ -45,6 +46,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Root", "Tune", "MIDI out", "Lights"},
     {"Chord 1", "Chord 2", "Chord 3", "Chord 4"},
     {"Root 1", "Root 2", "Root 3", "Root 4"},
+    {"Deal", "Chords", "Spice", "Form"},
 };
 /* SELECT held: a page's other knobs */
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
@@ -58,6 +60,7 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {K_NONE, K_NONE, K_NONE, K_NONE},
     {P_LEN1, P_LEN2, P_LEN3, P_LEN4},
     {P_RLEN1, P_RLEN2, P_RLEN3, P_RLEN4},
+    {P_RDEAL, P_RDCOUNT, P_RDSPICE, P_RDFORM},
 };
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"Sparkle", "Length", "Often", "Seed"},
@@ -70,6 +73,7 @@ static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"", "", "", ""},
     {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
     {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
+    {"Key deal", "Keys", "Spice", "Form"},
 };
 
 /* the screen's colours: the cover of Ambient 1: Music for Airports (1978), as the web app and the site.
@@ -292,6 +296,71 @@ static int slot_dup(int v)                      /* the same notes as a shape bef
     return 0;
 }
 
+/* the dealers: a number writes the slate's or the rotator's four steps, which can then be turned as any */
+static int slate_bars(void)                    /* what the chords come to; 0: none, the chord drifts */
+{
+    int i, b = 0;
+    for (i = 0; i < EN_NSLOT; i++)
+        if (proj.par[P_SLOT1 + i])
+            b += EN_SLATE_BARS[proj.par[P_LEN1 + i]];
+    return b;
+}
+static void put(int k, int v)
+{
+    if (proj.par[k] != v) {
+        proj.par[k] = (int16_t)v;
+        en_set(k, v);
+    }
+}
+static void deal_keys(void)
+{
+    int16_t r[EN_NSLOT], l[EN_NSLOT];
+    char t[24];
+    int i, n = 0;
+    if (!proj.par[P_RDEAL])
+        return;
+    en_deal_roots(proj.par[P_ROOT], proj.par[P_RDEAL], proj.par[P_RDCOUNT], proj.par[P_RDSPICE], proj.par[P_RDFORM],
+                  slate_bars(), r, l);
+    for (i = 0; i < EN_NSLOT; i++) {
+        put(P_RSLOT1 + i, r[i]);
+        put(P_RLEN1 + i, l[i]);
+        if (r[i]) {
+            const char *s = EN_NOTE_NAME[(r[i] - 1) % 12];
+            if (n)
+                t[n++] = ' ';
+            while (*s && n < 22)
+                t[n++] = *s++;
+        }
+    }
+    t[n] = 0;
+    say("KEYS", t);
+}
+static void deal_chords(void)
+{
+    int16_t s[EN_NSLOT], l[EN_NSLOT];
+    char t[24], nm[12];
+    int i, n = 0;
+    if (!proj.par[P_DEAL])
+        return;
+    en_deal_chords(proj.pool, proj.par[P_DEAL], proj.par[P_DCOUNT], proj.par[P_DSPICE], proj.par[P_DFORM], s, l);
+    for (i = 0; i < EN_NSLOT; i++) {
+        put(P_SLOT1 + i, s[i]);
+        put(P_LEN1 + i, l[i]);
+        if (s[i]) {
+            int pcs[4], c = en_chord_shape(proj.pool, root_now(), (s[i] - 1) / EN_NSHAPE, (s[i] - 1) % EN_NSHAPE, pcs);
+            const char *p = en_chord_name(pcs, c, nm);
+            if (n && n < 22)
+                t[n++] = ' ';
+            while (*p && n < 22)
+                t[n++] = *p++;
+        }
+    }
+    t[n] = 0;
+    if (proj.par[P_RDEAL])                       /* the keys last whole passes of these */
+        deal_keys();
+    say("DEALT", t);
+}
+
 static void knob_set(int k, int v)
 {
     int lo, hi;
@@ -311,6 +380,10 @@ static void knob_set(int k, int v)
     if (k < P_NPARAMS) {
         proj.par[k] = (int16_t)v;
         en_set(k, v);
+        if (k >= P_DEAL && k <= P_DFORM)
+            deal_chords();
+        else if (k >= P_RDEAL && k <= P_RDFORM)
+            deal_keys();
     } else if (k == K_LEDS) {
         proj.leds = (uint8_t)v;
     }
@@ -421,8 +494,8 @@ static void set_view(int v)
 static void button(int b)
 {
     int v;
-    if (b == B_SEL) {                            /* the two rotators: Chords, then Roots, then Chords */
-        set_view(ui.view == V_CHORDS ? V_ROOTS : V_CHORDS);
+    if (b == B_SEL) {                            /* the two rotators and their dealer: Chords, Roots, Deal, Chords */
+        set_view(ui.view == V_CHORDS ? V_ROOTS : ui.view == V_ROOTS ? V_DEAL : V_CHORDS);
         return;
     }
     if (b == B_ARP) {                            /* the bells, then their arpeggio, then the bells */
