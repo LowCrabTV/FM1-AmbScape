@@ -141,8 +141,17 @@ def build_host():
 
 def fetch(out):
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    r = subprocess.run([sys.executable, os.path.join(REPO, "base", "tools", "fm1_backup.py"), "backup", out,
-                        "--magic", MAGIC])
+    py = sys.executable                    # (the backup needs mido and python-rtmidi: here, or the fm1-tools venv)
+    try:
+        import mido  # noqa: F401
+        import rtmidi  # noqa: F401
+    except ImportError:
+        for p in (os.environ.get("AMB_TOOLS_PY", ""), os.path.expanduser(r"~m1-tools\Scripts\python.exe"),
+                  os.path.expanduser("~/fm1-tools/bin/python")):
+            if p and os.path.isfile(p):
+                py = p
+                break
+    r = subprocess.run([py, os.path.join(REPO, "base", "tools", "fm1_backup.py"), "backup", out, "--magic", MAGIC])
     if r.returncode:
         sys.exit("amb_render: no backup (is the FM-1 plugged in, on this firmware? fm1_backup.py needs mido and"
                  " python-rtmidi)")
