@@ -1321,7 +1321,8 @@ static const struct {
 
 /* Lead: a solo synth. With the bells' colour on Lead, their notes go to one voice instead, gliding from each to
  * the next: two saws a hair apart through a low-pass that opens as it sounds, a vibrato that comes in late, into
- * the echo and the reverb. It holds a note a while, then lets go. Bell tone is its brightness. */
+ * the echo and the reverb. It holds a note a while, then lets go slowly, darkening as it trails off, unlike a bell.
+ * Bell tone is its brightness. */
 #define LEAD_COLOUR 5
 static struct {
     float ph[2], inc, tinc, env, vel, vt, s[2], c[4];
@@ -2809,7 +2810,7 @@ static void render_lead(uint32_t n)
                 tgt = 0.0f;
             }
         }
-        lead.env += (tgt - lead.env) * (tgt > lead.env ? 0.004f : 0.00008f);
+        lead.env += (tgt - lead.env) * (tgt > lead.env ? 0.004f : tgt > 0.0f ? 0.00008f : 0.000025f);   /* let go: ~0.9 s, a long trail */
         lead.inc += (k - lead.inc) * 0.0004f;   /* the glide: ~55 ms */
         x = blep_saw(lead.ph[0], lead.inc) + 0.7f * blep_saw(lead.ph[1], lead.inc * 1.003f);
         lead.ph[0] += lead.inc;
