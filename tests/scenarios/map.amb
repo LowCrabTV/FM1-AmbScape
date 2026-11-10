@@ -1,0 +1,86 @@
+# Nightscape FM's map: Seed beside Dream (Setup, SELECT held); the bells' Colour on KNOB 4; a knob says when something
+# else drives it (Drift: Chords; Seed and Deal: Dream, until a hand turns them); SELECT held marks the page (+, or - where
+# there is no second layer) and dashes an empty place; the dream's number in the header; a card for SELECT.
+wait 5000
+listen
+tap ARP
+wait 1500
+said Colour Bell
+tap HOME
+wait 300
+press SEL
+wait 300
+shot garden_held.png
+spin K1 1
+spin K1 -1
+release SEL
+wait 200
+tap SEQ
+wait 300
+press SEL
+wait 300
+shot pulse_held.png
+spin K1 1
+spin K1 -1
+release SEL
+wait 200
+# the slate drives the chords: Drift says so, and a turn says where they are
+tap SEL
+wait 200
+spin K1 1
+wait 100
+expect par28 1
+tap HOME
+wait 1500
+said Drift Chords
+spin K4 3
+wait 100
+said Chords page
+expect par6 25
+tap SEL
+wait 200
+expect view 8
+spin K1 -1
+wait 100
+expect par28 0
+# Dream drives Seed and the dealers; a hand on Seed has it back
+tap GLO
+wait 300
+press SEL
+wait 300
+spin K1 1
+wait 100
+expect par67 1
+shot setup_held.png
+spin K1 1
+wait 100
+expect dreamkept 1
+release SEL
+wait 200
+tap SEL
+wait 200
+tap SEL
+wait 200
+tap SEL
+wait 1500
+expect view 10
+said Deal Dream
+tap GLO
+wait 300
+press SEL
+wait 300
+spin K4 1
+wait 100
+release SEL
+wait 300
+shot header.png
+# SELECT's card: a long hold, nothing turned
+tap HOME
+wait 300
+press SEL
+wait 2200
+shot select_card.png
+said SELECT
+release SEL
+wait 200
+expect view 0

@@ -25,7 +25,7 @@ enum { K_LEDS = 100, K_CPU, K_NONE };
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_TEMPO, P_EVOLVE, P_MOTION, P_DRIFT},
     {P_PAD, P_SWELL, P_BRIGHT, P_PADTONE},
-    {P_BELLS, P_DENSITY, P_BTONE, P_BOCT},
+    {P_BELLS, P_DENSITY, P_BTONE, P_BCOLOR},
     {P_ARP, P_ARATE, P_ARANGE, P_APOLY},
     {P_BASS, P_BASSOCT, P_GLIDE, P_FIFTH},
     {P_PULSE, P_HITS, P_SWING, P_HATS},
@@ -38,7 +38,7 @@ static const uint8_t VIEW_KNOB[NVIEWS][4] = {
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Tempo", "Evolve", "Motion", "Drift"},
     {"Level", "Swell", "Bright", "Colour"},
-    {"Level", "Density", "Tone", "Octave"},
+    {"Level", "Density", "Tone", "Colour"},
     {"Arp", "Rate", "Range", "Poly"},
     {"Level", "Octave", "Glide", "Fifth"},
     {"Level", "Hits", "Swing", "Hats"},
@@ -50,27 +50,27 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
 };
 /* SELECT held: a page's other knobs */
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
-    {P_SPARK, P_SPLEN, P_SPOFT, P_SEED},
+    {P_SPARK, P_SPLEN, P_SPOFT, K_NONE},
     {K_NONE, P_PADN, K_NONE, K_NONE},
-    {P_BCOLOR, K_NONE, K_NONE, K_NONE},
+    {P_BOCT, K_NONE, K_NONE, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
     {K_NONE, P_BASSN, K_NONE, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
     {P_SWOOSH, P_SWLEN, P_SWOFT, P_SWTONE},
-    {P_DREAM, P_DRANGE, P_DCAP, K_NONE},
+    {P_DREAM, P_DRANGE, P_DCAP, P_SEED},
     {P_LEN1, P_LEN2, P_LEN3, P_LEN4},
     {P_RLEN1, P_RLEN2, P_RLEN3, P_RLEN4},
     {P_RDEAL, P_RDCOUNT, P_RDSPICE, P_RDFORM},
 };
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
-    {"Sparkle", "Length", "Often", "Seed"},
+    {"Sparkle", "Length", "Often", ""},
     {"", "Notes", "", ""},
-    {"Colour", "", "", ""},
+    {"Octave", "", "", ""},
     {"", "", "", ""},
     {"", "Notes", "", ""},
     {"", "", "", ""},
     {"Swoosh", "Length", "Often", "Tone"},
-    {"Dream", "Range", "Spice cap", ""},
+    {"Dream", "Range", "Spice cap", "Seed"},
     {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
     {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
     {"Key deal", "Keys", "Spice", "Form"},
@@ -118,6 +118,7 @@ static struct {
     uint16_t dream_now;                /* the number of the dream playing (Dream); 0: none */
     uint8_t hold;                      /* a backup streams: no saving */
     uint32_t boot_t;                   /* the boot card's second part is due; 0: shown, or something said first */
+    uint8_t hand;                      /* Seed, Deal, Key deal turned since Dream dealt (1, 2, 4): they show their own */
 } ui;
 
 /* the screen reader (announce.c; speak() below): a message went to it this frame, so speak() leaves what it
@@ -222,6 +223,8 @@ static int knob_get(int k)
     return 0;
 }
 static int is_slot(int k) { return k >= P_SLOT1 && k < P_SLOT1 + EN_NSLOT; }
+static int hand_bit(int k) { return k == P_SEED ? 1 : k == P_DEAL ? 2 : k == P_RDEAL ? 4 : 0; }
+static int dream_drives(int k) { return hand_bit(k) && proj.par[P_DREAM] && !(ui.hand & hand_bit(k)); }
 static int is_rslot(int k) { return k >= P_RSLOT1 && k < P_RSLOT1 + EN_NSLOT; }
 /* where a Roots step sits on its knob: Off, then the piece's own root, then on up round the notes */
 static int rslot_pos(int v) { return v ? (v - 1 - proj.par[P_ROOT] + 12) % 12 + 1 : 0; }
@@ -245,7 +248,15 @@ static const char *knob_name(int k)
 static void knob_text(int k, char *b)
 {
     int v = knob_get(k);
-    if (k == P_SEED && !v) {                     /* a new garden each time */
+    if (dream_drives(k)) {                       /* Dream deals it: says so, until a hand turns it */
+        const char *n = "Dream";
+        while ((*b++ = *n++))
+            ;
+    } else if (k == P_DRIFT && any_step(P_SLOT1)) {   /* the slate has the chords */
+        const char *n = "Chords";
+        while ((*b++ = *n++))
+            ;
+    } else if (k == P_SEED && !v) {              /* a new garden each time */
         const char *n = "Wild";
         while ((*b++ = *n++))
             ;
@@ -475,6 +486,7 @@ static void dream_deal(int num)
         }
     }
     ui.dream_now = (uint16_t)num;
+    ui.hand = 0;
     deal_chords();
     itoa_u((uint32_t)num, head + 6);
     say(head, dealt);
@@ -545,6 +557,12 @@ static void turn(int role, int k, int32_t e)
         say("Root", "Roots page");
         return;
     }
+    if (k == P_DRIFT && any_step(P_SLOT1)) {     /* the same: the slate has the chords */
+        say("Drift", "Chords page");
+        return;
+    }
+    if (proj.par[P_DREAM])                       /* a hand on what Dream deals: its own from now */
+        ui.hand |= (uint8_t)hand_bit(k);
     knob_range(k, &lo, &hi);
     if (k == P_DREAM && knob_get(k) < 2) {       /* Off, Wild: a click is a step; up from Wild, the dream kept */
         if (e > 0)
@@ -719,7 +737,8 @@ static void help_tick(uint32_t btn, uint32_t keys)
     if (!btn || (btn & (btn - 1u)) || keys)
         return;
     for (i = 0; i < NB; i++)
-        if (btn == 1u << i && i != B_PLAY && i != B_SEL && !(ui.btn_used & btn) && now - ui.down_t[i] >= HELP_HOLD &&
+        if (btn == 1u << i && i != B_PLAY && !(ui.btn_used & btn) &&
+            now - ui.down_t[i] >= (i == B_SEL ? 2u * HELP_HOLD : HELP_HOLD) &&   /* (SELECT: its layer first) */
             (int32_t)(ui.turn_t - ui.down_t[i]) <= 0) {
             ui.help = (uint8_t)(i + 1);
             ui.btn_used |= btn;                  /* its release now does nothing */
@@ -1014,6 +1033,8 @@ static void draw_header(void)
         h = hash(hash(h, (uint32_t)ui.msg[0][0] << 8 | ui.msg[0][1]), ui.msg_until);
     if (en_playing)
         h = hash(h, (en_bars / 4u) & 1u);
+    h = hash(h, (uint32_t)(proj.par[P_DREAM] ? ui.dream_now : 0) | (uint32_t)proj.par[P_SEED] << 16 |
+                (uint32_t)(proj.par[P_DREAM] != 0) << 31);
     if (h == ui.sig[0])
         return;
     ui.sig[0] = h;
@@ -1057,6 +1078,16 @@ static void draw_header(void)
             int32_t j;                            /* resting: a play triangle */
             for (j = 0; j < 5; j++)
                 cv_rect(x + 2 + j, 9 + j, 1, 11 - 2 * j, K_DIM);
+        }
+        {                                         /* the dream playing (D), or the Seed (S): to note, to render */
+            const int n = proj.par[P_DREAM] ? ui.dream_now : proj.par[P_SEED];
+            if (n) {
+                char d[8];
+                d[0] = proj.par[P_DREAM] ? 'D' : 'S';
+                itoa_u((uint32_t)n, d + 1);
+                x -= text_w(&FONT_XS, d) + 6;
+                cv_text(x, 8, &FONT_XS, d, K_ACC);
+            }
         }
         w = text_w(&FONT_B, piece_name(proj.piece)) + 12;   /* the piece, in a coral tag */
         cv_round(4, 4, w, 20, 6, K_TEXT);
@@ -1198,7 +1229,8 @@ static int help_lines(int b, const char *l[HELP_LINES])
     switch (b) {
     case B_HOME: L("THE GARDEN"); L("TEMPO, EVOLVE, MOTION, DRIFT"); L("+ SELECT: TEMPO"); break;
     case B_ENV: L("THE PAD"); L("LEVEL, SWELL, BRIGHT,"); L("COLOUR"); break;
-    case B_ARP: L("THE BELLS"); L("LEVEL, DENSITY, TONE,"); L("OCTAVE; AGAIN: THE ARP"); break;
+    case B_ARP: L("THE BELLS"); L("LEVEL, DENSITY, TONE,"); L("COLOUR; AGAIN: THE ARP"); break;
+    case B_SEL: L("SELECT"); L("TAP: CHORDS, ROOTS, DEAL"); L("HOLD: THIS PAGE'S"); L("OTHER KNOBS (+)"); break;
     case B_LFO: L("THE BASS"); L("LEVEL, OCTAVE, GLIDE, FIFTH"); break;
     case B_SEQ: L("THE PULSE"); L("LEVEL, HITS, SWING, HATS"); break;
     case B_FX: L("THE SPACE"); L("ECHO, ECHO TIME, REVERB,"); L("SIZE"); break;
@@ -1285,6 +1317,8 @@ static void draw_knobs(void)
         h = hash(h, (uint32_t)knob_get(view_knob(ui.view, (int)i)));
     h = hash(h, (uint32_t)now_touch);
     h = hash(h, (uint32_t)layer_held(ui.view) | proj.pool << 1 | (uint32_t)root_now() << 13);   /* a slot names its chord */
+    h = hash(h, (ui.btn >> B_SEL & 1u) | (uint32_t)(proj.par[P_DREAM] != 0) << 1 | (uint32_t)ui.hand << 2 |
+                (uint32_t)any_step(P_SLOT1) << 6);
     if (h == ui.sig[2])
         return;
     ui.sig[2] = h;
@@ -1294,6 +1328,11 @@ static void draw_knobs(void)
         int k;
         int32_t xd = 237 - NVIEWS * 6, xt;
         caps(t, VIEW_NAME[ui.view], sizeof t);
+        if (ui.btn >> B_SEL & 1u) {              /* SELECT held: the other knobs (+), or none here (-) */
+            size_t n = strlen(t);
+            if (n + 2 < sizeof t)
+                t[n] = ' ', t[n + 1] = layer_held(ui.view) ? '+' : '-', t[n + 2] = 0;
+        }
         xt = xd - 5 - text_w(&FONT_XS, t);
         cv_rect(4, 5, xt - 9, 1, K_LINE);
         cv_text(xt, -1, &FONT_XS, t, K_ACC);
@@ -1305,8 +1344,14 @@ static void draw_knobs(void)
         int32_t x = (int32_t)i * 60, cx = x + 30;
         char t[16];
         uint16_t bg = hot ? K_PANEL : K_BG, fill = hot ? K_ACC : K_PAD;
-        if (k == K_NONE)
+        if (k == K_NONE) {                       /* nothing here: on a second layer, a dash says so */
+            if (layer_held(ui.view)) {
+                if (i)
+                    cv_rect(x, 16, 1, 46, K_LINE);
+                text_c(cx, 50, &FONT_B, "-", K_LINE);
+            }
             continue;
+        }
         if (i)
             cv_rect(x, 16, 1, 46, K_LINE);
         if (hot)
@@ -1418,7 +1463,7 @@ static void sp_value(int k)
 {
     char t[16];
     knob_text(k, t);
-    if (k == P_DRIFT) {
+    if (k == P_DRIFT && t[0] >= '0' && t[0] <= '9') {   /* (not when it says Chords) */
         uint32_t m = 0, s = 0, i;
         for (i = 0; t[i] >= '0' && t[i] <= '9'; i++)
             s = s * 10u + (uint32_t)(t[i] - '0');

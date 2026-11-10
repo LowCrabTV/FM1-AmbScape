@@ -1,17 +1,22 @@
-# SELECT held: a page's other knobs. The arp on the Bells page (ARP), Notes on the Pad's (ENV) and the Bass's (LFO);
+# SELECT held: a page's other knobs. The bells' Octave and the arp on the Bells page (ARP), Notes on the Pad's (ENV) and the Bass's (LFO);
 # each with the piece, gone with the recipe. A project from the slate's build (format 5) keeps its settings.
 wait 300
 tap ARP
 wait 100
 expect view 2
 expect par53 0
-press SEL
-wait 100
-shot colour.png
-spin K1 3
+# the bells' Colour on KNOB 4, as the pad's; their Octave with SELECT held, the rest of that layer a dash
+spin K4 3
 expect par53 3
 wait 100
 shot strings.png
+press SEL
+wait 100
+shot octave.png
+spin K1 1
+expect par21 1
+spin K1 -1
+expect par21 0
 spin K2 3
 release SEL
 wait 100

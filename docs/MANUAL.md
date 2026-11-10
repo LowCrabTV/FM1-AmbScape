@@ -117,8 +117,8 @@ another button puts the card away; letting go after it does nothing else.
 ![The screen on the Garden page: Blue Hour, D Dorian, tempo 72; the ring with the chord Dm7 in the middle, the four level bars on the left, the pulse rings on the right; TEMPO 72, EVOLVE 35, MOTION 50, DRIFT 39s](img/screen-garden.png "The Garden page (HOME)")
 ![The screen on the Pad page of the piece Pines: F Aeolian, tempo 56, the chord Fm7; LEVEL 85, SWELL 70, BRIGHT 67, COLOUR Voices](img/screen-voices.png "Pines, a piece with only the sung pad and a bass")
 
-- **Top line:** the piece, its root and mode. On the right, a slow beat light (a play triangle while
-  resting), the tempo (EXT when it follows MIDI clock), a dot when there are unsaved changes, and the
+- **Top line:** the piece, its root and mode. On the right, the dream playing (**D** and its number) or the
+  Seed (**S**), a slow beat light (a play triangle while resting), the tempo (EXT when it follows MIDI clock), a dot when there are unsaved changes, and the
   battery. Messages ("ADDED F#", "NEXT CHORD") show here for a moment.
 - **The battery:** three bars when it's full, fewer as it runs down. At one bar or none it turns
   red: time to charge. Plugged into a computer, it shows a lightning bolt instead. While it charges
@@ -197,8 +197,14 @@ the same for all.
 
 ## 7. The pages
 
-**Hold SELECT** on the Garden, Pad, Bells, Bass, Space, Chords or Roots page and the knobs change to that page's other
-settings; let go and they're back. Holding and turning doesn't change the page.
+**Hold SELECT** on the Garden, Pad, Bells, Bass, Space, Setup, Chords, Roots or Deal page and the knobs change to that
+page's other settings; let go and they're back. Holding and turning doesn't change the page. While it's held the
+page's name has a **+** (or a **-** where a page has no second layer), and a place with nothing in it shows a dash.
+Hold SELECT for two seconds without turning and a card says what it does.
+
+**Who's driving:** a knob something else is in charge of says so. Drift reads **Chords** while the Chords page has
+a step (turning it says where they are); Setup's Root reads **Roots** while the Roots page has one; Seed, Deal and
+Key deal read **Dream** while Dream deals them. Turn one of those three and it's yours again, until Dream deals next.
 
 One page a layer, each on its own button, with four values on KNOB 1–4. A layer's level is
 always KNOB 1. SELECT steps through them in this order.
@@ -214,7 +220,7 @@ always KNOB 1. SELECT steps through them in this order.
 - **Motion:** how far the arc swings, and how much pitch, pan, the vowel and the echo wander
   (at 0 the echo stays put: one head left, one right).
 - **Drift:** how long a chord lasts before the pad moves on, 20 seconds to 5 minutes (each time a
-  little more or less). EDIT moves on now.
+  little more or less). EDIT moves on now. While the Chords page has a step it reads **Chords**.
 
 ### SELECT: Chords
 
@@ -318,7 +324,8 @@ follows the Bells level. Turned up from 0, the first wave starts within a couple
   that speed. It plays the root first, then the fifth (from 25), the octave (from 50), and the third
   and seventh (from 75). Only the chord's tones, so it follows the slate and the drift. Fifth is for
   the held bass; with Notes up, Glide is capped so each note arrives.
-- **Bells, Colour (KNOB 1):** the bells' sound. **Bell** is the one they've always had; **Soft** is round,
+- **Bells, Octave (KNOB 1):** two down to two up (OCT− and OCT+ too).
+- **Bells, Colour** is on the Bells page itself now, KNOB 4: the bells' sound. **Bell** is the one they've always had; **Soft** is round,
   with no strike; **Wood** is hollow and holds; **Strings** swell slowly and hang; **Piano** strikes
   warm and mellows. Tone still shapes each one. The loops, the arp and Sparkle all play through it.
   They are the same two operators set differently: impressions, not the instruments themselves.
@@ -363,7 +370,8 @@ Press ARP from the Bells page for the arp's own page, and again to go back.
   chord's tones; from 20, passing notes come in. A change shows up as
   each loop comes round.
 - **Tone:** from round and soft-struck to a long metallic clang.
-- **Octave:** two down to two up (OCT− and OCT+ too).
+- **Colour:** the bells' sound: Bell, Soft, Wood, Strings, Piano, or Lead, a solo synth (below). The pad's
+  Colour is its page's KNOB 4 too. Octave is with SELECT held.
 
 ### LFO: Bass
 
@@ -398,9 +406,9 @@ Press ARP from the Bells page for the arp's own page, and again to go back.
 - **Size:** how long the plate rings, from a room to a long hall, and how many times the echo
   comes back.
 
-### Hold SELECT: Seed, on the Garden page
+### Hold SELECT: Seed, on the Setup page
 
-**KNOB 4**, beside Sparkle's three. A piece's knobs are its personality; the dice decide the rest: which notes
+**KNOB 4**, beside Dream, Range and Spice cap: the piece's dice together. A piece's knobs are its personality; the dice decide the rest: which notes
 the bells' loops hold, how the patterns turn, where the chords drift, how the arc rises and falls.
 
 - **Wild** (all the way down) is a new garden each time, as it always was.
@@ -487,7 +495,7 @@ and python-rtmidi packages:
    `python tools/amb_render.py fetch` (to `renders/pieces.amb1`; the FM-1 may keep playing).
 2. Render: `python tools/amb_render.py render --piece Headlights --minutes 30 --dream 417`. Or a batch to audition,
    one file each: `--dream 1-20 --minutes 5`. Without a Dream, each render takes a new Seed and says which, to
-   find it again on the FM-1 (Garden page, SELECT held). `--range`, `--cap`, and any knob after Dream has dealt:
+   find it again on the FM-1 (Setup page, SELECT held). `--range`, `--cap`, and any knob after Dream has dealt:
    `--set padtone=3 --set hats=0`. A fade-in (`--fade`, 6 s), and at the end the tails ring out (`--tail`, 30 s).
    The files go to `renders/`.
 
@@ -563,7 +571,7 @@ The defaults are Blue Hour's; each piece has its own.
 | Garden | Length (SELECT held) | 5 s – 1 min | 20 s |
 | Garden | Often (SELECT held) | 10 s – 5 min | 45 s |
 | Pad | Notes (SELECT held) | 2, 3, 4 | 4 |
-| Bells | Colour (SELECT held) | Bell, Soft, Wood, Strings, Piano, Lead | Bell |
+| Bells | Colour | Bell, Soft, Wood, Strings, Piano, Lead | Bell |
 | Arp | Arp | Off, Up, Down, Up/Dn, Dn/Up, Random, Converge, Diverge | Off |
 | Arp | Rate | 1/4, 1/8., 1/8, 1/16 | 1/8 |
 | Arp | Range | 1–3 octaves | 2 |
@@ -576,7 +584,7 @@ The defaults are Blue Hour's; each piece has its own.
 | Bells | Level | 0–100 | 65 |
 | Bells | Density | 0–100 (0 to 5 notes a loop) | 40 |
 | Bells | Tone | 0–100 | 50 |
-| Bells | Octave | −2 – +2 | 0 |
+| Bells | Octave (SELECT held) | −2 – +2 | 0 |
 | Bass | Level | 0–100 | 45 |
 | Bass | Octave | −1 – +1 | 0 |
 | Bass | Glide | 0–100 (20 ms – 1.2 s) | 20 |
@@ -593,7 +601,7 @@ The defaults are Blue Hour's; each piece has its own.
 | Space | Length (SELECT held) | 2–20 s | 6 s |
 | Space | Often (SELECT held) | 10 s – 5 min | 28 s |
 | Space | Tone (SELECT held) | 0–100 (white to brown) | 50 |
-| Garden | Seed (SELECT held) | Wild, 1–999 | Wild |
+| Setup | Seed (SELECT held) | Wild, 1–999 | Wild |
 | Deal | Deal, Chords, Spice, Form | Off, 1–999; 2–4; 0–100; Even, Home, Turn over 8, 16, 32 bars | Off, 4, 30, Even 16 |
 | Deal | Key deal, Keys, Spice, Form (SELECT held) | Off, 1–999; 2–4; 0–100; Even, Slow, Home, Lift | Off, 3, 30, Even |
 | Setup | Dream, Range, Spice cap (SELECT held) | Off, Wild, 1–999; 0–100; 0–100 | Off, 30, 70 |
