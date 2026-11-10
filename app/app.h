@@ -20,7 +20,7 @@
 enum { OBJ_PROJ, OBJ_PANEL, OBJ_NOBJ };
 #define APP_STORE_MAP {0xFC000u, 0xDC000u}
 #define PROJ_MAGIC 0x314F4E45u           /* "ENO1" */
-#define PROJ_FORMAT 13u                  /* 13: the dealers; 12: the Seed; 11: Swoosh; 10: the bells' colour; 9: the root rotator; 8: Sparkle; 7: a chord's shapes; 6: the arp, the voices' Notes; 5: the slate; 4: the bass's and the pulse's own settings (4 and 3 are
+#define PROJ_FORMAT 14u                  /* 14: Dream; 13: the dealers; 12: the Seed; 11: Swoosh; 10: the bells' colour; 9: the root rotator; 8: Sparkle; 7: a chord's shapes; 6: the arp, the voices' Notes; 5: the slate; 4: the bass's and the pulse's own settings (4 and 3 are
                                           * carried over; older formats give the recipes) */
 #define NPIECES EN_NPIECES
 

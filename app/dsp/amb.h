@@ -79,6 +79,7 @@ enum {
     P_SEED,                                           /* the garden's dice: 0 Wild, or a number, the same garden each PLAY */
     P_DEAL, P_DCOUNT, P_DSPICE, P_DFORM,              /* the chord dealer: Off or a number, 2-4 chords, Spice, Form */
     P_RDEAL, P_RDCOUNT, P_RDSPICE, P_RDFORM,          /* the key dealer: Off or a number, 2-4 keys, Spice, Form */
+    P_DREAM, P_DRANGE, P_DCAP,                        /* Dream: 0 Off, 1 Wild, 2-1000 the numbers 1-999; Range; Spice cap */
     P_NPARAMS
 };
 typedef struct {

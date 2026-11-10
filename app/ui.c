@@ -57,7 +57,7 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {K_NONE, P_BASSN, K_NONE, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
     {P_SWOOSH, P_SWLEN, P_SWOFT, P_SWTONE},
-    {K_NONE, K_NONE, K_NONE, K_NONE},
+    {P_DREAM, P_DRANGE, P_DCAP, K_NONE},
     {P_LEN1, P_LEN2, P_LEN3, P_LEN4},
     {P_RLEN1, P_RLEN2, P_RLEN3, P_RLEN4},
     {P_RDEAL, P_RDCOUNT, P_RDSPICE, P_RDFORM},
@@ -70,7 +70,7 @@ static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"", "Notes", "", ""},
     {"", "", "", ""},
     {"Swoosh", "Length", "Often", "Tone"},
-    {"", "", "", ""},
+    {"Dream", "Range", "Spice cap", ""},
     {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
     {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
     {"Key deal", "Keys", "Spice", "Form"},
@@ -113,6 +113,7 @@ static struct {
     uint32_t touch_until;
     uint32_t frame;
     uint32_t sig[3];                   /* what each band shows: redrawn when it changes */
+    uint16_t dream_now;                /* the number of the dream playing (Dream); 0: none */
 } ui;
 
 /* the screen reader (announce.c; speak() below): a message went to it this frame, so speak() leaves what it
@@ -335,6 +336,7 @@ static void deal_keys(void)
     t[n] = 0;
     say("KEYS", t);
 }
+static char dealt[24];                          /* what the chord dealer dealt last, named */
 static void deal_chords(void)
 {
     int16_t s[EN_NSLOT], l[EN_NSLOT];
@@ -356,9 +358,93 @@ static void deal_chords(void)
         }
     }
     t[n] = 0;
+    for (i = 0; i <= n; i++)
+        dealt[i] = t[i];
     if (proj.par[P_RDEAL])                       /* the keys last whole passes of these */
         deal_keys();
     say("DEALT", t);
+}
+
+/* Dream: one number deals the whole piece: the garden's Seed, both dealers (their Spice no more than the cap) and,
+ * with Range, the piece's sound, each knob within a window round the recipe. A part the recipe has off stays off;
+ * the scale, the tuning and MIDI are never touched; the tempo moves at most 15%. Wild deals a new one at each PLAY
+ * and each piece; turned up from Wild, the knob keeps the one playing. */
+static uint32_t dream_rng = 1u;
+static uint32_t dream_r(void)
+{
+    uint32_t x = dream_rng;
+    x ^= x << 13, x ^= x >> 17, x ^= x << 5;
+    dream_rng = x;
+    return x;
+}
+static float dream_f(void) { return (float)(dream_r() >> 8) * (1.0f / 16777216.0f); }
+static int dream_fresh(void)                     /* a new number: the clock, and what the last dream left saved */
+{
+    uint32_t x = plat_ms() * 2654435761u ^ ui.frame * 0x9E3779B9u ^ (uint32_t)proj.par[P_SEED] * 0x85EBCA6Bu ^
+                 (uint32_t)proj.par[P_DEAL] * 0xC2B2AE35u ^ 0x5BD1E995u;
+    int n;
+    x ^= x >> 15;
+    x *= 0x2C1B3C6Du;
+    x ^= x >> 13;
+    n = 1 + (int)(x % 999u);
+    return n == ui.dream_now ? n % 999 + 1 : n;
+}
+static int dream_level(int p)
+{
+    return p == P_PAD || p == P_BELLS || p == P_BASS || p == P_PULSE || p == P_SPARK || p == P_SWOOSH;
+}
+static void dream_deal(int num)
+{
+    static const uint8_t SOUND[] = {P_PAD,    P_BELLS,  P_BASS,  P_PULSE, P_DENSITY, P_EVOLVE, P_MOTION, P_HITS,
+                                    P_ECHO,   P_ETIME,  P_REVERB, P_SIZE, P_BRIGHT,  P_SWELL,  P_BTONE,  P_TEMPO,
+                                    P_SWING,  P_HATS,   P_GLIDE, P_FIFTH, P_SPARK,   P_SWOOSH};
+    int16_t rec[P_NPARAMS];
+    uint16_t pl;
+    const int cap = proj.par[P_DCAP], range = proj.par[P_DRANGE];
+    uint32_t x = (uint32_t)num * 2654435761u ^ 0xD4EA3u, i;
+    char head[16] = "DREAM ";
+    x ^= x >> 15;
+    x *= 0x2C1B3C6Du;
+    x ^= x >> 12;
+    dream_rng = x ? x : 1u;
+    en_piece(proj.piece, rec, &pl);
+    put(P_SEED, 1 + (int)(dream_r() % 999u));
+    put(P_DEAL, 1 + (int)(dream_r() % 999u));
+    {
+        const float c = dream_f();
+        put(P_DCOUNT, c < 0.2f ? 2 : c < 0.5f ? 3 : 4);
+    }
+    put(P_DSPICE, (int)(dream_f() * (float)cap + 0.5f));
+    put(P_DFORM, (int)(dream_r() % EN_NDFORM));
+    if (dream_f() < 0.6f) {                          /* a journey of keys, more often than not */
+        put(P_RDEAL, 1 + (int)(dream_r() % 999u));
+        put(P_RDCOUNT, 2 + (int)(dream_r() % 3u));
+        put(P_RDSPICE, (int)(dream_f() * (float)cap + 0.5f));
+        put(P_RDFORM, (int)(dream_r() % EN_NRFORM));
+    } else {
+        put(P_RDEAL, 0);
+        for (i = 0; i < EN_NSLOT; i++)
+            put(P_RSLOT1 + (int)i, 0);
+    }
+    if (range > 0)
+        for (i = 0; i < sizeof SOUND; i++) {
+            const int p = SOUND[i], c = rec[p], lo = en_param_info(p)->lo, hi = en_param_info(p)->hi;
+            const float u = dream_f() * 2.0f - 1.0f, r = (float)range * 0.01f;
+            float d;
+            int v;
+            if (dream_level(p) && !c)
+                continue;                            /* off in the recipe: off */
+            d = p == P_TEMPO ? u * (float)c * 0.15f * r : p == P_ETIME ? u * 2.0f * r : u * 0.35f * (float)(hi - lo) * r;
+            v = c + (int)(d + (d < 0.0f ? -0.5f : 0.5f));
+            v = v < lo ? lo : v > hi ? hi : v;
+            if (dream_level(p) && v < 10)
+                v = 10;                              /* on in the recipe: still heard */
+            put(p, v);
+        }
+    ui.dream_now = (uint16_t)num;
+    deal_chords();
+    itoa_u((uint32_t)num, head + 6);
+    say(head, dealt);
 }
 
 static void knob_set(int k, int v)
@@ -384,6 +470,12 @@ static void knob_set(int k, int v)
             deal_chords();
         else if (k >= P_RDEAL && k <= P_RDFORM)
             deal_keys();
+        else if (k == P_DREAM && v == 1)
+            dream_deal(dream_fresh());
+        else if (k == P_DREAM && v >= 2 && v - 1 != ui.dream_now)
+            dream_deal(v - 1);
+        else if ((k == P_DRANGE || k == P_DCAP) && proj.par[P_DREAM] && ui.dream_now)
+            dream_deal(ui.dream_now);                /* the same dream, within the new bounds */
     } else if (k == K_LEDS) {
         proj.leds = (uint8_t)v;
     }
@@ -421,6 +513,13 @@ static void turn(int role, int k, int32_t e)
         return;
     }
     knob_range(k, &lo, &hi);
+    if (k == P_DREAM && knob_get(k) < 2) {       /* Off, Wild: a click is a step; up from Wild, the dream kept */
+        if (e > 0)
+            knob_set(k, knob_get(k) ? (ui.dream_now ? ui.dream_now + 1 : 2) : 1);
+        else if (knob_get(k))
+            knob_set(k, 0);
+        return;
+    }
     if (k == P_SEED && !knob_get(k)) {           /* up from Wild: the garden growing now, kept */
         if (e > 0)
             knob_set(k, en_seed_now ? en_seed_now : 1);
@@ -477,6 +576,10 @@ static void set_piece(int i)                    /* the piece playing kept as it 
 {
     project_piece(i);
     project_apply();
+    if (proj.par[P_DREAM] == 1)                  /* Wild: a new dream for it */
+        dream_deal(dream_fresh());
+    else
+        ui.dream_now = (uint16_t)(proj.par[P_DREAM] >= 2 ? proj.par[P_DREAM] - 1 : 0);
     en_seed(plat_ms());
     en_regrow();
     say_as("PIECE", piece_name(proj.piece), 0);
@@ -520,8 +623,11 @@ static void button(int b)
             say("RESTING", 0);
         } else {
             en_seed(plat_ms());
+            if (proj.par[P_DREAM] == 1)          /* Wild: a new dream, its toast in place of GROWING */
+                dream_deal(dream_fresh());
             en_play(1);
-            say("GROWING", 0);
+            if (proj.par[P_DREAM] != 1)
+                say("GROWING", 0);
         }
         break;
     case B_REC:
@@ -1659,6 +1765,10 @@ void ui_init(void)
 {
     memset(&ui, 0, sizeof ui);
     ui.touched = -1;
+    if (proj.par[P_DREAM] == 1)
+        dream_deal(dream_fresh());
+    else
+        ui.dream_now = (uint16_t)(proj.par[P_DREAM] >= 2 ? proj.par[P_DREAM] - 1 : 0);
     lcd_fill(0, 0, 240, 240, K_BG);
     if (!en_playing)
         en_play(1);                              /* it grows from the start */

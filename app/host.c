@@ -33,6 +33,10 @@ int app_expect(const char *what, int *got)
         g = (int)(en_pad_level * 100.0f);
     else if (!strcmp(what, "bass_level"))
         g = (int)(en_bass_level * 100.0f);
+    else if (!strcmp(what, "dreamkept"))         /* Dream is the number of the dream playing */
+        g = proj.par[P_DREAM] >= 2 && proj.par[P_DREAM] - 1 == ui.dream_now;
+    else if (!strcmp(what, "dreamdealt"))        /* a dream dealt: its number, the chords dealt */
+        g = ui.dream_now && proj.par[P_DEAL] && proj.par[P_SLOT1];
     else if (!strcmp(what, "seedkept"))          /* the Seed is the number of the garden growing */
         g = proj.par[P_SEED] && proj.par[P_SEED] == en_seed_now;
     else if (!strcmp(what, "chordroot"))
@@ -117,6 +121,27 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         o.piece = proj.piece;
         for (i = 0; i < NPIECES; i++) {
             for (k = 0; k < V9_NPARAMS; k++)
+                o.slot[i].par[k] = proj.slot[i].par[k];
+            o.slot[i].pool = proj.slot[i].pool;
+        }
+        o.slot[proj.piece].par[P_PAD] = o.par[P_PAD];
+        plat_store_save(OBJ_PROJ, &o, sizeof o);
+        return 1;
+    }
+    if (!strcmp(cmd, "storev13")) {              /* storev13 N: the project as the dealers' build wrote it (format 13) */
+        static project_v13_t o;
+        int i, k;
+        memset(&o, 0, sizeof o);
+        o.magic = PROJ_MAGIC;
+        o.format = 13u;
+        for (k = 0; k < V13_NPARAMS; k++)
+            o.par[k] = proj.par[k];
+        o.par[P_PAD] = (int16_t)atoi(a);
+        o.pool = proj.pool;
+        o.leds = proj.leds;
+        o.piece = proj.piece;
+        for (i = 0; i < NPIECES; i++) {
+            for (k = 0; k < V13_NPARAMS; k++)
                 o.slot[i].par[k] = proj.slot[i].par[k];
             o.slot[i].pool = proj.slot[i].pool;
         }

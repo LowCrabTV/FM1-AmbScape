@@ -49,6 +49,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Seed", 0, 999, 0},
     {"Deal", 0, 999, 0},     {"Deal count", 2, 4, 4}, {"Spice", 0, 100, 30}, {"Form", 0, EN_NDFORM - 1, 1},
     {"Key deal", 0, 999, 0}, {"Key count", 2, 4, 3}, {"Key spice", 0, 100, 30}, {"Key form", 0, EN_NRFORM - 1, 0},
+    {"Dream", 0, 1000, 0},   {"Range", 0, 100, 30},   {"Spice cap", 0, 100, 70},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -145,6 +146,8 @@ void en_param_text(int i, int v, char *b)
         s = RFORM_NAME[(unsigned)v < EN_NRFORM ? v : 0];
     else if ((i == P_DEAL || i == P_RDEAL) && !v)
         s = "Off";
+    else if (i == P_DREAM && v < 2)
+        s = v ? "Wild" : "Off";
     if (s) {
         int k = 0;
         while (s[k] && k < 9) {
@@ -152,6 +155,10 @@ void en_param_text(int i, int v, char *b)
             k++;
         }
         b[k] = 0;
+        return;
+    }
+    if (i == P_DREAM) {                          /* a number: shown from 1 */
+        itoa_s(v - 1, b);
         return;
     }
     if (i == P_DCOUNT || i == P_RDCOUNT) {

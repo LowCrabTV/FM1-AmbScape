@@ -274,6 +274,23 @@ chords, so a progression is never cut off. Form: **Even** (one pass each), **Slo
 two), **Lift** (home long, then the last key a whole step above the one before: the last chorus's lift).
 Turning the chord dealer deals the keys again too, to fit the new length.
 
+### Hold SELECT: Dream, on the Setup page
+
+One number deals the whole piece: the garden's Seed, both dealers on the Deal page, and, with Range, the piece's
+sound. Everything it deals shows on its own page and can be turned by hand after.
+
+- **Dream (KNOB 1):** **Off** leaves the piece as you set it. **Wild** deals a new dream at each PLAY and each
+  time you come to the piece. A number, 1 to 999, deals the same dream each time. Turned up from Wild, the knob
+  keeps the dream playing; on from there, its neighbours. A toast names it (**DREAM 417**, and its chords).
+- **Range (KNOB 2):** how far the sound may move from the piece's recipe. At 0 only the notes, the chords and
+  the keys are dealt. On up, the levels, Density, Evolve, Motion, Hits, Hats, Swing, the echo and reverb, the
+  pad's Swell and Bright, the bells' tone, Glide, Fifth, Sparkle and Swoosh move too, each within a window round
+  the recipe, so the piece stays itself. The tempo moves at most 15%.
+- **Spice cap (KNOB 3):** the most Spice either dealer may be given.
+- **What it never does:** turn on a part the recipe has off, or turn one down to nothing; change the scale, the
+  piece's root, the tuning or MIDI.
+- Wild deals over your knobs at each PLAY. To keep a version you've changed, turn up to its number first.
+
 ### Hold SELECT: Sparkle, on the Garden page
 
 Little flourishes on the bells, coming and going in waves: a run of the scale, a grace note, the
@@ -549,6 +566,7 @@ The defaults are Garden's; each piece has its own.
 | Garden | Seed (SELECT held) | Wild, 1–999 | Wild |
 | Deal | Deal, Chords, Spice, Form | Off, 1–999; 2–4; 0–100; Even, Home, Turn over 8, 16, 32 bars | Off, 4, 30, Even 16 |
 | Deal | Key deal, Keys, Spice, Form (SELECT held) | Off, 1–999; 2–4; 0–100; Even, Slow, Home, Lift | Off, 3, 30, Even |
+| Setup | Dream, Range, Spice cap (SELECT held) | Off, Wild, 1–999; 0–100; 0–100 | Off, 30, 70 |
 | Setup | Root | C – B | D |
 | Setup | Tune | −50 – +50 cents | 0 |
 | Setup | MIDI out | Off, On | On |

@@ -1,0 +1,80 @@
+# Dream: SELECT held on the Setup page. Off in every recipe. Up from Off, Wild deals a dream; up from Wild, the knob
+# keeps it; on, the next number. Range 0 leaves the sound; 100 moves it, and a part the recipe has off stays off
+# (Departures: no bass, no pulse). With the piece; gone with the recipe. A project from the dealers' build (format 13)
+# keeps its settings, Dream Off.
+wait 300
+tap GLO
+wait 100
+expect view 7
+expect par67 0
+press SEL
+wait 100
+shot off.png
+spin K2 -30
+wait 100
+expect par68 0
+spin K1 1
+wait 100
+expect par67 1
+expect dreamdealt 1
+expect par0 60
+expect par18 72
+shot wild.png
+spin K1 1
+wait 100
+expect dreamkept 1
+spin K1 1
+wait 100
+expect dreamkept 1
+spin K2 100
+wait 100
+expect par68 100
+expect dreamkept 1
+expect dreamdealt 1
+shot range.png
+release SEL
+wait 100
+expect view 7
+tap SAVE
+wait 200
+reboot
+wait 300
+expect dreamkept 1
+turn PRESET 1
+wait 300
+expect piece 1
+expect par2 0
+expect par3 0
+tap GLO
+wait 100
+expect view 7
+press SEL
+wait 100
+spin K2 100
+spin K1 1
+wait 100
+expect par67 1
+expect dreamdealt 1
+expect par2 0
+expect par3 0
+release SEL
+wait 100
+press SAVE
+wait 1700
+release SAVE
+wait 100
+expect par67 0
+expect par68 30
+storev13 13
+reboot
+wait 300
+expect par0 13
+expect par67 0
+expect par68 30
+expect par69 70
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par0 13
+expect par67 0
