@@ -963,9 +963,42 @@ int main(void)
         en_play(1);
     }
 
+    /* the pad's colours: Rhodes, Voices, Strings, Noir; each sounds, clean and bounded, about as loud as Voices */
+    {
+        static const char *const PN[4] = {"Rhodes", "Voices", "Strings", "Noir"};
+        double lev[4];
+        char nm[12];
+        int c;
+        for (c = 0; c < 4; c++) {
+            double e;
+            en_param_text(P_PADTONE, c, nm);
+            CHECK(!strcmp(nm, PN[c]), "pad colour %d named %s", c, nm);
+            en_init();
+            for (i = 0; i < P_NPARAMS; i++)
+                en_set(i, en_param_info(i)->def);
+            run(0.05f);
+            en_set(P_BELLS, 0), en_set(P_BASS, 0), en_set(P_PULSE, 0), en_set(P_ECHO, 0), en_set(P_REVERB, 0);
+            en_set(P_PAD, 80), en_set(P_PADTONE, c);
+            run(0.05f);
+            en_play(1);
+            run(8.0f);
+            peak = sum2 = 0.0f;
+            bad = 0;
+            run(20.0f);
+            lev[c] = e = (double)sum2;
+            CHECK(peak < 1.0f, "pad %s peak %f", PN[c], (double)peak);
+            CHECK(!bad, "pad %s: %d bad samples", PN[c], bad);
+        }
+        for (c = 0; c < 4; c++)
+            CHECK(lev[c] > 0.4 * lev[1] && lev[c] < 2.5 * lev[1], "pad %s against Voices: %.1f dB", PN[c],
+                  10.0 * log10(lev[c] / lev[1]));
+        en_init();
+        en_play(1);
+    }
+
     /* the bells' colours: each sounds, stays bounded and clean; the strike comes as it should */
     {
-        static const char *const NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano"};
+        static const char *const NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano", "Lead"};
         float early[EN_NBCOLOR], later[EN_NBCOLOR];
         char t[12];
         int c;

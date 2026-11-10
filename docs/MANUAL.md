@@ -316,6 +316,9 @@ follows the Bells level. Turned up from 0, the first wave starts within a couple
   with no strike; **Wood** is hollow and holds; **Strings** swell slowly and hang; **Piano** strikes
   warm and mellows. Tone still shapes each one. The loops, the arp and Sparkle all play through it.
   They are the same two operators set differently: impressions, not the instruments themselves.
+  **Lead** is not a bell: a solo synth, one voice that takes all their notes and glides from each to the
+  next, two saws through a filter that opens as it sounds, a late vibrato, into the echo and reverb.
+  Bell tone is its brightness. With busy loops it runs; with few, it sings.
 
 ### ARP again: Arp
 
@@ -340,7 +343,9 @@ Press ARP from the Bells page for the arp's own page, and again to go back.
 - **Swell:** how long the voices breathe, from a few seconds to about half a minute.
 - **Bright:** opens the pad's filter and brightens the Rhodes; for the Voices it also moves the
   vowel from "oo" to "eh".
-- **Colour:** Rhodes or Voices. Each piece keeps its own.
+- **Colour:** **Rhodes**; **Voices**; **Strings**, a section's bow, two saws a little apart through a
+  warm filter that Bright opens; or **Noir**, brass in the manner of a CS-80, a filter that blooms
+  open with each breath and a slow vibrato, for the rain-and-neon feel. Each piece keeps its own.
 
 ### ARP: Bells
 
@@ -533,7 +538,7 @@ The defaults are Garden's; each piece has its own.
 | Garden | Length (SELECT held) | 5 s – 1 min | 20 s |
 | Garden | Often (SELECT held) | 10 s – 5 min | 45 s |
 | Pad | Notes (SELECT held) | 2, 3, 4 | 4 |
-| Bells | Colour (SELECT held) | Bell, Soft, Wood, Strings, Piano | Bell |
+| Bells | Colour (SELECT held) | Bell, Soft, Wood, Strings, Piano, Lead | Bell |
 | Arp | Arp | Off, Up, Down, Up/Dn, Dn/Up, Random, Converge, Diverge | Off |
 | Arp | Rate | 1/4, 1/8., 1/8, 1/16 | 1/8 |
 | Arp | Range | 1–3 octaves | 2 |
@@ -542,7 +547,7 @@ The defaults are Garden's; each piece has its own.
 | Pad | Level | 0–100 | 60 |
 | Pad | Swell | 0–100 | 60 |
 | Pad | Bright | 0–100 | 40 |
-| Pad | Colour | Rhodes, Voices | Rhodes |
+| Pad | Colour | Rhodes, Voices, Strings, Noir | Rhodes |
 | Bells | Level | 0–100 | 65 |
 | Bells | Density | 0–100 (0 to 5 notes a loop) | 40 |
 | Bells | Tone | 0–100 | 50 |

@@ -48,7 +48,7 @@ extern const uint8_t EN_DRUM_N[EN_NDRUM];
 #define EN_NSLOT 4                     /* the slate's steps */
 #define EN_NBARS 8
 #define EN_NRBARS 8
-#define EN_NBCOLOR 5
+#define EN_NBCOLOR 6
 #define EN_NSHAPE 6                    /* a chord's shapes: seventh, triad, sus2, sus4, add9, sixth. A slot's value: 0 empty,
                                         * else 1 + degree * EN_NSHAPE + shape */
 #define EN_NARP 8                      /* the arp's styles, Off first */

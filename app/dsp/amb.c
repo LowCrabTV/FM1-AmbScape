@@ -30,7 +30,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Echo", 0, 100, 45},     {"Echo time", 0, 5, 3},   {"Reverb", 0, 100, 65},   {"Size", 0, 100, 80},
     {"Bright", 0, 100, 40},   {"Swell", 0, 100, 60},    {"Bell tone", 0, 100, 50}, {"Motion", 0, 100, 50},
     {"Tune", -50, 50, 0},     {"MIDI out", 0, 1, 1},    {"Tempo", 30, 120, 72},   {"Root", 0, 11, 2},
-    {"Mode", 0, EN_NMODES - 1, 1}, {"Bell oct", -2, 2, 0}, {"Pad tone", 0, 1, 0},
+    {"Mode", 0, EN_NMODES - 1, 1}, {"Bell oct", -2, 2, 0}, {"Pad tone", 0, 3, 0},
     {"Bass oct", -1, 1, 0},   {"Glide", 0, 100, 20},    {"Fifth", 0, 100, 35},
     {"Swing", 0, 100, 0},     {"Hats", 0, 100, 50},
     {"Chord 1", 0, 12 * EN_NSHAPE, 0}, {"Chord 2", 0, 12 * EN_NSHAPE, 0},
@@ -88,7 +88,8 @@ static const uint8_t ARATE_STEPS[EN_NARATE] = {4, 3, 2, 1};      /* sixteenths a
 static const char *const APOLY_NAME[EN_NAPOLY] = {"Off", "3:4", "5:4", "3:2", "7:4"};
 static const uint8_t APOLY_NUM[EN_NAPOLY] = {1, 3, 5, 3, 7}, APOLY_DEN[EN_NAPOLY] = {1, 4, 4, 2, 4};
 static const float ARATE_DEC[EN_NARATE] = {1.0f, 0.8f, 0.6f, 0.4f};   /* the faster, the shorter the bell */
-static const char *const BCOLOR_NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano"};
+static const char *const BCOLOR_NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano", "Lead"};
+static const char *const PADTONE_NAME[4] = {"Rhodes", "Voices", "Strings", "Noir"};
 static const char *const ETIME_NAME[6] = {"1/4.", "1/2", "1/2.", "1 bar", "2 bars", "4 bars"};
 static const float ETIME_BEATS[6] = {1.5f, 2.0f, 3.0f, 4.0f, 8.0f, 16.0f};
 
@@ -127,7 +128,7 @@ void en_param_text(int i, int v, char *b)
     else if (i == P_MIDI)
         s = ONOFF[v ? 1 : 0];
     else if (i == P_PADTONE)
-        s = v ? "Voices" : "Rhodes";
+        s = PADTONE_NAME[(unsigned)v < 4u ? v : 0];
     else if (i == P_MODE)
         s = EN_MODE_NAME[(unsigned)v < EN_NMODES ? v : 0];
     else if (i == P_ROOT)
@@ -785,7 +786,7 @@ typedef struct {
     float vib, pan;
     float hf;                                   /* a handoff's fade: 1 normal */
     uint8_t midi_note, hand;                    /* hand: 1 fading out of the old key, 2 into the new */
-    uint8_t voices;                             /* this breath's colour: 0 Rhodes, 1 Voices */
+    uint8_t voices;                             /* this breath's colour: 0 Rhodes, 1 Voices, 2 Strings, 3 Noir */
 } pad_t;
 static pad_t pad[EN_NPAD];
 static float pad_gate, pad_gain, pad_vol, bright, swell;
@@ -824,7 +825,7 @@ static void pad_breathe(pad_t *v, int i)        /* a new breath: its length, its
     if (en_playing && v->midi_note)
         midi(0x80, v->midi_note, 0);
     v->note = v->target;
-    v->voices = (uint8_t)(par[P_PADTONE] != 0);
+    v->voices = (uint8_t)par[P_PADTONE];
     v->midi_note = (uint8_t)v->target;
     if (en_playing)
         midi(0x90, v->midi_note, (uint32_t)(50.0f + 40.0f * v->peak));
@@ -839,7 +840,7 @@ static void pad_handoff(void)
     int i;
     for (i = 0; i < EN_NPAD; i++) {
         pad_t *v = &pad[i];
-        if (v->amp > 0.002f && ((float)v->midi_note != v->target || v->voices != (par[P_PADTONE] != 0)))
+        if (v->amp > 0.002f && ((float)v->midi_note != v->target || v->voices != par[P_PADTONE]))
             v->hand = 1;
         else if (!v->hand)
             v->note = v->target;
@@ -891,6 +892,18 @@ static void pad_coefs(pad_t *v, int i)          /* every 32 samples: the breath,
     if (v->vib >= 1.0f)
         v->vib -= 1.0f;
     f = mtof(v->note + 0.08f * motion * mod[i].v);                          /* a slow drift, as tape */
+    if (v->voices >= 2) {                       /* Strings: a section's bow; Noir: a CS-80's brass, blooming */
+        const int noir = v->voices == 3;
+        const float br = breath(v->t), b01 = (float)bright * 0.01f;
+        const float det = noir ? 0.0042f : 0.0035f;   /* apart: 7 cents, 6 */
+        float fv = f * (1.0f + 0.0578f * sine(v->vib) * (noir ? 0.07f + 0.06f * br : 0.045f)), fc;
+        v->inc[0] = fv * (1.0f - det) * (1.0f / EN_SR);
+        v->inc[1] = fv * (1.0f + det) * (1.0f / EN_SR);
+        fc = noir ? f * (1.2f + (2.0f + 10.0f * b01) * br) : f * (3.0f + 9.0f * b01) * (1.0f + 0.25f * arcm);
+        svf_coefs(v->c1, fc, noir ? 0.5f : 1.1f);
+        svf_coefs(v->c2, fc * 1.4f, 1.3f);
+        return;
+    }
     v->inc[0] = f * 0.99856f * (1.0f / EN_SR);  /* -2.5 and +2.5 cents */
     v->inc[1] = f * 1.00144f * (1.0f / EN_SR);
     vw = fm_clampf((float)bright * 0.01f + 0.25f * arcm + 0.2f * motion * mod[(i + 2) % NMOD_PAD].v, 0.0f, 1.0f) * 2.999f;
@@ -1303,7 +1316,50 @@ static const struct {
     {2.0f, 0.55f, 2.0f, 0.0f, 0.0f, 1.7f, 0.0006f, 0.85f},       /* Wood: odd harmonics, hollow, holding */
     {1.0f, 0.7f, 1.6f, 6.0f, 6.0f, 2.2f, 0.00007f, 0.8f},        /* Strings: a slow swell that hangs */
     {1.0f, 1.3f, 3.0f, 0.22f, 0.5f, 0.95f, 0.008f, 1.0f},        /* Piano: a warm strike that mellows */
+    {1.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.001f, 1.0f},          /* Lead: (not a bell: its own voice, below) */
 };
+
+/* Lead: a solo synth. With the bells' colour on Lead, their notes go to one voice instead, gliding from each to
+ * the next: two saws a hair apart through a low-pass that opens as it sounds, a vibrato that comes in late, into
+ * the echo and the reverb. It holds a note a while, then lets go. Bell tone is its brightness. */
+#define LEAD_COLOUR 5
+static struct {
+    float ph[2], inc, tinc, env, vel, vt, s[2], c[4];
+    int32_t wait, hold;
+    uint8_t on, note, pend, pnote, pvel, midi;
+} lead;
+
+static void lead_start(int n, float vel)
+{
+    if (lead.midi)
+        midi(0x81, lead.midi, 0);
+    lead.note = (uint8_t)n;
+    lead.tinc = mtof((float)n) * (1.0f / EN_SR);
+    if (!lead.on || lead.env < 0.01f)
+        lead.inc = lead.tinc;                   /* from silence: no glide in */
+    lead.vel = vel;
+    lead.on = 1;
+    lead.hold = (int32_t)(1.4f * EN_SR);
+    lead.vt = 0.0f;
+    lead.midi = (uint8_t)n;
+    midi(0x91, (uint32_t)n, (uint32_t)(vel * 110.0f));
+}
+
+static void lead_note(int n, float vel, int32_t wait)
+{
+    if (lead.pend) {                            /* one waiting already: it goes now */
+        lead.pend = 0;
+        lead_start(lead.pnote, (float)lead.pvel * (1.0f / 110.0f));
+    }
+    if (wait > 0) {
+        lead.pend = 1;
+        lead.pnote = (uint8_t)n;
+        lead.pvel = (uint8_t)(vel * 110.0f);
+        lead.wait = wait;
+    } else {
+        lead_start(n, vel);
+    }
+}
 
 static void bell_voice(int l, int n, float vel, int32_t wait)
 {
@@ -1311,6 +1367,11 @@ static void bell_voice(int l, int n, float vel, int32_t wait)
     float lo = 9.0f, t60, p;
     bell_t *v;
     const int c = par[P_BCOLOR];
+    if (c == LEAD_COLOUR) {                     /* the solo synth takes it */
+        lead_note(n, vel, wait);
+        en_loop_glow[l] = 1.0f;
+        return;
+    }
     for (i = 0; i < NBELL; i++) {               /* a free voice, or the quietest */
         float a = bell[i].on ? bell[i].amp : -1.0f;
         if (a < lo) {
@@ -2526,6 +2587,8 @@ static void pad_bus(uint32_t n)
         plp[j] = fm_flush(plp[j]);
 }
 
+#define PADG_STRINGS 0.9f                       /* each colour about as loud as Voices */
+#define PADG_NOIR 0.9f
 static void render_pad(uint32_t n)
 {
     int i;
@@ -2565,6 +2628,30 @@ static void render_pad(uint32_t n)
                     p0 -= 1.0f;
                 amp += (tgt - amp) * 0.01f;
                 x *= amp;
+                padl[j] += x * gl;
+                padr[j] += x * gr;
+                continue;
+            }
+            if (v->voices >= 2) {                /* Strings, Noir: two saws apart through two low-passes */
+                x = blep_saw(p0, v->inc[0]) + blep_saw(p1, v->inc[1]);
+                p0 += v->inc[0];
+                if (p0 >= 1.0f)
+                    p0 -= 1.0f;
+                p1 += v->inc[1];
+                if (p1 >= 1.0f)
+                    p1 -= 1.0f;
+                v3 = x - s1;
+                v1 = v->c1[0] * s0 + v->c1[1] * v3;
+                v2 = s1 + v->c1[1] * s0 + v->c1[2] * v3;
+                s0 = 2.0f * v1 - s0;
+                s1 = 2.0f * v2 - s1;
+                v3 = v2 - s3;
+                v1 = v->c2[0] * s2 + v->c2[1] * v3;
+                v2 = s3 + v->c2[1] * s2 + v->c2[2] * v3;
+                s2 = 2.0f * v1 - s2;
+                s3 = 2.0f * v2 - s3;
+                amp += (tgt - amp) * 0.01f;
+                x = v2 * amp * (v->voices == 3 ? PADG_NOIR : PADG_STRINGS);
                 padl[j] += x * gl;
                 padr[j] += x * gr;
                 continue;
@@ -2696,6 +2783,63 @@ static void render_bells(uint32_t n)
     }
 }
 
+static void render_lead(uint32_t n)
+{
+    const float g = bell_vol * 0.62f * 0.55f;
+    float tgt = 0.0f, k = 0.0f;
+    uint32_t j;
+    if (!lead.on && !lead.pend)
+        return;
+    for (j = 0; j < n; j++) {
+        float x, v1, v2, v3, y;
+        if (lead.pend && --lead.wait <= 0) {
+            lead.pend = 0;
+            lead_start(lead.pnote, (float)lead.pvel * (1.0f / 110.0f));
+        }
+        if (!(j & 31u)) {
+            const float depth = fm_minf(lead.vt * (1.0f / (0.6f * EN_SR)), 1.0f) * 0.15f;   /* late, then a semitone's sixth */
+            float f = mtof((float)lead.note);
+            lead.vt += 32.0f;
+            k = f * (1.0f / EN_SR) * (1.0f + depth * 0.0578f * sine(lead.vt * (5.2f / EN_SR)));
+            svf_coefs(lead.c, f * (1.5f + (1.5f + 6.0f * btone) * lead.env), 0.75f);
+            if (lead.hold > 0) {
+                lead.hold -= 32;
+                tgt = lead.vt < 0.15f * EN_SR ? 1.0f : 0.75f;   /* a swell, then held a little lower */
+            } else {
+                tgt = 0.0f;
+            }
+        }
+        lead.env += (tgt - lead.env) * (tgt > lead.env ? 0.004f : 0.00008f);
+        lead.inc += (k - lead.inc) * 0.0004f;   /* the glide: ~55 ms */
+        x = blep_saw(lead.ph[0], lead.inc) + 0.7f * blep_saw(lead.ph[1], lead.inc * 1.003f);
+        lead.ph[0] += lead.inc;
+        if (lead.ph[0] >= 1.0f)
+            lead.ph[0] -= 1.0f;
+        lead.ph[1] += lead.inc * 1.003f;
+        if (lead.ph[1] >= 1.0f)
+            lead.ph[1] -= 1.0f;
+        v3 = x - lead.s[1];                      /* a low-pass: TPT SVF */
+        v1 = lead.c[0] * lead.s[0] + lead.c[1] * v3;
+        v2 = lead.s[1] + lead.c[1] * lead.s[0] + lead.c[2] * v3;
+        lead.s[0] = 2.0f * v1 - lead.s[0];
+        lead.s[1] = 2.0f * v2 - lead.s[1];
+        y = v2 * lead.env * lead.vel * g;
+        mixl[j] += y * 0.8f;
+        mixr[j] += y * 0.8f;
+        rsend[j] += y * 0.8f;
+        esend[j] += y;
+    }
+    lead.s[0] = fm_flush(lead.s[0]);
+    lead.s[1] = fm_flush(lead.s[1]);
+    if (!lead.pend && lead.hold <= 0 && lead.env < 1e-4f) {
+        lead.on = 0;
+        lead.env = 0.0f;
+        if (lead.midi)
+            midi(0x81, lead.midi, 0);
+        lead.midi = 0;
+    }
+}
+
 /* a hat: the metal and noise through a Chamberlin SVF, dark to bright by Hats; no pitch, little echo */
 static void render_hat(drum_t *v, uint32_t n, float g, float pl, float pr)
 {
@@ -2803,6 +2947,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     render_pad(n);
     render_bass(n);
     render_bells(n);
+    render_lead(n);
     render_drums(n);
     render_swoosh(n);
     for (j = 0; j < n; j++) {
