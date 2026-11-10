@@ -888,6 +888,62 @@ int main(void)
         CHECK(!bad_r, "Deal keys: %d journeys break a guardrail", bad_r);
     }
 
+    /* the Rings: a count gives that many hits; a turn rotates the ring; Still holds them through Evolve, Follow lets
+     * them move; Auto is what Hits and Hats say */
+    {
+        int bar, changed, d;
+        uint32_t p0[EN_NDRUM];
+        en_init();
+        for (i = 0; i < P_NPARAMS; i++)
+            en_set(i, en_param_info(i)->def);
+        run(0.05f);
+        for (d = 0; d < EN_NDRUM; d++) {
+            int n = 0;
+            uint32_t q;
+            for (q = en_drum_pat[d]; q; q &= q - 1u)
+                n++;
+            CHECK(n == en_ring_auto(d, en_param_info(P_HITS)->def, en_param_info(P_HATS)->def), "ring %d on Auto: %d hits", d, n);
+        }
+        en_set(P_RHITS1, 1 + 5), en_set(P_RTURN1, 0);
+        run(0.05f);
+        p0[1] = en_drum_pat[1];
+        {
+            int n = 0;
+            uint32_t q;
+            for (q = p0[1]; q; q &= q - 1u)
+                n++;
+            CHECK(n == 5, "closed hat at 5: %d hits", n);
+        }
+        en_set(P_RTURN1, 3);
+        run(0.05f);
+        CHECK(en_drum_pat[1] == en_euclid(5, EN_DRUM_N[1], 3) && en_drum_pat[1] != p0[1], "closed hat turned 3: %x from %x",
+              (unsigned)en_drum_pat[1], (unsigned)p0[1]);
+        en_set(P_RHITS0, 1 + 16);
+        run(0.05f);
+        CHECK(en_drum_pat[0] == 0xFFFFu, "thump at 16: every step, %x", (unsigned)en_drum_pat[0]);
+        en_set(P_RHITS0, 1 + 4), en_set(P_RHITS2, 1 + 2);
+        en_set(P_EVOLVE, 100), en_set(P_PULSE, 60), en_set(P_RMOVES, 1);
+        run(0.05f);
+        en_play(1);
+        for (d = 0; d < EN_NDRUM; d++)
+            p0[d] = en_drum_pat[d];
+        for (bar = 0, changed = 0; bar < 40; bar++) {
+            run(2.0f);
+            for (d = 0; d < EN_NDRUM; d++)
+                changed += en_drum_pat[d] != p0[d];
+        }
+        CHECK(!changed, "Still: the rings moved %d times in 40 bars", changed);
+        en_set(P_RMOVES, 0);
+        for (bar = 0, changed = 0; bar < 40; bar++) {
+            run(2.0f);
+            for (d = 0; d < EN_NDRUM; d++)
+                changed += en_drum_pat[d] != p0[d];
+        }
+        CHECK(changed > 0, "Follow: the rings never moved in 40 bars at Evolve 100");
+        en_init();
+        en_play(1);
+    }
+
     /* Seed: a number grows the same garden each PLAY, however long it rested and whatever the pad's breaths did
      * meanwhile; another number, another garden; up from Wild keeps the one growing, its loops as they began */
     {

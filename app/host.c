@@ -33,7 +33,11 @@ int app_expect(const char *what, int *got)
         g = (int)(en_pad_level * 100.0f);
     else if (!strcmp(what, "bass_level"))
         g = (int)(en_bass_level * 100.0f);
-    else if (!strcmp(what, "dreamkept"))         /* Dream is the number of the dream playing */
+    else if (!strncmp(what, "ring", 4)) {        /* ringN: the hits in ring N's pattern now (0 thump, 1, 2 hats) */
+        uint32_t p = en_drum_pat[atoi(what + 4) % EN_NDRUM];
+        for (g = 0; p; p &= p - 1u)
+            g++;
+    } else if (!strcmp(what, "dreamkept"))         /* Dream is the number of the dream playing */
         g = proj.par[P_DREAM] >= 2 && proj.par[P_DREAM] - 1 == ui.dream_now;
     else if (!strcmp(what, "dreamdealt"))        /* a dream dealt: its number, the chords dealt */
         g = ui.dream_now && proj.par[P_DEAL] && proj.par[P_SLOT1];
@@ -229,6 +233,27 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         o.piece = proj.piece;
         for (i = 0; i < NPIECES; i++) {
             for (k = 0; k < V9_NPARAMS; k++)
+                o.slot[i].par[k] = proj.slot[i].par[k];
+            o.slot[i].pool = proj.slot[i].pool;
+        }
+        o.slot[proj.piece].par[P_PAD] = o.par[P_PAD];
+        plat_store_save(OBJ_PROJ, &o, sizeof o);
+        return 1;
+    }
+    if (!strcmp(cmd, "storev14")) {              /* storev14 N: the project as Dream's build wrote it (format 14) */
+        static project_v14_t o;
+        int i, k;
+        memset(&o, 0, sizeof o);
+        o.magic = PROJ_MAGIC;
+        o.format = 14u;
+        for (k = 0; k < V14_NPARAMS; k++)
+            o.par[k] = proj.par[k];
+        o.par[P_PAD] = (int16_t)atoi(a);
+        o.pool = proj.pool;
+        o.leds = proj.leds;
+        o.piece = proj.piece;
+        for (i = 0; i < NPIECES; i++) {
+            for (k = 0; k < V14_NPARAMS; k++)
                 o.slot[i].par[k] = proj.slot[i].par[k];
             o.slot[i].pool = proj.slot[i].pool;
         }

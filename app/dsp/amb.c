@@ -50,6 +50,8 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Deal", 0, 999, 0},     {"Deal count", 2, 4, 4}, {"Spice", 0, 100, 30}, {"Form", 0, EN_NDFORM - 1, 1},
     {"Key deal", 0, 999, 0}, {"Key count", 2, 4, 3}, {"Key spice", 0, 100, 30}, {"Key form", 0, EN_NRFORM - 1, 0},
     {"Dream", 0, 1000, 0},   {"Range", 0, 100, 30},   {"Spice cap", 0, 100, 70},
+    {"Thump hits", 0, 17, 0}, {"Closed hits", 0, 13, 0}, {"Open hits", 0, 8, 0},
+    {"Thump turn", 0, 15, 0}, {"Closed turn", 0, 11, 2}, {"Open turn", 0, 6, 3}, {"Moves", 0, 1, 0},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -150,6 +152,10 @@ void en_param_text(int i, int v, char *b)
         s = "Off";
     else if (i == P_DREAM && v < 2)
         s = v ? "Wild" : "Off";
+    else if (i >= P_RHITS0 && i <= P_RHITS2 && !v)
+        s = "Auto";
+    else if (i == P_RMOVES)
+        s = v ? "Still" : "Follow";
     if (s) {
         int k = 0;
         while (s[k] && k < 9) {
@@ -157,6 +163,21 @@ void en_param_text(int i, int v, char *b)
             k++;
         }
         b[k] = 0;
+        return;
+    }
+    if (i >= P_RHITS0 && i <= P_RHITS2) {        /* a count: "5 hits" */
+        b = itoa_s(v - 1, b);
+        s = v == 2 ? " hit" : " hits";
+        while (*s)
+            *b++ = *s++;
+        *b = 0;
+        return;
+    }
+    if (i >= P_RTURN0 && i <= P_RTURN2) {        /* "Turn 3" */
+        s = "Turn ";
+        while (*s)
+            *b++ = *s++;
+        itoa_s(v, b);
         return;
     }
     if (i == P_DREAM) {                          /* a number: shown from 1 */
@@ -1698,7 +1719,7 @@ static void spark_tick(void)                    /* a sixteenth */
 }
 
 /* ---------------------------------------------------------------- pulse --- */
-static const uint8_t DRUM_ROT[EN_NDRUM] = {0, 2, 3};
+/* (each ring's turn at home: the Rings' Turn knobs, 0, 2 and 3 in every recipe) */
 static int drum_k[EN_NDRUM], drum_kb[EN_NDRUM], drum_rot[EN_NDRUM], pulse_rest;   /* rest: bars left */
 
 static void drum_publish(int d)
@@ -1707,39 +1728,47 @@ static void drum_publish(int d)
     en_drum_pat[d] = drum_pat[d];
 }
 
-/* Hats: how much hat. 0 none; up to 50 a share of what Hits gives them; 50 just that; on up to 100, toward a full
- * ring, whatever Hits says */
-static int hat_hits(int d, int home)
+/* a ring's hits on Auto (pure: the knobs ask it too). The thump's from Hits. The hats': how much hat, by Hats: 0 none;
+ * up to 50 a share of what Hits gives them; 50 just that; on up to 100, toward a full ring, whatever Hits says */
+int en_ring_auto(int d, int hits, int hats)
 {
     static const uint8_t FULL[EN_NDRUM] = {0, 10, 5};
-    const int v = par[P_HATS];
-    if (v <= 50)
-        return (home * v + 49) / 50;
-    return home + ((FULL[d] > home ? FULL[d] - home : 0) * (v - 50) + 25) / 50;
+    const int home = (hits * DRUM_KMAX[d % EN_NDRUM] + 50) / 100;
+    d %= EN_NDRUM;
+    if (!d)
+        return home;
+    if (hats <= 50)
+        return (home * hats + 49) / 50;
+    return home + ((FULL[d] > home ? FULL[d] - home : 0) * (hats - 50) + 25) / 50;
 }
 
-static void drums_pattern(void)                 /* Hits and Hats: the patterns' home */
+static void drums_pattern(void)                 /* the patterns' home: the Rings' counts and turns, or Auto */
 {
     int d;
     for (d = 0; d < EN_NDRUM; d++) {
-        int k = (par[P_HITS] * DRUM_KMAX[d] + 50) / 100;
-        drum_kb[d] = drum_k[d] = d ? hat_hits(d, k) : k;
-        drum_rot[d] = DRUM_ROT[d];
+        int k = par[P_RHITS0 + d] ? par[P_RHITS0 + d] - 1 : en_ring_auto(d, par[P_HITS], par[P_HATS]);
+        drum_kb[d] = drum_k[d] = k > EN_DRUM_N[d] ? EN_DRUM_N[d] : k;
+        drum_rot[d] = par[P_RTURN0 + d] % EN_DRUM_N[d];
         drum_publish(d);
     }
 }
 
 static void drums_evolve(void)                  /* a bar: a pattern turns, or gains or loses a hit */
 {
-    int d = irand(EN_NDRUM), n = EN_DRUM_N[d];
+    int d = irand(EN_NDRUM), n = EN_DRUM_N[d], r0, k0;
     if (!drum_kb[d])
         return;
+    r0 = drum_rot[d], k0 = drum_k[d];
     if (frand() < 0.5f) {
         drum_rot[d] = (drum_rot[d] + (frand() < 0.5f ? 1 : n - 1)) % n;
     } else {
         int k = drum_k[d] + (frand() < 0.5f ? 1 : -1);
         if (k >= drum_kb[d] - 1 && k <= drum_kb[d] + 1 && k >= 1 && k <= n)
             drum_k[d] = k;
+    }
+    if (par[P_RMOVES]) {                        /* Still: the dice rolled all the same, so the rest goes as it would */
+        drum_rot[d] = r0, drum_k[d] = k0;
+        return;
     }
     drum_publish(d);
 }
@@ -2189,7 +2218,12 @@ static void apply(int p, int v)
     case P_BELLS: bell_vol = (float)(v * v) * 0.0001f; break;
     case P_BASS: bass_vol = (float)(v * v) * 0.0001f; break;
     case P_PULSE: pulse_vol = (float)(v * v) * 0.0001f; break;
-    case P_HITS: drums_pattern(); break;
+    case P_HITS:
+    case P_RHITS0: case P_RHITS1: case P_RHITS2:
+    case P_RTURN0: case P_RTURN1: case P_RTURN2:
+    case P_RMOVES:                               /* (Still: back to where they're set) */
+        drums_pattern();
+        break;
     case P_BASSOCT:
         if (nsteps)
             bass_to(bass.midi_note % 12);

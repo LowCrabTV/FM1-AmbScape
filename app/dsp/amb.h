@@ -80,6 +80,8 @@ enum {
     P_DEAL, P_DCOUNT, P_DSPICE, P_DFORM,              /* the chord dealer: Off or a number, 2-4 chords, Spice, Form */
     P_RDEAL, P_RDCOUNT, P_RDSPICE, P_RDFORM,          /* the key dealer: Off or a number, 2-4 keys, Spice, Form */
     P_DREAM, P_DRANGE, P_DCAP,                        /* Dream: 0 Off, 1 Wild, 2-1000 the numbers 1-999; Range; Spice cap */
+    P_RHITS0, P_RHITS1, P_RHITS2,                     /* the Rings: thump, closed hat, open hat: 0 Auto, else 1 + hits */
+    P_RTURN0, P_RTURN1, P_RTURN2, P_RMOVES,           /* each ring's turn (steps); Moves: 0 Follow (Evolve), 1 Still */
     P_NPARAMS
 };
 typedef struct {
@@ -132,6 +134,7 @@ extern volatile float en_spark;                /* 0..1: where the Sparkle's wave
 #define EN_NRFORM 4                    /* Even, Slow, Home, Lift */
 int en_deal_chords(uint32_t pool, int num, int count, int spice, int form, int16_t *slot, int16_t *len);
 void en_deal_roots(int home, int num, int count, int spice, int form, int cycle, int16_t *rslot, int16_t *rlen);
+int en_ring_auto(int d, int hits, int hats);   /* a ring's hits on Auto: from Hits and Hats, as the pulse plays them */
 extern volatile uint16_t en_seed_now;          /* the number the garden growing now grew from, 1..999 */
 extern volatile float en_arc;                  /* the arc, -1 sparse .. +1 full (times Motion) */
 extern volatile uint8_t en_pulse_rest;         /* the pulse is sitting a few bars out */

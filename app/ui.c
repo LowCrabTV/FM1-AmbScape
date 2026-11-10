@@ -17,9 +17,9 @@
 #include "fastmath.h"
 
 /* the pages, one a layer (a button each); SELECT steps through them in this order */
-enum { V_GARDEN, V_PAD, V_BELLS, V_ARP, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, V_ROOTS, V_DEAL, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Roots", "Deal"};
-static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL, B_SEL};
+enum { V_GARDEN, V_PAD, V_BELLS, V_ARP, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, V_ROOTS, V_DEAL, V_RINGS, NVIEWS };
+static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Roots", "Deal", "Rings"};
+static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL, B_SEL, B_SEQ};
 /* the four knobs of each page: a parameter, or one of these; and what the knob is called there */
 enum { K_LEDS = 100, K_CPU, K_NONE };
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
@@ -34,6 +34,7 @@ static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_SLOT1, P_SLOT2, P_SLOT3, P_SLOT4},
     {P_RSLOT1, P_RSLOT2, P_RSLOT3, P_RSLOT4},
     {P_DEAL, P_DCOUNT, P_DSPICE, P_DFORM},
+    {P_RHITS0, P_RHITS1, P_RHITS2, P_RMOVES},
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Tempo", "Evolve", "Motion", "Drift"},
@@ -47,6 +48,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Chord 1", "Chord 2", "Chord 3", "Chord 4"},
     {"Root 1", "Root 2", "Root 3", "Root 4"},
     {"Deal", "Chords", "Spice", "Form"},
+    {"Thump", "Closed", "Open", "Moves"},
 };
 /* SELECT held: a page's other knobs */
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
@@ -61,6 +63,7 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {P_LEN1, P_LEN2, P_LEN3, P_LEN4},
     {P_RLEN1, P_RLEN2, P_RLEN3, P_RLEN4},
     {P_RDEAL, P_RDCOUNT, P_RDSPICE, P_RDFORM},
+    {P_RTURN0, P_RTURN1, P_RTURN2, K_NONE},
 };
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"Sparkle", "Length", "Often", ""},
@@ -74,6 +77,7 @@ static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
     {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
     {"Key deal", "Keys", "Spice", "Form"},
+    {"Thump", "Closed", "Open", ""},
 };
 
 /* the screen's colours (Nightscape FM): LowCrabTV's photograph of a pine-lined road at the edge of dusk. The
@@ -571,6 +575,11 @@ static void turn(int role, int k, int32_t e)
             knob_set(k, 0);
         return;
     }
+    if (k >= P_RHITS0 && k <= P_RHITS2 && !knob_get(k)) {   /* up from Auto: the count playing now, kept */
+        if (e > 0)
+            knob_set(k, 1 + en_ring_auto(k - P_RHITS0, proj.par[P_HITS], proj.par[P_HATS]));
+        return;
+    }
     if (k == P_SEED && !knob_get(k)) {           /* up from Wild: the garden growing now, kept */
         if (e > 0)
             knob_set(k, en_seed_now ? en_seed_now : 1);
@@ -654,6 +663,10 @@ static void button(int b)
     }
     if (b == B_ARP) {                            /* the bells, then their arpeggio, then the bells */
         set_view(ui.view == V_BELLS ? V_ARP : V_BELLS);
+        return;
+    }
+    if (b == B_SEQ) {                            /* the pulse, then its rings, then the pulse */
+        set_view(ui.view == V_PULSE ? V_RINGS : V_PULSE);
         return;
     }
     for (v = 0; v < NVIEWS; v++)                 /* a page's button: its page */
@@ -1232,7 +1245,7 @@ static int help_lines(int b, const char *l[HELP_LINES])
     case B_ARP: L("THE BELLS"); L("LEVEL, DENSITY, TONE,"); L("COLOUR; AGAIN: THE ARP"); break;
     case B_SEL: L("SELECT"); L("TAP: CHORDS, ROOTS, DEAL"); L("HOLD: THIS PAGE'S"); L("OTHER KNOBS (+)"); break;
     case B_LFO: L("THE BASS"); L("LEVEL, OCTAVE, GLIDE, FIFTH"); break;
-    case B_SEQ: L("THE PULSE"); L("LEVEL, HITS, SWING, HATS"); break;
+    case B_SEQ: L("THE PULSE"); L("LEVEL, HITS, SWING, HATS"); L("AGAIN: THE RINGS"); break;
     case B_FX: L("THE SPACE"); L("ECHO, ECHO TIME, REVERB,"); L("SIZE"); break;
     case B_GLO: L("SETUP"); L("ROOT, TUNE, MIDI OUT, LIGHTS"); break;
     case B_EDIT: L("THE NEXT CHORD,"); L("ON THE NEXT BAR"); break;

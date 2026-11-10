@@ -394,6 +394,18 @@ Press ARP from the Bells page for the arp's own page, and again to go back.
   on. Up to **50** they come in, few, soft and dark. **50** is what Hits gives them. On up to **100** they
   fill the ring, brighter and longer, with ghost notes between the hits and, near the top, quick rolls.
 
+### SEQ again: Rings
+
+The three pulse rings by hand, as the screen's rings on the right show them: the thump (16 steps), the closed hat (12)
+and the open hat (7). Press SEQ again from the Pulse page, and again to go back.
+
+- **Thump, Closed, Open (KNOB 1-3):** each ring's hits. **Auto** is what Hits and Hats give it, as before. Turned up,
+  the knob starts on the count playing now and goes on from there, up to every step (16, 12, 7).
+- **Moves (KNOB 4):** **Follow** lets Evolve turn the rings now and then and give or take a hit, as it always has.
+  **Still** keeps them exactly as set. (Evolve's rests, a few bars of no pulse, still come and go.)
+- **Hold SELECT: each ring's turn,** where its hits fall: Turn 0 starts on the first step. The recipes' turns are 0, 2
+  and 3.
+
 ### FX: Space
 
 ![The Space page: ECHO 45, ECHO TIME 1 bar, REVERB 65, SIZE 80](img/screen-space.png "The Space page")
@@ -602,6 +614,9 @@ The defaults are Blue Hour's; each piece has its own.
 | Space | Often (SELECT held) | 10 s – 5 min | 28 s |
 | Space | Tone (SELECT held) | 0–100 (white to brown) | 50 |
 | Setup | Seed (SELECT held) | Wild, 1–999 | Wild |
+| Rings | Thump, Closed, Open | Auto, 0–16; Auto, 0–12; Auto, 0–7 | Auto |
+| Rings | Moves | Follow, Still | Follow |
+| Rings | Turns (SELECT held) | 0–15; 0–11; 0–6 | 0, 2, 3 |
 | Deal | Deal, Chords, Spice, Form | Off, 1–999; 2–4; 0–100; Even, Home, Turn over 8, 16, 32 bars | Off, 4, 30, Even 16 |
 | Deal | Key deal, Keys, Spice, Form (SELECT held) | Off, 1–999; 2–4; 0–100; Even, Slow, Home, Lift | Off, 3, 30, Even |
 | Setup | Dream, Range, Spice cap (SELECT held) | Off, Wild, 1–999; 0–100; 0–100 | Off, 30, 70 |
