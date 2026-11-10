@@ -3,7 +3,7 @@
 # Copyright (C) 2026 Charles Vestal
 """The manual's map of the controls, drawn (no photographs: M-VAVE's and Felucca's are not ours to use):
 
-  docs/img/fm1-panel.svg   the FM-1 front panel, AMB-1's real screen in it, each control labelled with
+  docs/img/fm1-panel.svg   the FM-1 front panel, the real screen in it, each control labelled with
                            what it does in AMB-1, the keys with their notes
 
   tools/gen_manual_figures.py [SCREEN.png]     (default docs/img/screen-garden.png)

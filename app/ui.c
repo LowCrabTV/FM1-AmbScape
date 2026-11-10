@@ -76,25 +76,27 @@ static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"Key deal", "Keys", "Spice", "Form"},
 };
 
-/* the screen's colours: the cover of Ambient 1: Music for Airports (1978), as the web app and the site.
- * The map's paper, its ink; the land's greens for the pad (the chord) and the scale, its rivers for the
- * bells; the bass and the pulse in darker inks. Each layer has a pale tint for the shapes at rest. */
-#define K_BG RGB(246, 238, 181)
-#define K_PANEL RGB(255, 251, 224)
-#define K_LINE RGB(208, 214, 150)
-#define K_DIM RGB(112, 106, 58)
-#define K_TEXT RGB(29, 27, 2)
-#define K_ACC RGB(64, 128, 124)          /* the accent: the page, the knob being turned, a message's word */
-#define K_BELL RGB(84, 153, 149)
-#define K_BELL_T RGB(176, 214, 206)
-#define K_PAD RGB(112, 142, 62)
-#define K_PAD_T RGB(208, 220, 146)
-#define K_PULSE RGB(70, 66, 28)
-#define K_PULSE_T RGB(214, 214, 160)
-#define K_BASS RGB(138, 128, 52)
-#define K_BASS_T RGB(222, 218, 160)
-#define K_FROST RGB(60, 132, 160)
-#define K_FROST_T RGB(170, 210, 216)
+/* the screen's colours (Nightscape FM): LowCrabTV's photograph of a pine-lined road at the edge of dusk. The
+ * night sky behind it all; the dusk teal behind the pines for the pad (the chord) and the scale, the headlit road
+ * for the bells, the blue hour for the bass, the ember band at the horizon for the pulse, and the amber of the
+ * curve signs (another night's photograph) for the page and the knob being turned. Each layer has a dark tint for
+ * the shapes at rest. (As AMB-1 the colours were the cover of Ambient 1: Music for Airports.) */
+#define K_BG RGB(11, 19, 34)
+#define K_PANEL RGB(18, 29, 48)
+#define K_LINE RGB(38, 54, 80)
+#define K_DIM RGB(122, 138, 166)
+#define K_TEXT RGB(205, 214, 232)
+#define K_ACC RGB(214, 168, 24)          /* the accent: the page, the knob being turned, a message's word */
+#define K_BELL RGB(136, 163, 215)
+#define K_BELL_T RGB(40, 54, 84)
+#define K_PAD RGB(58, 143, 174)
+#define K_PAD_T RGB(22, 52, 70)
+#define K_PULSE RGB(223, 140, 9)
+#define K_PULSE_T RGB(70, 46, 14)
+#define K_BASS RGB(92, 124, 182)
+#define K_BASS_T RGB(28, 40, 66)
+#define K_FROST RGB(159, 211, 224)
+#define K_FROST_T RGB(30, 58, 70)
 
 static struct {
     uint8_t view;
@@ -115,6 +117,7 @@ static struct {
     uint32_t sig[3];                   /* what each band shows: redrawn when it changes */
     uint16_t dream_now;                /* the number of the dream playing (Dream); 0: none */
     uint8_t hold;                      /* a backup streams: no saving */
+    uint32_t boot_t;                   /* the boot card's second part is due; 0: shown, or something said first */
 } ui;
 
 /* the screen reader (announce.c; speak() below): a message went to it this frame, so speak() leaves what it
@@ -1808,6 +1811,8 @@ void ui_init(void)
     else
         ui.dream_now = (uint16_t)(proj.par[P_DREAM] >= 2 ? proj.par[P_DREAM] - 1 : 0);
     lcd_fill(0, 0, 240, 240, K_BG);
+    say_as("NIGHTSCAPE FM", "after AMB-1", 0);   /* the boot card: whose it is; then whose it grew from (ui_frame) */
+    ui.msg_until = ui.boot_t = plat_ms() + 2200u;
     if (!en_playing)
         en_play(1);                              /* it grows from the start */
     sp_tp.playing = 1;
@@ -1816,6 +1821,13 @@ void ui_init(void)
 
 void ui_frame(void)
 {
+    if (ui.boot_t && (int32_t)(plat_ms() - ui.boot_t) >= 0) {   /* the boot card's credit, unless a turn spoke first */
+        if (ui.msg_until == ui.boot_t) {
+            say_as("AMB-1", "by Charles Vestal", 0);
+            ui.msg_until = plat_ms() + 2200u;
+        }
+        ui.boot_t = 0;
+    }
     input();
     autosave();
     draw_header();

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MPL-2.0
-"""Render AMB-1 pieces to WAV files on the computer, as the FM-1 would play them, many times faster than real time.
+"""Render Nightscape FM pieces to WAV files on the computer, as the FM-1 would play them, many times faster than real time.
 
 It runs the whole firmware (its pages, Dream, the dealers, the engine) in fm1-base's host simulator, and writes 24-bit
 44.1 kHz stereo. A Seed or a Dream number grows the same garden here as on the FM-1, from PLAY.
@@ -11,7 +11,7 @@ It runs the whole firmware (its pages, Dream, the dealers, the engine) in fm1-ba
 
 Options for render:
     --pieces FILE        the pieces from the FM-1 (default renders/pieces.amb1 when there; else the stock recipes)
-    --piece NAME|1-8     which piece (default: the one the FM-1 was on, else Garden)
+    --piece NAME|1-8     which piece (default: the one the FM-1 was on, else Blue Hour); AMB-1's old names work too
     --minutes M          how long it plays (default 10); then the tails ring out (--tail, default 30 s)
     --fade S             a fade-in of S seconds (default 6)
     --dream N|A-B|wild   a Dream number, a batch of them (one file each), or a new one picked here
@@ -39,7 +39,8 @@ import time
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = os.path.join(REPO, "app")
 HOST = os.path.join(APP, "build", "host", "amb_host")
-PIECES = ["Garden", "Departures", "Voices", "Afternoon", "Night Bus", "Shoreline", "Glass", "Tides"]
+PIECES = ["Blue Hour", "Last Light", "Pines", "Ember Line", "Chevrons", "Afterglow", "Headlights", "Gravel"]
+OLD = ["Garden", "Departures", "Voices", "Afternoon", "Night Bus", "Shoreline", "Glass", "Tides"]   # (as AMB-1)
 MAGIC = "AMB1"
 
 
@@ -164,7 +165,7 @@ def piece_index(s):
     if s.isdigit() and 1 <= int(s) <= 8:
         return int(s) - 1
     for i, n in enumerate(PIECES):
-        if n.lower().replace(" ", "") == s.lower().replace(" ", ""):
+        if s.lower().replace(" ", "") in (n.lower().replace(" ", ""), OLD[i].lower().replace(" ", "")):
             return i
     sys.exit(f"amb_render: no piece {s!r} (one of {', '.join(PIECES)}, or 1-8)")
 
@@ -207,7 +208,7 @@ def render_one(exe, P, a, pieces, piece, dream, seed, out):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="AMB-1 pieces to WAV on the computer")
+    ap = argparse.ArgumentParser(description="Nightscape FM pieces to WAV on the computer")
     sp = ap.add_subparsers(dest="cmd", required=True)
     f = sp.add_parser("fetch", help="the FM-1's eight pieces to a file")
     f.add_argument("--to", default=os.path.join(REPO, "renders", "pieces.amb1"))

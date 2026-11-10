@@ -28,7 +28,7 @@ wait 100
 shot next_root.png
 spin K1 -7
 expect par28 0
-# Shoreline: E pentatonic major
+# Afterglow (Shoreline): E pentatonic major
 turn PRESET 5
 wait 100
 expect piece 5

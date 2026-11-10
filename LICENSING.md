@@ -1,4 +1,8 @@
-# AMB-1 licensing
+# Nightscape FM licensing
+
+Nightscape FM is LowCrabTV's fork of AMB-1 by Charles Vestal, under the same licence: the **Mozilla Public
+License 2.0**, file by file. Its changes to AMB-1's files are MPL-2.0 too, and every file keeps its licence
+header. What follows is AMB-1's own account, which holds for this fork.
 
 AMB-1 is free software under the **Mozilla Public License 2.0** (`MPL-2.0`, full text in `LICENSE`), file by file.
 If you change one of its files and share the result, share that file's source under the MPL. It is built on

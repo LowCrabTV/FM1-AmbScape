@@ -1,12 +1,13 @@
-# AMB-1
+# Nightscape FM
 
-AMB-1 turns the M-VAVE FM-1 into a generative ambient machine, inspired by Brian Eno's
-*Music for Airports*. It plays itself from the moment it's switched on: breathing voices, soft
+Nightscape FM turns the M-VAVE FM-1 into generative ambient music for night drives, and for the
+photographs and art that come back from them. It is LowCrabTV's fork of Charles Vestal's AMB-1, inspired by
+Brian Eno's *Music for Airports*. It plays itself from the moment it's switched on: breathing voices, soft
 bells on tape loops of unequal length, a gliding bass and quiet Euclidean percussion, all through
 a short echo, a long tape loop and a plate reverb. You don't perform it, you tend it: pick a piece
 and a scale, take notes out, put them back, and let it grow.
 
-![A drawing of the FM-1 running AMB-1, each control labelled with what it does: the Controls section below says the same in words](img/fm1-panel.svg "The FM-1 (a drawing), running AMB-1, each control labelled")
+![A drawing of the FM-1 running Nightscape FM, each control labelled with what it does: the Controls section below says the same in words](img/fm1-panel.svg "The FM-1 (a drawing), running Nightscape FM, each control labelled")
 
 ---
 
@@ -29,14 +30,16 @@ and a scale, take notes out, put them back, and let it grow.
 
 ## 1. Install
 
-**Try it first:** the [AMB-1 emulator](https://charlesvestal.github.io/fm1-amb/emu/) runs the same
-code in the browser, with sound, played with the mouse, a touch screen or the keyboard.
+**Hear it first:** the renderer (section 9, *Rendering on a computer*) plays any piece into a file on a
+computer, faster than real time.
 
-**Install:** open the [web installer](https://charlesvestal.github.io/fm1-amb/install/) in Chrome or
-Edge, connect the FM-1 with a USB data cable and press Install. Don't unplug it while it's
-writing; when it finishes, the FM-1 restarts into AMB-1.
+**Install:** run *Build and attest firmware* in the repository's GitHub Actions, download its `packages`, and
+with the FM-1 connected by a USB data cable run `python base/tools/fm1_install.py build/release-assets/amb.fwsc`
+(Python 3 with `pip install mido python-rtmidi`). Don't unplug it while it's writing; when it finishes, the FM-1
+restarts into Nightscape FM.
 
-**Go back:** "Back to the stock firmware", at the bottom of the same page, puts M-VAVE's firmware
+**Go back:** "Back to the stock firmware", at the bottom of Nightscape FM'S_KEEP
+[web installer](https://charlesvestal.github.io/fm1-amb/install/), puts M-VAVE's firmware
 back (download the FM-1 V15 file from the link there, choose it, press the button). M-VAVE's own
 updater, M-UPGRADE, works too.
 
@@ -45,13 +48,11 @@ updater, M-UPGRADE, works too.
 
 <details><summary>Install from the command line</summary>
 
-Download the firmware file (for example `amb-1.0.fwsc`) from the
-[releases page](https://github.com/charlesvestal/fm1-amb/releases), get the AMB-1 source from GitHub
-(`git clone --recursive https://github.com/charlesvestal/fm1-amb`), install Python 3 with
-`pip3 install mido python-rtmidi`, and run:
+Get the source (`git clone --recursive https://github.com/LowCrabTV/FM1-AmbScape`), install Python 3 with
+`pip3 install mido python-rtmidi`, and run, with the firmware file from a build's `packages`:
 
 ```
-python3 base/tools/fm1_install.py amb-1.0.fwsc
+python3 base/tools/fm1_install.py amb.fwsc
 ```
 
 </details>
@@ -60,9 +61,9 @@ python3 base/tools/fm1_install.py amb-1.0.fwsc
 
 ## 2. Getting started
 
-AMB-1 starts playing as soon as it's on. A few minutes with it:
+Nightscape FM starts playing as soon as it's on. A few minutes with it:
 
-1. **Listen.** The first piece, Garden, is playing: D Dorian, pad, bells, bass and a soft pulse.
+1. **Listen.** The first piece, Blue Hour, is playing: D Dorian, pad, bells, bass and a soft pulse.
    Turn MASTER for the volume.
 2. **Try another piece.** Turn PRESETS. Each of the eight pieces has its own key, tempo, sounds
    and amount of movement.
@@ -77,7 +78,7 @@ AMB-1 starts playing as soon as it's on. A few minutes with it:
 7. **Rest.** Press PLAY: the garden stops growing and its sounds fade out slowly. PLAY again and
    it grows back.
 
-What you change is kept with the piece. AMB-1 saves it by itself while resting, or press SAVE.
+What you change is kept with the piece. Nightscape FM saves it by itself while resting, or press SAVE.
 
 Not sure what a button does? Hold it for a second: a card says. Let go and nothing happens.
 
@@ -90,7 +91,7 @@ The drawing at the top shows them all; here they are in more detail.
 | Control | What it does |
 |---|---|
 | Keys | The scale. Each key adds its note to the scale or takes it out; the keys light up for the notes in it. Every octave of a note is the same key. The root stays, and the scale keeps at least three notes. |
-| PLAY | Grow / rest. AMB-1 starts growing by itself when it's switched on. At rest, the sounds fade out slowly and the reverb rings away. Lit green while growing. |
+| PLAY | Grow / rest. Nightscape FM starts growing by itself when it's switched on. At rest, the sounds fade out slowly and the reverb rings away. Lit green while growing. |
 | REC | **Freeze**: the chord holds and the reverb rings on forever, while the bells and pulse go on dry above it. Press again to thaw. Lit while frozen. |
 | EDIT | The next chord, at the start of the next bar (at once while resting). |
 | HOME | The Garden page: the whole garden. |
@@ -113,8 +114,8 @@ another button puts the card away; letting go after it does nothing else.
 
 ## 4. The screen
 
-![The screen on the Garden page: Garden, D Dorian, tempo 72; the ring with the chord Dm7 in the middle, the four level bars on the left, the pulse rings on the right; TEMPO 72, EVOLVE 35, MOTION 50, DRIFT 39s](img/screen-garden.png "The Garden page (HOME)")
-![The screen on the Pad page of the piece Voices: F Aeolian, tempo 56, the chord Fm7; LEVEL 85, SWELL 70, BRIGHT 67, COLOUR Voices](img/screen-voices.png "Voices, a piece with only the sung pad and a bass")
+![The screen on the Garden page: Blue Hour, D Dorian, tempo 72; the ring with the chord Dm7 in the middle, the four level bars on the left, the pulse rings on the right; TEMPO 72, EVOLVE 35, MOTION 50, DRIFT 39s](img/screen-garden.png "The Garden page (HOME)")
+![The screen on the Pad page of the piece Pines: F Aeolian, tempo 56, the chord Fm7; LEVEL 85, SWELL 70, BRIGHT 67, COLOUR Voices](img/screen-voices.png "Pines, a piece with only the sung pad and a bass")
 
 - **Top line:** the piece, its root and mode. On the right, a slow beat light (a play triangle while
   resting), the tempo (EXT when it follows MIDI clock), a dot when there are unsaved changes, and the
@@ -141,7 +142,7 @@ another button puts the card away; letting go after it does nothing else.
 
 ## 5. The garden
 
-AMB-1 grows four layers from one scale and one chord.
+Nightscape FM grows four layers from one scale and one chord.
 
 - **Pad:** four breathing voices. Each swells in, hangs and fades on its own cycle (unequal
   lengths, around 11 to 19 seconds at first, as in the tape loops of "2/1"), taking its note of
@@ -183,14 +184,14 @@ the same for all.
 
 | Piece | What it is |
 |---|---|
-| **Garden** | D Dorian, 72: everything, gently. Rhodes. |
-| **Departures** | C# Ionian, 60: soft, slowed-piano bells an octave down over a quiet Rhodes, as "1/1". |
-| **Voices** | F Aeolian, 56: only the sung voices on unequal loops and a low bass, as "2/1". |
-| **Afternoon** | G Lydian, 84: a bright Rhodes, busier bells, a light pulse. |
-| **Night Bus** | A Aeolian, 96: the pulse forward, metallic bells, short echoes. |
-| **Shoreline** | E pentatonic major, 64: dark, round bells lost in long echoes, as "2/2". |
-| **Glass** | Eb pentatonic minor, 76: clangy bells an octave up, dense. |
-| **Tides** | Bb Mixolydian, 70: sung voices, the most changeable (Evolve and Motion high). |
+| **Blue Hour** | D Dorian, 72: everything, gently. Rhodes. |
+| **Last Light** | C# Ionian, 60: soft, slowed-piano bells an octave down over a quiet Rhodes, as "1/1". |
+| **Pines** | F Aeolian, 56: only the sung voices on unequal loops and a low bass, as "2/1". |
+| **Ember Line** | G Lydian, 84: a bright Rhodes, busier bells, a light pulse. |
+| **Chevrons** | A Aeolian, 96: the pulse forward, metallic bells, short echoes. |
+| **Afterglow** | E pentatonic major, 64: dark, round bells lost in long echoes, as "2/2". |
+| **Headlights** | Eb pentatonic minor, 76: clangy bells an octave up, dense. |
+| **Gravel** | Bb Mixolydian, 70: sung voices, the most changeable (Evolve and Motion high). |
 
 ---
 
@@ -446,12 +447,12 @@ MIDI comes in over USB and the TRS jack, and goes out over USB.
 - **In, clock:** the beat follows MIDI clock, and start / stop start and stop the garden. The
   screen shows EXT for the tempo.
 - **Out** (on by default): the pad on channel 1, the bells on 2, the bass on 3 and the pulse on 10,
-  and clock with start / stop when AMB-1 runs on its own tempo. Turning MIDI out off sends all
+  and clock with start / stop when Nightscape FM runs on its own tempo. Turning MIDI out off sends all
   notes off.
 
 ### Screen reader
 
-AMB-1 can tell a screen reader what its screen shows. Connect the FM-1 by USB, open the
+Nightscape FM can tell a screen reader what its screen shows. Connect the FM-1 by USB, open the
 [FM-1 Screen Reader](https://charlesvestal.github.io/fm1-reader/) in Chrome or Edge, and click
 Connect. It reads out the page you're on and its knobs, a knob's value as you turn it, the piece
 and its key, the notes you add or take out, help cards, every message, and the chord each time
@@ -465,7 +466,7 @@ chord and the scale. The FM-1 says nothing until the page connects, so a DAW on 
 
 ## 9. Saving
 
-AMB-1 keeps all eight pieces in the FM-1's memory, each as you left it: the knobs, the scale,
+Nightscape FM keeps all eight pieces in the FM-1's memory, each as you left it: the knobs, the scale,
 the tempo, the pad's colour and the bells' octave, plus Tune, MIDI out and Lights.
 
 - **By itself:** a few seconds after a change, but only while resting. Writing to the memory
@@ -484,7 +485,7 @@ and python-rtmidi packages:
 
 1. Press **SAVE** on the FM-1, plug it in, and fetch its eight pieces:
    `python tools/amb_render.py fetch` (to `renders/pieces.amb1`; the FM-1 may keep playing).
-2. Render: `python tools/amb_render.py render --piece Glass --minutes 30 --dream 417`. Or a batch to audition,
+2. Render: `python tools/amb_render.py render --piece Headlights --minutes 30 --dream 417`. Or a batch to audition,
    one file each: `--dream 1-20 --minutes 5`. Without a Dream, each render takes a new Seed and says which, to
    find it again on the FM-1 (Garden page, SELECT held). `--range`, `--cap`, and any knob after Dream has dealt:
    `--set padtone=3 --set hats=0`. A fade-in (`--fade`, 6 s), and at the end the tails ring out (`--tail`, 30 s).
@@ -503,13 +504,13 @@ before it ends to cancel.
 **Calibration:** if a button or knob does the wrong thing, hold OCT- and OCT+ while you switch
 the FM-1 on. The screen then asks you to press each button and turn each knob in turn.
 
-**After a crash:** AMB-1 shows a red CRASH screen and restarts by itself a few seconds later. The
+**After a crash:** Nightscape FM shows a red CRASH screen and restarts by itself a few seconds later. The
 next start shows RESTARTED AFTER A CRASH and an address (PC ...) for a moment. If you report the
 problem, include that address and what you were doing.
 
-**Safe mode:** if AMB-1 crashes twice in a row while starting, it starts in SAFE MODE instead.
-There's no sound, but USB works, so the web installer can reach it: reinstall AMB-1, or put the
-stock firmware back from the same page. Press PLAY to try starting AMB-1 normally again. If even
+**Safe mode:** if Nightscape FM crashes twice in a row while starting, it starts in SAFE MODE instead.
+There's no sound, but USB works, so the web installer can reach it: reinstall Nightscape FM, or put the
+stock firmware back from the same page. Press PLAY to try starting Nightscape FM normally again. If even
 safe mode fails twice, the FM-1 drops into the chip's own update mode, and only the rescue below
 can reach it.
 
@@ -532,13 +533,13 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/hugelton/felucca-bsp/mai
    chip, saves a backup of the FM-1's memory in the `fm1-rescue` folder in your home folder, and
    asks before it writes anything.
 4. Type **yes** and press Return. Don't unplug anything until it says it's restarting the FM-1.
-   The FM-1 then starts into its original firmware, and you can install AMB-1 again from there.
+   The FM-1 then starts into its original firmware, and you can install Nightscape FM again from there.
 
 The script downloads M-VAVE's FM-1 V15 firmware and JieLi's flash loader, and checks both against
 known fingerprints. It writes only the firmware area of the memory, never the bootloader or the
 FM-1's own settings, and checks everything it writes. Running it again is always safe. If it fails,
 copy everything in the Terminal window and
-[open an issue](https://github.com/charlesvestal/fm1-amb/issues). If the FM-1 never shows up at
+[open an issue](https://github.com/LowCrabTV/FM1-AmbScape/issues). If the FM-1 never shows up at
 all, Felucca's [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter) (a small
 RP2040 board wired to the USB lines) can still reach it.
 
@@ -546,9 +547,9 @@ RP2040 board wired to the USB lines) can still reach it.
 
 ## 11. Parameters
 
-The defaults are Garden's; each piece has its own.
+The defaults are Blue Hour's; each piece has its own.
 
-| Page | Value | Range | Garden |
+| Page | Value | Range | Blue Hour |
 |---|---|---|---|
 | Garden | Tempo | 30–120 | 72 |
 | Garden | Evolve | 0–100 | 35 |
@@ -606,8 +607,13 @@ The defaults are Garden's; each piece has its own.
 
 ## 12. Credits
 
-AMB-1 is free software under the GNU General Public License, version 3. If you share the
-firmware, you must also share its source code.
+Nightscape FM is LowCrabTV's fork of [AMB-1](https://github.com/charlesvestal/fm1-amb) by Charles Vestal: the
+engine, the garden, the pages and the pieces are his, grown here with dealt chords and keys, Dream, new
+instruments and the renderer. It is free software under the Mozilla Public License 2.0, file by file: if you
+change one of its files and share the result, share that file's source under the MPL too (`LICENSE`,
+`LICENSING.md`).
+
+- The night palette is drawn from LowCrabTV's photographs of country roads at dusk.
 
 - The idea comes from Brian Eno's generative music: *Music for Airports*' tape loops of unequal
   length, and the echo and tape-delay chain of *Discreet Music*.
@@ -620,5 +626,5 @@ firmware, you must also share its source code.
 - The idea of running FM-1 firmware in the browser comes from [Groove OS](https://www.groove-os.com/).
 - The fonts are Barlow Semi Condensed and Terminus (SIL Open Font License).
 
-M-VAVE and FM-1 are trademarks of their owners. AMB-1 is not connected with M-VAVE, Brian Eno or
-Hügelton Instruments.
+M-VAVE and FM-1 are trademarks of their owners. Nightscape FM is not connected with M-VAVE, Charles Vestal,
+Brian Eno or Hügelton Instruments.

@@ -5,7 +5,7 @@ expect piece 0
 tap ENV
 spin K1 -10
 expect par0 50
-# the next piece: Departures, its recipe (tempo 60, no pulse, C# Ionian)
+# the next piece: Last Light (Departures), its recipe (tempo 60, no pulse, C# Ionian)
 turn PRESET 1
 expect piece 1
 expect par18 60

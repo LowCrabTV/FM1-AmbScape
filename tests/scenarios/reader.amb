@@ -3,7 +3,7 @@
 wait 200
 listen
 wait 100
-said Garden page: Tempo 72, Evolve 35, Motion 50, Drift 39 seconds. Piece Garden, D Dorian, growing
+said Garden page: Tempo 72, Evolve 35, Motion 50, Drift 39 seconds. Piece Blue Hour, D Dorian, growing
 # (the garden follows, queued: the chord, how far to the next, the scale from the root up)
 listen
 where
@@ -60,11 +60,11 @@ said MODE Phrygian
 turn ALGO -1
 said MODE Dorian
 turn PRESET 1
-said PIECE Departures, C# Ionian, tempo 60
+said PIECE Last Light, C# Ionian, tempo 60
 wait 300
 unsaid Level
 turn PRESET -1
-said PIECE Garden, D Dorian, tempo 74
+said PIECE Blue Hour, D Dorian, tempo 74
 wait 300
 # the buttons' messages, said once
 tap REC
@@ -112,4 +112,4 @@ wait 1000
 said Tempo 74
 # WHERE: everything again
 where
-said Garden page: Tempo 74, Evolve 35, Motion 50, Drift 1 minute 8 seconds. Piece Garden, D Dorian, resting
+said Garden page: Tempo 74, Evolve 35, Motion 50, Drift 1 minute 8 seconds. Piece Blue Hour, D Dorian, resting
