@@ -353,6 +353,7 @@ static void deal_keys(void)
         }
     }
     t[n] = 0;
+    en_restart(3);                               /* the journey from its first key, the chords with it */
     say("KEYS", t);
 }
 static char dealt[24];                          /* what the chord dealer dealt last, named */
@@ -379,6 +380,7 @@ static void deal_chords(void)
     t[n] = 0;
     for (i = 0; i <= n; i++)
         dealt[i] = t[i];
+    en_restart(1);                               /* heard from the top at the next bar, not after the step playing */
     if (proj.par[P_RDEAL])                       /* the keys last whole passes of these */
         deal_keys();
     say("DEALT", t);
@@ -416,7 +418,7 @@ static void dream_deal(int num)
 {
     static const uint8_t SOUND[] = {P_PAD,    P_BELLS,  P_BASS,  P_PULSE, P_DENSITY, P_EVOLVE, P_MOTION, P_HITS,
                                     P_ECHO,   P_ETIME,  P_REVERB, P_SIZE, P_BRIGHT,  P_SWELL,  P_BTONE,  P_TEMPO,
-                                    P_SWING,  P_HATS,   P_GLIDE, P_FIFTH, P_SPARK,   P_SWOOSH};
+                                    P_SWING,  P_HATS,   P_GLIDE, P_FIFTH};
     int16_t rec[P_NPARAMS];
     uint16_t pl;
     const int cap = proj.par[P_DCAP], range = proj.par[P_DRANGE];
@@ -487,6 +489,45 @@ static void dream_deal(int num)
             put(P_BOCT, o < -2 ? -2 : o > 2 ? 2 : o);
             if (c == 5 && proj.par[P_DENSITY] > 45)
                 put(P_DENSITY, 45);                 /* the solo sings rather than runs */
+        }
+        /* the flourishes may join, subtly, more often the higher Range is: Sparkle over the bells, Swoosh anywhere */
+        if (rec[P_BELLS] && dream_f() < 0.35f * r) {
+            put(P_SPARK, 10 + (int)(dream_f() * 30.0f));
+            put(P_SPLEN, 20 + (int)(dream_r() % 61u));
+            put(P_SPOFT, 20 + (int)(dream_r() % 61u));
+        } else {
+            put(P_SPARK, rec[P_SPARK]);
+        }
+        if (dream_f() < 0.35f * r) {
+            put(P_SWOOSH, 5 + (int)(dream_f() * 35.0f));
+            put(P_SWLEN, 20 + (int)(dream_r() % 61u));
+            put(P_SWOFT, 20 + (int)(dream_r() % 61u));
+            put(P_SWTONE, (int)(dream_r() % 101u));
+        } else {
+            put(P_SWOOSH, rec[P_SWOOSH]);
+        }
+        if (rec[P_BELLS] && dream_f() < 0.3f * r) {     /* the arp, through the bells */
+            put(P_ARP, 1 + (int)(dream_r() % (uint32_t)(EN_NARP - 1)));
+            put(P_ARATE, (int)(dream_r() % (uint32_t)EN_NARATE));
+            put(P_ARANGE, 1 + (int)(dream_r() % 3u));
+            put(P_APOLY, r > 0.6f && dream_f() < 0.3f ? 1 + (int)(dream_r() % (uint32_t)(EN_NAPOLY - 1)) : 0);
+        } else {
+            put(P_ARP, rec[P_ARP]);
+            put(P_APOLY, rec[P_APOLY]);
+        }
+        if (rec[P_BASS]) {                           /* the bass: held, or a steady 1, 2 or 4 a bar; its octave */
+            static const uint8_t BN[4] = {0, 12, 37, 62};
+            int o = rec[P_BASSOCT];
+            put(P_BASSN, dream_f() < 0.4f * r ? BN[1 + dream_r() % 3u] : rec[P_BASSN]);
+            if (dream_f() < 0.3f * r)
+                o += dream_f() < 0.5f ? -1 : 1;
+            put(P_BASSOCT, o < -1 ? -1 : o > 1 ? 1 : o);
+        }
+        if (rec[P_PULSE]) {                          /* the rings: their turns now and then, Still now and then */
+            int d;
+            for (d = 0; d < EN_NDRUM; d++)
+                put(P_RTURN0 + d, dream_f() < 0.4f * r ? (int)(dream_r() % EN_DRUM_N[d]) : rec[P_RTURN0 + d]);
+            put(P_RMOVES, dream_f() < 0.25f * r);
         }
     }
     ui.dream_now = (uint16_t)num;

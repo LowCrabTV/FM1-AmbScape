@@ -675,7 +675,7 @@ void en_deal_roots(int home, int num, int count, int spice, int form, int cycle,
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW };
+enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW, C_RESTART };
 #define QN 128u
 typedef char qn_holds_a_whole_piece[P_NPARAMS + 1 + 4 <= (int)QN ? 1 : -1];   /* project_apply: every param and the pool, with room */
 static uint32_t q[QN];
@@ -698,6 +698,7 @@ void en_seed(uint32_t s) { post(C_SEED, 0, (int)(s & 0xFFFFu)); }
 void en_panic(void) { post(C_PANIC, 0, 0); }
 void en_clock(int msg) { post(C_CLOCK, msg, 0); }
 void en_regrow(void) { post(C_REGROW, 0, 0); }
+void en_restart(int what) { post(C_RESTART, what, 0); }
 
 /* -------------------------------------------------------------- state --- */
 volatile uint8_t en_playing, en_frozen, en_ext;
@@ -2595,6 +2596,12 @@ static void drain(void)
             break;
         case C_PANIC: quiet(); break;
         case C_REGROW: regrow(); break;
+        case C_RESTART:                          /* a deal: its steps from the first, at the next bar */
+            if (a & 1)
+                slate_i = SLATE_NONE;
+            if (a & 2)
+                root_i = SLATE_NONE;
+            break;
         }
     }
 }

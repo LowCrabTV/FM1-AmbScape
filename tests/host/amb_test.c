@@ -888,6 +888,29 @@ int main(void)
         CHECK(!bad_r, "Deal keys: %d journeys break a guardrail", bad_r);
     }
 
+    /* a deal lands from the top: en_restart takes the slate back to its first step at the next bar */
+    {
+        int before;
+        en_init();
+        for (i = 0; i < P_NPARAMS; i++)
+            en_set(i, en_param_info(i)->def);
+        run(0.05f);
+        en_set(P_TEMPO, 120), en_set(P_MOTION, 0), en_set(P_EVOLVE, 0);
+        en_set(P_SLOT1, 1), en_set(P_SLOT2, 3 * EN_NSHAPE + 1), en_set(P_SLOT3, 4 * EN_NSHAPE + 1);
+        en_set(P_SLOT4, 5 * EN_NSHAPE + 1);
+        for (i = 0; i < EN_NSLOT; i++)
+            en_set(P_LEN1 + i, 3);                 /* four bars each */
+        run(0.05f);
+        en_play(0), run(0.05f), en_play(1);
+        run(19.0f);                                /* bar 10: the third step, A in D Dorian */
+        before = en_chord_root;
+        en_restart(1);
+        run(2.5f);
+        CHECK(before == 9 && en_chord_root == 2, "a restart: %d then %d, not 9 then 2", before, en_chord_root);
+        en_init();
+        en_play(1);
+    }
+
     /* the Rings: a count gives that many hits; a turn rotates the ring; Still holds them through Evolve, Follow lets
      * them move; Auto is what Hits and Hats say */
     {
