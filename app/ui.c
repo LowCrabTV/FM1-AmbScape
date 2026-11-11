@@ -417,43 +417,54 @@ static int dream_level(int p)
 }
 static void dream_deal(int num)
 {
+    /* one character for the whole dream: its number, low calm, high lively (a little either way), steering every choice
+     * together. Calm: slower, long chords, few keys, sparse bells, gentle Evolve and Motion, more reverb and echo, the
+     * bass held, the rings still, Swoosh before Sparkle. Lively: the other way. Range how far the sound moves */
     static const uint8_t SOUND[] = {P_PAD,    P_BELLS,  P_BASS,  P_PULSE, P_DENSITY, P_EVOLVE, P_MOTION, P_HITS,
                                     P_ECHO,   P_ETIME,  P_REVERB, P_SIZE, P_BRIGHT,  P_SWELL,  P_BTONE,  P_TEMPO,
                                     P_SWING,  P_HATS,   P_GLIDE, P_FIFTH};
+    static const int8_t LIFT[sizeof SOUND] = {0, 1, 0, 1, 1, 1, 1, 1, -1, -1, -1, -1, 1, -1, 1, 1, 1, 1, -1, 0};
+    static const char *const MOOD[4] = {" still", " calm", " moving", " lively"};
     int16_t rec[P_NPARAMS];
     uint16_t pl;
     const int cap = proj.par[P_DCAP], range = proj.par[P_DRANGE];
+    const float r = (float)range * 0.01f;
     uint32_t x = (uint32_t)num * 2654435761u ^ 0xD4EA3u, i;
-    char head[16] = "DREAM ";
+    float ch, live;
+    char head[24] = "DREAM ";
     x ^= x >> 15;
     x *= 0x2C1B3C6Du;
     x ^= x >> 12;
     dream_rng = x ? x : 1u;
+    ch = (float)(num - 1) / 998.0f + (dream_f() - 0.5f) * 0.2f;
+    ch = ch < 0.0f ? 0.0f : ch > 1.0f ? 1.0f : ch;
+    live = 2.0f * ch - 1.0f;                     /* -1 still .. +1 lively */
     en_piece(proj.piece, rec, &pl);
     put(P_SEED, 1 + (int)(dream_r() % 999u));
     put(P_DEAL, 1 + (int)(dream_r() % 999u));
-    {
-        const float c = dream_f();
-        put(P_DCOUNT, c < 0.2f ? 2 : c < 0.5f ? 3 : 4);
+    {                                            /* the chords: fewer and longer the calmer */
+        int n = 2 + (int)(ch * 2.0f + dream_f());
+        put(P_DCOUNT, n > 4 ? 4 : n);
+        put(P_DSPICE, (int)((0.3f + 0.7f * dream_f()) * (float)cap + 0.5f));
+        put(P_DFORM, (int)(dream_r() % 3u) * 3 + (ch < 0.33f ? 2 : ch < 0.66f ? 1 : 0));
     }
-    put(P_DSPICE, (int)(dream_f() * (float)cap + 0.5f));
-    put(P_DFORM, (int)(dream_r() % EN_NDFORM));
-    if (dream_f() < 0.6f) {                          /* a journey of keys, more often than not */
+    if (dream_f() < 0.25f + 0.45f * ch) {        /* a journey of keys: more often, and further, the livelier */
+        int n = 2 + (int)(ch * 2.0f + dream_f() * 0.9f);
         put(P_RDEAL, 1 + (int)(dream_r() % 999u));
-        put(P_RDCOUNT, 2 + (int)(dream_r() % 3u));
-        put(P_RDSPICE, (int)(dream_f() * (float)cap + 0.5f));
-        put(P_RDFORM, (int)(dream_r() % EN_NRFORM));
+        put(P_RDCOUNT, n > 4 ? 4 : n);
+        put(P_RDSPICE, (int)((0.2f + 0.8f * ch * dream_f()) * (float)cap + 0.5f));
+        put(P_RDFORM, ch < 0.4f ? (dream_f() < 0.5f ? 1 : 2) : (int)(dream_r() % EN_NRFORM));
     } else {
         put(P_RDEAL, 0);
         for (i = 0; i < EN_NSLOT; i++)
             put(P_RSLOT1 + (int)i, 0);
     }
     if (range > 0)
-        for (i = 0; i < sizeof SOUND; i++) {
+        for (i = 0; i < sizeof SOUND; i++) {     /* the sound round the recipe, leaning with the character */
             const int p = SOUND[i], c = rec[p], lo = en_param_info(p)->lo, hi = en_param_info(p)->hi;
-            const float u = dream_f() * 2.0f - 1.0f, r = (float)range * 0.01f;
-            float d;
+            float u = 0.5f * (dream_f() * 2.0f - 1.0f) + 0.6f * (float)LIFT[i] * live, d;
             int v;
+            u = u < -1.0f ? -1.0f : u > 1.0f ? 1.0f : u;
             if (dream_level(p) && !c)
                 continue;                            /* off in the recipe: off */
             d = p == P_TEMPO ? u * (float)c * 0.15f * r : p == P_ETIME ? u * 2.0f * r : u * 0.35f * (float)(hi - lo) * r;
@@ -464,7 +475,6 @@ static void dream_deal(int num)
             put(p, v);
         }
     if (range > 0) {                             /* the instruments and voicings: more often away as Range grows */
-        const float r = (float)range * 0.01f;
         if (rec[P_PAD]) {
             const int away = dream_f() < 0.6f * r, other = (rec[P_PADTONE] + 1 + (int)(dream_r() % 3u)) % 4;
             const int notes = range >= 30 && dream_f() < 0.5f * r ? 2 + (int)(dream_r() % 3u) : rec[P_PADN];
@@ -475,12 +485,12 @@ static void dream_deal(int num)
             static const float W[EN_NBCOLOR] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.5f};   /* Lead, less often */
             int c = rec[P_BCOLOR], o = rec[P_BOCT], k;
             if (dream_f() < 0.6f * r) {
-                float sum = 0.0f, x;
+                float sum = 0.0f, y;
                 for (k = 0; k < EN_NBCOLOR; k++)
                     sum += k == rec[P_BCOLOR] ? 0.0f : W[k];
-                x = dream_f() * sum;
+                y = dream_f() * sum;
                 for (k = 0; k < EN_NBCOLOR; k++)
-                    if (k != rec[P_BCOLOR] && (x -= W[k]) < 0.0f)
+                    if (k != rec[P_BCOLOR] && (y -= W[k]) < 0.0f)
                         break;
                 c = k < EN_NBCOLOR ? k : EN_NBCOLOR - 1;
             }
@@ -491,15 +501,15 @@ static void dream_deal(int num)
             if (c == 5 && proj.par[P_DENSITY] > 45)
                 put(P_DENSITY, 45);                 /* the solo sings rather than runs */
         }
-        /* the flourishes may join, subtly, more often the higher Range is: Sparkle over the bells, Swoosh anywhere */
-        if (rec[P_BELLS] && dream_f() < 0.35f * r) {
+        /* the flourishes, subtle: Sparkle the livelier, Swoosh the calmer */
+        if (rec[P_BELLS] && dream_f() < 0.35f * r * (0.4f + 1.2f * ch)) {
             put(P_SPARK, 10 + (int)(dream_f() * 30.0f));
             put(P_SPLEN, 20 + (int)(dream_r() % 61u));
             put(P_SPOFT, 20 + (int)(dream_r() % 61u));
         } else {
             put(P_SPARK, rec[P_SPARK]);
         }
-        if (dream_f() < 0.35f * r) {
+        if (dream_f() < 0.35f * r * (1.6f - 1.2f * ch)) {
             put(P_SWOOSH, 5 + (int)(dream_f() * 35.0f));
             put(P_SWLEN, 20 + (int)(dream_r() % 61u));
             put(P_SWOFT, 20 + (int)(dream_r() % 61u));
@@ -507,34 +517,43 @@ static void dream_deal(int num)
         } else {
             put(P_SWOOSH, rec[P_SWOOSH]);
         }
-        if (rec[P_BELLS] && dream_f() < 0.3f * r) {     /* the arp, through the bells */
+        if (rec[P_BELLS] && dream_f() < 0.3f * r * (0.3f + 1.4f * ch)) {   /* the arp, through the bells */
             put(P_ARP, 1 + (int)(dream_r() % (uint32_t)(EN_NARP - 1)));
             put(P_ARATE, (int)(dream_r() % (uint32_t)EN_NARATE));
             put(P_ARANGE, 1 + (int)(dream_r() % 3u));
-            put(P_APOLY, r > 0.6f && dream_f() < 0.3f ? 1 + (int)(dream_r() % (uint32_t)(EN_NAPOLY - 1)) : 0);
+            put(P_APOLY, ch > 0.6f && dream_f() < 0.3f ? 1 + (int)(dream_r() % (uint32_t)(EN_NAPOLY - 1)) : 0);
         } else {
             put(P_ARP, rec[P_ARP]);
             put(P_APOLY, rec[P_APOLY]);
         }
-        if (rec[P_BASS]) {                           /* the bass: held, or a steady 1, 2 or 4 a bar; its octave */
+        if (rec[P_BASS]) {                           /* the bass: held, or steady notes, more a bar the livelier */
             static const uint8_t BN[4] = {0, 12, 37, 62};
             int o = rec[P_BASSOCT];
-            put(P_BASSN, dream_f() < 0.4f * r ? BN[1 + dream_r() % 3u] : rec[P_BASSN]);
+            put(P_BASSN, dream_f() < 0.4f * r * (0.3f + 1.4f * ch) ? BN[1 + (int)(ch * 2.99f)] : rec[P_BASSN]);
             if (dream_f() < 0.3f * r)
                 o += dream_f() < 0.5f ? -1 : 1;
             put(P_BASSOCT, o < -1 ? -1 : o > 1 ? 1 : o);
         }
-        if (rec[P_PULSE]) {                          /* the rings: their turns now and then, Still now and then */
+        if (rec[P_PULSE]) {                          /* the rings: turns now and then; Still the calmer */
             int d;
             for (d = 0; d < EN_NDRUM; d++)
                 put(P_RTURN0 + d, dream_f() < 0.4f * r ? (int)(dream_r() % EN_DRUM_N[d]) : rec[P_RTURN0 + d]);
-            put(P_RMOVES, dream_f() < 0.25f * r);
+            put(P_RMOVES, dream_f() < 0.25f * r * (1.6f - 1.2f * ch));
         }
     }
     ui.dream_now = (uint16_t)num;
     ui.hand = 0;
     deal_chords();
     itoa_u((uint32_t)num, head + 6);
+    {                                            /* "DREAM 417 calm" */
+        const char *m = MOOD[ch < 0.25f ? 0 : ch < 0.5f ? 1 : ch < 0.75f ? 2 : 3];
+        char *h = head;
+        while (*h)
+            h++;
+        while (*m && h < head + sizeof head - 1)
+            *h++ = *m++;
+        *h = 0;
+    }
     say(head, dealt);
 }
 

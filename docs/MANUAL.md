@@ -288,6 +288,11 @@ Turning the chord dealer deals the keys again too, to fit the new length.
 One number deals the whole piece: the garden's Seed, both dealers on the Deal page, and, with Range, the piece's
 sound. Everything it deals shows on its own page and can be turned by hand after.
 
+- **Every dream has one character**, from its number: low numbers **still** and **calm**, high ones **moving**
+  and **lively**, each a little either way. It steers everything together: calm is slower, with long chords, few
+  keys, sparse bells, gentle Evolve and Motion, more reverb and echo, a held bass and still rings, and Swoosh
+  more often than Sparkle; lively is quicker, with shorter chords, more keys, denser bells, the arp and a stepping
+  bass more often, and Sparkle. The toast says which (**DREAM 417 calm**).
 - **Dream (KNOB 1):** **Off** leaves the piece as you set it. **Wild** deals a new dream at each PLAY and each
   time you come to the piece. A number, 1 to 999, deals the same dream each time. Turned up from Wild, the knob
   keeps the dream playing; on from there, its neighbours. A toast names it (**DREAM 417**, and its chords).
