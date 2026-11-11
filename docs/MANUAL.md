@@ -197,13 +197,13 @@ the same for all.
 
 ## 7. The pages
 
-**Hold SELECT** on the Garden, Pad, Bells, Bass, Space, Setup, Chords, Roots or Deal page and the knobs change to that
+**Hold SELECT** on the Garden, Pad, Bells, Bass, Space, Setup, Chords, Keys or Deal page and the knobs change to that
 page's other settings; let go and they're back. Holding and turning doesn't change the page. While it's held the
 page's name has a **+** (or a **-** where a page has no second layer), and a place with nothing in it shows a dash.
 Hold SELECT for two seconds without turning and a card says what it does.
 
 **Who's driving:** a knob something else is in charge of says so. Drift reads **Chords** while the Chords page has
-a step (turning it says where they are); Setup's Root reads **Roots** while the Roots page has one; Seed, Deal and
+a step (turning it says where they are); Setup's Root reads **Keys** while the Keys page has one; Seed, Deal and
 Key deal read **Dream** while Dream deals them. Turn one of those three and it's yours again, until Dream deals next.
 
 One page a layer, each on its own button, with four values on KNOB 1–4. A layer's level is
@@ -237,7 +237,11 @@ SELECT for the page.
 - **EDIT** goes to the next step on the next bar, and **REC** holds the step. Each piece keeps its
   own slate.
 
-### SELECT again: Roots
+### SELECT again: Keys
+
+The key itself, its home note: what a song changes seldom, if at all (a lift for the last chorus, a bridge in a
+neighbouring key). The chords move within it; the keys move the whole. Dream changes key only in its livelier
+dreams, and seldom.
 
 The root rotator: up to four root notes in order, each for a set number of bars, like the slate
 but for the key. Press SELECT from the Chords page, and again to go back. The scale moves with the
@@ -245,8 +249,8 @@ root, and so do your chords: Dm7 and G7 in D become Gm7 and C7 in G.
 
 - **KNOB 1–4:** each step's root. Turned up from **Off**, a knob starts on the piece's own root and goes on
   up round the notes. **Off** skips that step. With all four off, the Root on the Setup page is in charge,
-  and KNOB 1 reads it (**Root D**). While any step is on, the rotator is, and the Setup page's Root reads
-  **Roots**; it can't be turned until the steps are off.
+  and KNOB 1 reads it (**Key D**). While any step is on, the rotator is, and the Setup page's Root reads
+  **Keys**; it can't be turned until the steps are off.
 - **Hold SELECT and turn KNOB 1–4:** that step's length: 1, 2, 4, 8, 12, 16, 24, 32, 48, 64, 96 or 128 bars. With **Song** on, a key
   lasts at least a section (about two and a half minutes), however short its step is set.
 - **Each new root starts the chords again from their first step**, so sections line up like a verse
@@ -258,9 +262,9 @@ root, and so do your chords: Dm7 and G7 in D become Gm7 and C7 in G.
 
 ### SELECT a third time: Deal
 
-The dealers: a number writes the Chords page's four steps, or (SELECT held) the Roots page's, the same each time
+The dealers: a number writes the Chords page's four steps, or (SELECT held) the Keys page's, the same each time
 for that number. What they deal is yours to turn like anything you set; a toast names it (**DEALT** Dm7 Em7 F
-G7, **KEYS** D G C). Press SELECT from the Roots page, and again to go back to Chords.
+G7, **KEYS** D G C). Press SELECT from the Keys page, and again to go back to Chords.
 
 - **Deal (KNOB 1):** **Off**, or 1 to 999. Off leaves the steps as they are, dealt or your own.
 - **Chords (KNOB 2):** 2, 3 or 4.
@@ -275,7 +279,7 @@ G7, **KEYS** D G C). Press SELECT from the Roots page, and again to go back to C
 - **Guardrails, at every Spice:** the first chord is home; no chord twice; the last leads home well; the
   diminished chord only with Spice, and never the longest.
 
-**Hold SELECT: the keys.** The same four knobs for the Roots page: **Key deal**, **Keys** (2 to 4), **Spice**
+**Hold SELECT: the keys.** The same four knobs for the Keys page: **Key deal**, **Keys** (2 to 4), **Spice**
 and **Form**. Keys feel near or far by the notes they share: a fourth or fifth shares six of seven, a whole
 step five, a minor third four, a major third three, a half step or the tritone two. Low Spice keeps to fifths
 and whole steps; on up, minor thirds, then major, then the far ones. The journey starts at the piece's root
@@ -343,7 +347,7 @@ follows the Bells level. Turned up from 0, the first wave starts within a couple
 
 - **Pad, Notes (KNOB 2):** how much of the chord the pad sings. 4 is the whole chord; 3 its root,
   third and fifth; 2 its root and fifth, open. Under 4, the arc moves it by one as each chord comes.
-- **Bass, Notes (KNOB 2):** **Held** is the one long note. Turned up, the bass keeps a steady speed:
+- **Bass, Notes (KNOB 2):** **Pedal**, below Held: the key's home note, held under every chord, as a drone. **Held** is the one long note. Turned up, the bass keeps a steady speed:
   1 note a bar (1 to 24), 2 (25 to 49), 4 (50 to 74) or 8 (75 to 100). The arc and Evolve never change
   that speed. It plays the root first, then the fifth (from 25), the octave (from 50), and the third
   and seventh (from 75). Only the chord's tones, so it follows the slate and the drift. Fifth is for
@@ -407,6 +411,9 @@ Press ARP from the Bells page for the arp's own page, and again to go back.
 - **Fifth:** how often, halfway through a chord, the bass leans on the fifth.
 
 ### SEQ: Pulse
+
+The pieces keep it quiet, for work, sleep and meditation: no hats until you turn Hats up, and a sparse kick, two a
+bar at most. Dream keeps it so.
 
 ![The Pulse page: LEVEL 40, HITS 35, SWING 50%, HATS 50](img/screen-pulse.png "The Pulse page")
 
@@ -601,8 +608,8 @@ The defaults are Blue Hour's; each piece has its own.
 | Garden | Drift | 20 s – 5:00 | 25 (about 40 s) |
 | Chords | Chord 1–4 | Off, or a chord of the scale in one of six shapes | Off |
 | Chords | Bars 1–4 (SELECT held) | 1, 2, 3, 4, 6, 8, 12, 16, 24, 32 | 4 |
-| Roots | Root 1–4 | Off, C – B | Off |
-| Roots | Bars 1–4 (SELECT held) | 1, 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128 | 8 |
+| Keys | Key 1–4 | Off, C – B | Off |
+| Keys | Bars 1–4 (SELECT held) | 1, 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128 | 8 |
 | Garden | Song (SELECT held) | Off, On | On |
 | Garden | Sparkle (SELECT held) | 0–100 | 0 |
 | Garden | Length (SELECT held) | 5 s – 1 min | 20 s |
@@ -613,7 +620,7 @@ The defaults are Blue Hour's; each piece has its own.
 | Arp | Rate | 1/4, 1/8., 1/8, 1/16 | 1/8 |
 | Arp | Range | 1–3 octaves | 2 |
 | Arp | Poly | Off, 3:4, 5:4, 3:2, 7:4 | Off |
-| Bass | Notes (SELECT held) | Held, 1–100 (1, 2, 4 or 8 notes a bar) | Held |
+| Bass | Notes (SELECT held) | Pedal, Held, 1–100 (1, 2, 4 or 8 notes a bar) | Held |
 | Pad | Level | 0–100 | 60 |
 | Pad | Swell | 0–100 | 60 |
 | Pad | Bright | 0–100 | 40 |

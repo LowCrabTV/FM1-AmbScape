@@ -948,6 +948,33 @@ int main(void)
         en_play(1);
     }
 
+    /* a pedal: the key's home under every chord (Dm7, G7 in D: always D); held, the bass follows the chord to G */
+    {
+        int pass, k, home, g;
+        for (pass = 0; pass < 2; pass++) {
+            en_init();
+            for (i = 0; i < P_NPARAMS; i++)
+                en_set(i, en_param_info(i)->def);
+            run(0.05f);
+            en_set(P_TEMPO, 120), en_set(P_EVOLVE, 0), en_set(P_MOTION, 0), en_set(P_BASS, 80), en_set(P_FIFTH, 0);
+            en_set(P_SLOT1, 1), en_set(P_SLOT2, 3 * EN_NSHAPE + 1), en_set(P_LEN1, 1), en_set(P_LEN2, 1);
+            en_set(P_BASSN, pass ? 0 : -1);
+            run(0.05f);
+            en_play(0), run(0.05f), en_play(1);
+            bell_logging = 1, bell_n = bass_n = 0;
+            run(16.0f);
+            bell_logging = 0;
+            for (k = 0, home = 0, g = 0; k < bass_n; k++)
+                home += bass_log[k] % 12 == 2, g += bass_log[k] % 12 == 7;
+            if (!pass)
+                CHECK(bass_n > 0 && home == bass_n, "Pedal: %d of %d bass notes D", home, bass_n);
+            else
+                CHECK(g > 0, "Held: the bass never went to G (%d notes)", bass_n);
+        }
+        en_init();
+        en_play(1);
+    }
+
     /* a deal lands from the top: en_restart takes the slate back to its first step at the next bar */
     {
         int before;

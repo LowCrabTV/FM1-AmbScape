@@ -19,10 +19,12 @@ spin K1 2
 wait 100
 expect par70 5
 expect ring0 4
+# no hats in the recipes: the closed hat on Auto plays none, and turned up starts there
 spin K2 3
 wait 100
-expect ring1 2
-spin K2 2
+expect par71 1
+expect ring1 0
+spin K2 4
 wait 100
 expect ring1 4
 spin K4 1

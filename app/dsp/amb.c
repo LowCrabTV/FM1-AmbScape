@@ -38,7 +38,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Bars 1", 0, EN_NBARS - 1, 3}, {"Bars 2", 0, EN_NBARS - 1, 3}, {"Bars 3", 0, EN_NBARS - 1, 3},
     {"Bars 4", 0, EN_NBARS - 1, 3},
     {"Arp", 0, EN_NARP - 1, 0}, {"Arp rate", 0, EN_NARATE - 1, 2}, {"Arp range", 1, 3, 2},
-    {"Pad notes", 2, 4, 4},   {"Bass notes", 0, 100, 0},
+    {"Pad notes", 2, 4, 4},   {"Bass notes", -1, 100, 0},
     {"Arp poly", 0, EN_NAPOLY - 1, 0},
     {"Sparkle", 0, 100, 0},   {"Spk length", 0, 100, 56}, {"Spk often", 0, 100, 44},
     {"Root 1", 0, 12, 0},     {"Root 2", 0, 12, 0},     {"Root 3", 0, 12, 0},     {"Root 4", 0, 12, 0},
@@ -60,19 +60,20 @@ const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PAR
  * as AMB-1 they were Garden, Departures, Voices, Afternoon, Night Bus, Shoreline, Glass, Tides). Tune and
  * MIDI out are taken from here by neither: they belong to the player, not the piece */
 /*                     Pad Bel Bas Pul  Den Evo Dri Hit  Ech ET Rev Siz  Bri Swe Ton Mot  Tun MI Tem Rt Md Oc  PT  BO Gli Fif  Swi Hat
- * (PT: the pad's colour, 0 Rhodes, 1 Voices; BO: the bass's octave) */
+ * (PT: the pad's colour, 0 Rhodes, 1 Voices; BO: the bass's octave). Hat 0 in each: for work, sleep and meditation,
+ * no hats unless turned up, and the pulse a sparse kick (Hits 45 at most: two a bar) */
 static const struct {
     const char *name;
     int8_t v[P_NPARAMS];
 } PIECES[EN_NPIECES] = {
-    {"Blue Hour",  {60, 65, 45, 40, 40, 35, 25, 35, 45, 3, 65, 80, 40, 60, 50, 50, 0, 1, 72, 2, 1, 0, 0, 0, 20, 35, 0, 50}},
-    {"Last Light", {35, 75, 0, 0, 35, 30, 40, 0, 30, 3, 70, 85, 20, 55, 5, 40, 0, 1, 60, 1, 0, -1, 0, 0, 30, 25, 0, 40}},
-    {"Pines",      {85, 0, 25, 0, 30, 30, 50, 0, 20, 5, 80, 90, 67, 70, 30, 55, 0, 1, 56, 5, 5, 0, 1, -1, 45, 30, 0, 40}},
-    {"Ember Line", {50, 65, 35, 25, 55, 45, 20, 30, 50, 2, 60, 75, 60, 50, 60, 55, 0, 1, 84, 7, 3, 0, 0, 0, 15, 40, 15, 50}},
-    {"Chevrons",   {45, 55, 55, 60, 45, 50, 15, 55, 55, 1, 55, 70, 35, 40, 75, 70, 0, 1, 96, 9, 5, 0, 0, 0, 10, 45, 30, 50}},
-    {"Afterglow",  {40, 60, 30, 0, 30, 40, 40, 0, 85, 4, 55, 95, 30, 80, 0, 85, 0, 1, 64, 4, 6, 0, 0, 0, 40, 20, 0, 30}},
-    {"Headlights", {35, 80, 30, 20, 60, 55, 25, 25, 45, 2, 65, 80, 55, 45, 90, 50, 0, 1, 76, 3, 7, 1, 0, 1, 10, 30, 10, 50}},
-    {"Gravel",     {55, 60, 40, 35, 45, 75, 10, 40, 50, 3, 65, 85, 60, 60, 55, 95, 0, 1, 70, 10, 4, 0, 1, 0, 25, 55, 10, 50}},
+    {"Blue Hour",  {60, 65, 45, 40, 40, 35, 25, 35, 45, 3, 65, 80, 40, 60, 50, 50, 0, 1, 72, 2, 1, 0, 0, 0, 20, 35, 0, 0}},
+    {"Last Light", {35, 75, 0, 0, 35, 30, 40, 0, 30, 3, 70, 85, 20, 55, 5, 40, 0, 1, 60, 1, 0, -1, 0, 0, 30, 25, 0, 0}},
+    {"Pines",      {85, 0, 25, 0, 30, 30, 50, 0, 20, 5, 80, 90, 67, 70, 30, 55, 0, 1, 56, 5, 5, 0, 1, -1, 45, 30, 0, 0}},
+    {"Ember Line", {50, 65, 35, 25, 55, 45, 20, 30, 50, 2, 60, 75, 60, 50, 60, 55, 0, 1, 84, 7, 3, 0, 0, 0, 15, 40, 15, 0}},
+    {"Chevrons",   {45, 55, 55, 60, 45, 50, 15, 45, 55, 1, 55, 70, 35, 40, 75, 70, 0, 1, 96, 9, 5, 0, 0, 0, 10, 45, 30, 0}},
+    {"Afterglow",  {40, 60, 30, 0, 30, 40, 40, 0, 85, 4, 55, 95, 30, 80, 0, 85, 0, 1, 64, 4, 6, 0, 0, 0, 40, 20, 0, 0}},
+    {"Headlights", {35, 80, 30, 20, 60, 55, 25, 25, 45, 2, 65, 80, 55, 45, 90, 50, 0, 1, 76, 3, 7, 1, 0, 1, 10, 30, 10, 0}},
+    {"Gravel",     {55, 60, 40, 35, 45, 75, 10, 40, 50, 3, 65, 85, 60, 60, 55, 95, 0, 1, 70, 10, 4, 0, 1, 0, 25, 55, 10, 0}},
 };
 
 const char *en_piece_name(int i) { return PIECES[(unsigned)i < EN_NPIECES ? i : 0].name; }
@@ -224,8 +225,10 @@ void en_param_text(int i, int v, char *b)
         *b = 0;
         return;
     }
-    if (i == P_BASSN && !v) {
-        b[0] = 'H', b[1] = 'e', b[2] = 'l', b[3] = 'd', b[4] = 0;
+    if (i == P_BASSN && v <= 0) {               /* Held; below it, Pedal: the key's home under every chord */
+        const char *s2 = v ? "Pedal" : "Held";
+        while ((*b++ = *s2++))
+            ;
         return;
     }
     if (i == P_ARANGE) {
@@ -1109,14 +1112,19 @@ static void drift_reset(void)
     fifth_done = 0;
 }
 
+static int bass_home(void)                      /* the bass's note: the chord's root, or with Pedal the key's */
+{
+    return par[P_BASSN] < 0 ? cur_root : chord_pcs[0];
+}
+
 static void chord_to(int d)                     /* the chord on degree d: the pad, the bass */
 {
     deg = d;
     pad_retarget();
     pad_leave();
-    bass_to(chord_pcs[0]);
+    bass_to(bass_home());
     /* Evolve: the held bass sometimes sits a chord out, more often when the arc is sparse; with Notes, it keeps time */
-    bass.rest = !par[P_BASSN] && frand() < evolve * 0.3f + 0.25f * fm_maxf(-arcm, 0.0f);
+    bass.rest = par[P_BASSN] == 0 && frand() < evolve * 0.3f + 0.25f * fm_maxf(-arcm, 0.0f);   /* (a pedal stays) */
     drift_reset();
 }
 
@@ -1236,7 +1244,7 @@ static void root_check(void)                    /* a step changed: the rotator o
         if (nsteps) {
             pad_retarget();
             pad_handoff();
-            bass_to(chord_pcs[0]);
+            bass_to(bass_home());
         }
     }
     root_on = (uint8_t)on;
@@ -2099,7 +2107,7 @@ static void tick(void)
         if (++drum_pos[d] >= EN_DRUM_N[d])
             drum_pos[d] = 0;
     }
-    if (par[P_BASSN])
+    if (par[P_BASSN] > 0)
         bass_step();
     if (par[P_ARP])
         arp_step();
@@ -2405,14 +2413,14 @@ static void apply(int p, int v)
         break;
     case P_ARATE: case P_APOLY: arp_acc = 0; break;   /* the new rhythm from the next sixteenth */
     case P_BASSN:
-        if (v) {
+        if (v > 0) {
             bass_pattern();
             bass.rest = 0;
-        } else {                                 /* back to one long note */
+        } else {                                 /* back to one long note: the chord's, or the key's (Pedal) */
             bass.wait = 0;
             bass.env = bass.edec = 1.0f;
             if (nsteps)
-                bass_to(chord_pcs[0]);
+                bass_to(bass_home());
         }
         break;
     case P_PADN:
@@ -2499,7 +2507,7 @@ static void apply(int p, int v)
         if (nsteps) {
             pad_retarget();
             pad_handoff();
-            bass_to(chord_pcs[0]);
+            bass_to(bass_home());
         }
         break;
     case P_MIDI:
@@ -2518,7 +2526,7 @@ static void pool_set(uint32_t p)
         deg = 0;
     pad_retarget();
     pad_handoff();
-    bass_to(chord_pcs[0]);
+    bass_to(bass_home());
 }
 
 static uint32_t seed_mix(uint32_t n)            /* a Seed's number to the dice's state */
@@ -2548,7 +2556,7 @@ static void regrow(void)                        /* a new piece: fresh loops, hom
     shape = 0;
     pad_retarget();
     pad_handoff();
-    bass_to(chord_pcs[0]);
+    bass_to(bass_home());
     bass.rest = 0;
     for (l = 0; l < EN_NLOOP; l++) {             /* on the home chord, which they'll begin on */
         loop_regrow(l);
@@ -2916,7 +2924,7 @@ static void render_bass(uint32_t n)
     }
     /* Glide; with Bass notes, never so slow that a note doesn't arrive */
     bass.note += (bass.target - bass.note) *
-                 fm_minf((float)n * (par[P_BASSN] ? fm_maxf(glide_k, 4.0f / step_len) : glide_k), 1.0f);
+                 fm_minf((float)n * (par[P_BASSN] > 0 ? fm_maxf(glide_k, 4.0f / step_len) : glide_k), 1.0f);
     inc = mtof(bass.note) * (1.0f / EN_SR);
     for (j = 0; j < n; j++) {
         float x = sine(ph) * 0.75f + sine(ph * 0.5f + 0.25f) * 0.45f + sine(ph * 2.0f) * 0.12f;
@@ -3230,7 +3238,7 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
             drift_left -= (float)n;
         if (!fifth_done && (slate_on ? slate_done() >= 0.5f : drift_left < 0.5f * drift_total)) {
             fifth_done = 1;                      /* halfway: the bass may lean on the fifth */
-            if (frand() < (float)par[P_FIFTH] * 0.01f && chord_nt >= 3 && !par[P_BASSN])
+            if (frand() < (float)par[P_FIFTH] * 0.01f && chord_nt >= 3 && par[P_BASSN] == 0)
                 bass_to(chord_pcs[2]);
         }
         if (!slate_on && drift_left <= 0.0f)

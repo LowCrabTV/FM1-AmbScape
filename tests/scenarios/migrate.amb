@@ -12,7 +12,7 @@ expect par23 0
 expect par24 10
 expect par25 45
 expect par26 30
-expect par27 50
+expect par27 0
 tap SAVE
 reboot
 wait 300

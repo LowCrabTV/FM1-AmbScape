@@ -18,7 +18,7 @@
 
 /* the pages, one a layer (a button each); SELECT steps through them in this order */
 enum { V_GARDEN, V_PAD, V_BELLS, V_ARP, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, V_ROOTS, V_DEAL, V_RINGS, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Roots", "Deal", "Rings"};
+static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Keys", "Deal", "Rings"};
 static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL, B_SEL, B_SEQ};
 /* the four knobs of each page: a parameter, or one of these; and what the knob is called there */
 enum { K_LEDS = 100, K_CPU, K_NONE };
@@ -46,7 +46,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Echo", "Echo time", "Reverb", "Size"},
     {"Root", "Tune", "MIDI out", "Lights"},
     {"Chord 1", "Chord 2", "Chord 3", "Chord 4"},
-    {"Root 1", "Root 2", "Root 3", "Root 4"},
+    {"Key 1", "Key 2", "Key 3", "Key 4"},
     {"Deal", "Chords", "Spice", "Form"},
     {"Thump", "Closed", "Open", "Moves"},
 };
@@ -276,12 +276,12 @@ static void knob_text(int k, char *b)
             ;
     } else if (k == P_RSLOT1 && !any_step(P_RSLOT1)) {
         const char *n = EN_NOTE_NAME[proj.par[P_ROOT]];
-        b[0] = 'R', b[1] = 'o', b[2] = 'o', b[3] = 't', b[4] = ' ';
-        b += 5;
+        b[0] = 'K', b[1] = 'e', b[2] = 'y', b[3] = ' ';
+        b += 4;
         while ((*b++ = *n++))
             ;
-    } else if (k == P_ROOT && any_step(P_RSLOT1)) {   /* the Roots page has it */
-        const char *n = "Roots";
+    } else if (k == P_ROOT && any_step(P_RSLOT1)) {   /* the Keys page has it */
+        const char *n = "Keys";
         while ((*b++ = *n++))
             ;
     } else if (is_slot(k) && v) {                /* a slot says its chord: "Dm7" */
@@ -419,7 +419,7 @@ static int dream_fresh(void)                     /* a new number: the clock, and
 }
 static int dream_level(int p)
 {
-    return p == P_PAD || p == P_BELLS || p == P_BASS || p == P_PULSE || p == P_SPARK || p == P_SWOOSH;
+    return p == P_PAD || p == P_BELLS || p == P_BASS || p == P_PULSE || p == P_SPARK || p == P_SWOOSH || p == P_HATS;
 }
 static void dream_deal(int num)
 {
@@ -454,12 +454,12 @@ static void dream_deal(int num)
         put(P_DSPICE, (int)((0.3f + 0.7f * dream_f()) * (float)cap + 0.5f));
         put(P_DFORM, (int)(dream_r() % 3u) * 3 + (ch < 0.33f ? 2 : ch < 0.66f ? 1 : 0));
     }
-    if (dream_f() < 0.25f + 0.45f * ch) {        /* a journey of keys: more often, and further, the livelier */
-        int n = 2 + (int)(ch * 2.0f + dream_f() * 0.9f);
+    if (ch > 0.5f && dream_f() < (ch - 0.5f) * 0.9f) {   /* a change of key: rare, as in songs; never when calm */
+        const int lift = dream_f() < 0.5f;
         put(P_RDEAL, 1 + (int)(dream_r() % 999u));
-        put(P_RDCOUNT, n > 4 ? 4 : n);
-        put(P_RDSPICE, (int)((0.2f + 0.8f * ch * dream_f()) * (float)cap + 0.5f));
-        put(P_RDFORM, ch < 0.4f ? (dream_f() < 0.5f ? 1 : 2) : (int)(dream_r() % EN_NRFORM));
+        put(P_RDCOUNT, lift ? 2 : 2 + (int)(dream_r() % 2u));   /* the lift; or home, a neighbour (or two), home */
+        put(P_RDSPICE, (int)(0.25f * (float)cap * dream_f() + 0.5f));   /* near keys */
+        put(P_RDFORM, lift ? 3 : 0);
     } else {
         put(P_RDEAL, 0);
         for (i = 0; i < EN_NSLOT; i++)
@@ -478,6 +478,8 @@ static void dream_deal(int num)
             v = v < lo ? lo : v > hi ? hi : v;
             if (dream_level(p) && v < 10)
                 v = 10;                              /* on in the recipe: still heard */
+            if (p == P_HITS && v > 45)
+                v = 45;                              /* the kick sparse: two a bar at most */
             put(p, v);
         }
     if (range > 0) {                             /* the instruments and voicings: more often away as Range grows */
@@ -535,7 +537,10 @@ static void dream_deal(int num)
         if (rec[P_BASS]) {                           /* the bass: held, or steady notes, more a bar the livelier */
             static const uint8_t BN[4] = {0, 12, 37, 62};
             int o = rec[P_BASSOCT];
-            put(P_BASSN, dream_f() < 0.4f * r * (0.3f + 1.4f * ch) ? BN[1 + (int)(ch * 2.99f)] : rec[P_BASSN]);
+            if (dream_f() < 0.5f * r * (1.0f - ch))
+                put(P_BASSN, -1);                    /* a pedal: the key's home under every chord, the calmer */
+            else
+                put(P_BASSN, dream_f() < 0.4f * r * (0.3f + 1.4f * ch) ? BN[1 + (int)(ch * 2.99f)] : rec[P_BASSN]);
             if (dream_f() < 0.3f * r)
                 o += dream_f() < 0.5f ? -1 : 1;
             put(P_BASSOCT, o < -1 ? -1 : o > 1 ? 1 : o);
@@ -625,7 +630,7 @@ static void turn(int role, int k, int32_t e)
     if (!e || k == K_NONE || k == K_CPU)
         return;
     if (k == P_ROOT && any_step(P_RSLOT1)) {     /* it wouldn't be heard: say where it is */
-        say("Root", "Roots page");
+        say("Root", "Keys page");
         return;
     }
     if (k == P_DRIFT && any_step(P_SLOT1)) {     /* the same: the slate has the chords */
@@ -1310,7 +1315,7 @@ static int help_lines(int b, const char *l[HELP_LINES])
     case B_HOME: L("THE GARDEN"); L("TEMPO, EVOLVE, MOTION, DRIFT"); L("+ SELECT: TEMPO"); break;
     case B_ENV: L("THE PAD"); L("LEVEL, SWELL, BRIGHT,"); L("COLOUR"); break;
     case B_ARP: L("THE BELLS"); L("LEVEL, DENSITY, TONE,"); L("COLOUR; AGAIN: THE ARP"); break;
-    case B_SEL: L("SELECT"); L("TAP: CHORDS, ROOTS, DEAL"); L("HOLD: THIS PAGE'S"); L("OTHER KNOBS (+)"); break;
+    case B_SEL: L("SELECT"); L("TAP: CHORDS, KEYS, DEAL"); L("HOLD: THIS PAGE'S"); L("OTHER KNOBS (+)"); break;
     case B_LFO: L("THE BASS"); L("LEVEL, OCTAVE, GLIDE, FIFTH"); break;
     case B_SEQ: L("THE PULSE"); L("LEVEL, HITS, SWING, HATS"); L("AGAIN: THE RINGS"); break;
     case B_FX: L("THE SPACE"); L("ECHO, ECHO TIME, REVERB,"); L("SIZE"); break;
