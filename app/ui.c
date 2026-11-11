@@ -256,6 +256,12 @@ static void knob_text(int k, char *b)
         const char *n = "Dream";
         while ((*b++ = *n++))
             ;
+    } else if (k == P_DFORM) {                   /* its shape, and the bars the chords will come to: "Even 32" */
+        static const char *const SHAPE[3] = {"Even ", "Home ", "Turn "};
+        const char *n = SHAPE[(unsigned)v / 3u < 3u ? v / 3 : 0];
+        while (*n)
+            *b++ = *n++;
+        itoa_u((uint32_t)en_deal_cycle(proj.par[P_DCOUNT], v, proj.par[P_TEMPO]), b);
     } else if (k == P_DRIFT && any_step(P_SLOT1)) {   /* the slate has the chords */
         const char *n = "Chords";
         while ((*b++ = *n++))

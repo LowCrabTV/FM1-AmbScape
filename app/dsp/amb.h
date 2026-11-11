@@ -137,6 +137,7 @@ extern volatile float en_spark;                /* 0..1: where the Sparkle's wave
 int en_deal_chords(uint32_t pool, int num, int count, int spice, int form, int tempo, int16_t *slot, int16_t *len);
 void en_deal_roots(int home, int num, int count, int spice, int form, int cycle, int min_bars, int16_t *rslot,
                    int16_t *rlen);
+int en_deal_cycle(int count, int form, int tempo);   /* the bars a dealt progression comes to, at this tempo */
 int en_ring_auto(int d, int hits, int hats);   /* a ring's hits on Auto: from Hits and Hats, as the pulse plays them */
 extern volatile uint16_t en_seed_now;          /* the number the garden growing now grew from, 1..999 */
 extern volatile float en_arc;                  /* the arc, -1 sparse .. +1 full (times Motion) */

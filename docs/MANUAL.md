@@ -268,8 +268,9 @@ G7, **KEYS** D G C). Press SELECT from the Roots page, and again to go back to C
   that leads back (I IV V, I vi IV V, ii V, and each scale's own: i VII VI, I bVII IV), as plain sevenths and
   triads. On up come the softer and the surprising turns, the sus, add9 and sixth colours, and at the top the
   weaker, dreamier moves. Always in the scale.
-- **Form (KNOB 4):** how long each chord lasts: about **12**, **20** or **32 s** a chord at the piece's tempo, the whole
-  4, 8, 16, 32 or 64 bars, as phrases go (so a slow piece gets fewer bars, a quick one more). **Even**:
+- **Form (KNOB 4):** how long each chord lasts, in whole bars: about 12, 20 or 32 seconds a chord at the piece's
+  tempo, the progression always 4, 8, 16, 32 or 64 bars, as phrases go (a slow piece fewer bars, a quick one more).
+  The knob shows the shape and the bars it comes to now: **Even 32** is four chords of eight bars. **Even**:
   equal (three chords: the last held). **Home**: the first longest. **Turn**: the last short, turning back.
 - **Guardrails, at every Spice:** the first chord is home; no chord twice; the last leads home well; the
   diminished chord only with Spice, and never the longest.

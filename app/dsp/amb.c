@@ -516,6 +516,17 @@ static float chord_move(const int *st, int m, const uint8_t *dim, int d, int e, 
     return w * (1.0f - 0.6f * sp) + 3.0f * 0.6f * sp;     /* Spice evens the odds */
 }
 
+int en_deal_cycle(int count, int form, int tempo)   /* the phrase nearest the pace's seconds, at this tempo */
+{
+    static const float PACE[3] = {12.0f, 20.0f, 32.0f};
+    const int n = count < 2 ? 2 : count > 4 ? 4 : count, f = form < 0 ? 0 : form >= EN_NDFORM ? EN_NDFORM - 1 : form;
+    const float want = (float)n * PACE[f % 3] * (float)(tempo < 30 ? 30 : tempo) / 240.0f;
+    int total = 4;
+    while (total < 64 && (float)total * 1.41421f < want)
+        total *= 2;
+    return total;
+}
+
 int en_deal_chords(uint32_t pool, int num, int count, int spice, int form, int tempo, int16_t *slot, int16_t *len)
 {
     int st[12], m = en_scale(pool, st), n, i, e, seq[4], bars[4], total, longest = 0, attempt, ok = 0, shape, f;
@@ -525,13 +536,7 @@ int en_deal_chords(uint32_t pool, int num, int count, int spice, int form, int t
     if (n > m)
         n = m;
     f = form < 0 ? 0 : form >= EN_NDFORM ? EN_NDFORM - 1 : form;
-    {                                           /* the cycle: the phrase nearest the pace's seconds, at this tempo */
-        static const float PACE[3] = {12.0f, 20.0f, 32.0f};
-        const float want = (float)n * PACE[f % 3] * (float)(tempo < 30 ? 30 : tempo) / 240.0f;
-        total = 4;
-        while (total < 64 && (float)total * 1.41421f < want)
-            total *= 2;
-    }
+    total = en_deal_cycle(n, f, tempo);
     {
         const uint8_t *u = DFORM_UNITS[f / 3][n - 2];
         int sum = 0, good = 1;
