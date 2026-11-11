@@ -1,6 +1,6 @@
 # the dealers: SELECT a third time from the Chords page. A number deals the slate's four steps (Garden, D Dorian: Dm7 Em7
-# F G7, four bars each); another number, others; back, the first again. SELECT held: the keys, whole passes of those
-# 16 bars (D G C). Off keeps what was dealt. With the piece; gone with the recipe. A project from the Seed's build
+# F G7, eight bars each: about 20 s a chord at 72); another number, others; back, the first again. SELECT held: the keys, whole passes of those
+# 32 bars, and with Song each a section: 64 bars (D G C). Off keeps what was dealt. With the piece; gone with the recipe. A project from the Seed's build
 # (format 12) keeps its settings, the dealers Off.
 wait 300
 tap SEL
@@ -21,8 +21,8 @@ expect par28 1
 expect par29 7
 expect par30 14
 expect par31 19
-expect par32 3
-expect par35 3
+expect par32 5
+expect par35 5
 shot dealt.png
 spin K1 1
 wait 100
@@ -41,7 +41,7 @@ expect par45 3
 expect par46 8
 expect par47 1
 expect par48 0
-expect par49 5
+expect par49 9
 shot keys.png
 release SEL
 wait 100

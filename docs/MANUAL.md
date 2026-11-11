@@ -232,7 +232,7 @@ SELECT for the page.
   sixth (`Dm6`). All of them keep to the scale, so nothing can clash; the bells, the arp and the bass
   follow the shape. A pentatonic scale has fewer, and the knob skips the repeats. **Off** skips that
   step. With all four off, the chord drifts as usual, and KNOB 1 reads **Drift**.
-- **Hold SELECT and turn KNOB 1–4:** that step's length: 1, 2, 3, 4, 6, 8, 12 or 16 bars. Short
+- **Hold SELECT and turn KNOB 1–4:** that step's length: 1, 2, 3, 4, 6, 8, 12, 16, 24 or 32 bars. Short
   chords may not let the pad finish breathing in: at most tempos, try 4 bars or more.
 - **EDIT** goes to the next step on the next bar, and **REC** holds the step. Each piece keeps its
   own slate.
@@ -247,7 +247,8 @@ root, and so do your chords: Dm7 and G7 in D become Gm7 and C7 in G.
   up round the notes. **Off** skips that step. With all four off, the Root on the Setup page is in charge,
   and KNOB 1 reads it (**Root D**). While any step is on, the rotator is, and the Setup page's Root reads
   **Roots**; it can't be turned until the steps are off.
-- **Hold SELECT and turn KNOB 1–4:** that step's length: 1, 2, 4, 8, 12, 16, 24 or 32 bars.
+- **Hold SELECT and turn KNOB 1–4:** that step's length: 1, 2, 4, 8, 12, 16, 24, 32, 48, 64, 96 or 128 bars. With **Song** on, a key
+  lasts at least a section (about two and a half minutes), however short its step is set.
 - **Each new root starts the chords again from their first step**, so sections line up like a verse
   and a chorus. Make a root last as long as your chords add up to, or the last ones won't be reached.
   With no chords set, each new root begins on the home chord. A step on the same root as the one before
@@ -267,7 +268,8 @@ G7, **KEYS** D G C). Press SELECT from the Roots page, and again to go back to C
   that leads back (I IV V, I vi IV V, ii V, and each scale's own: i VII VI, I bVII IV), as plain sevenths and
   triads. On up come the softer and the surprising turns, the sus, add9 and sixth colours, and at the top the
   weaker, dreamier moves. Always in the scale.
-- **Form (KNOB 4):** how long each chord lasts, the whole always 8, 16 or 32 bars, as phrases go. **Even**:
+- **Form (KNOB 4):** how long each chord lasts: about **12**, **20** or **32 s** a chord at the piece's tempo, the whole
+  4, 8, 16, 32 or 64 bars, as phrases go (so a slow piece gets fewer bars, a quick one more). **Even**:
   equal (three chords: the last held). **Home**: the first longest. **Turn**: the last short, turning back.
 - **Guardrails, at every Spice:** the first chord is home; no chord twice; the last leads home well; the
   diminished chord only with Spice, and never the longest.
@@ -302,6 +304,22 @@ sound. Everything it deals shows on its own page and can be turned by hand after
 - **Your hand comes first.** Turn any knob, an instrument, a voicing, a level, at any time: it stays as you
   set it until Dream deals again, at the next turn of Dream, Range or Spice cap, or, in Wild, the next PLAY.
   To keep a version you've changed, turn up to its number first, then save.
+
+### Hold SELECT: Song, on the Garden page
+
+**KNOB 4.** **On** (the default): the garden plays in sections, as a song does. **Off**: as it always did, each part
+changing on its own clock.
+
+- **A section** lasts whole passes of the chords, about two and a half minutes. With keys dealt or set, each key is a
+  section, home the first, and lasts at least that long.
+- **Through a section** the bells' loops keep their melody. What Density adds back comes from it first.
+- **At a section's end** the melody moves on (further with Evolve), and the rings, the arp and the bass's figure may
+  turn. The pulse may breathe for the last two bars before it.
+- **A section comes back as itself:** without keys the sections go A B A C A B..., and an A brings back the first
+  section's melody (with Evolve, a note of it changed); with keys, each key has its own, home's coming back with home.
+- **The arc follows the song:** it opens low, builds, peaks, settles, peaks again and eases, a section at a time,
+  instead of on its own.
+- Every knob still turns at any time; Song only decides when the garden changes by itself.
 
 ### Hold SELECT: Sparkle, on the Garden page
 
@@ -576,9 +594,10 @@ The defaults are Blue Hour's; each piece has its own.
 | Garden | Motion | 0–100 | 50 |
 | Garden | Drift | 20 s – 5:00 | 25 (about 40 s) |
 | Chords | Chord 1–4 | Off, or a chord of the scale in one of six shapes | Off |
-| Chords | Bars 1–4 (SELECT held) | 1, 2, 3, 4, 6, 8, 12, 16 | 4 |
+| Chords | Bars 1–4 (SELECT held) | 1, 2, 3, 4, 6, 8, 12, 16, 24, 32 | 4 |
 | Roots | Root 1–4 | Off, C – B | Off |
-| Roots | Bars 1–4 (SELECT held) | 1, 2, 4, 8, 12, 16, 24, 32 | 8 |
+| Roots | Bars 1–4 (SELECT held) | 1, 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128 | 8 |
+| Garden | Song (SELECT held) | Off, On | On |
 | Garden | Sparkle (SELECT held) | 0–100 | 0 |
 | Garden | Length (SELECT held) | 5 s – 1 min | 20 s |
 | Garden | Often (SELECT held) | 10 s – 5 min | 45 s |
@@ -617,7 +636,7 @@ The defaults are Blue Hour's; each piece has its own.
 | Rings | Thump, Closed, Open | Auto, 0–16; Auto, 0–12; Auto, 0–7 | Auto |
 | Rings | Moves | Follow, Still | Follow |
 | Rings | Turns (SELECT held) | 0–15; 0–11; 0–6 | 0, 2, 3 |
-| Deal | Deal, Chords, Spice, Form | Off, 1–999; 2–4; 0–100; Even, Home, Turn over 8, 16, 32 bars | Off, 4, 30, Even 16 |
+| Deal | Deal, Chords, Spice, Form | Off, 1–999; 2–4; 0–100; Even, Home, Turn at 12, 20, 32 s a chord | Off, 4, 30, Even 20s |
 | Deal | Key deal, Keys, Spice, Form (SELECT held) | Off, 1–999; 2–4; 0–100; Even, Slow, Home, Lift | Off, 3, 30, Even |
 | Setup | Dream, Range, Spice cap (SELECT held) | Off, Wild, 1–999; 0–100; 0–100 | Off, 30, 70 |
 | Setup | Root | C – B | D |

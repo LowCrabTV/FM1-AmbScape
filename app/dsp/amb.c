@@ -21,8 +21,8 @@ const uint16_t EN_MODE_POOL[EN_NMODES] = {
 #undef B
 const uint8_t EN_LOOP_LEN[EN_NLOOP] = {13, 17, 23, 29};
 const uint8_t EN_DRUM_N[EN_NDRUM] = {16, 12, 7};
-const uint8_t EN_SLATE_BARS[EN_NBARS] = {1, 2, 3, 4, 6, 8, 12, 16};
-static const uint8_t EN_ROOT_BARS[EN_NRBARS] = {1, 2, 4, 8, 12, 16, 24, 32};
+const uint8_t EN_SLATE_BARS[EN_NBARS] = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32};
+static const uint8_t EN_ROOT_BARS[EN_NRBARS] = {1, 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128};
 
 static const en_param_t PARAMS[P_NPARAMS] = {
     {"Pad", 0, 100, 60},      {"Bells", 0, 100, 65},    {"Bass", 0, 100, 45},     {"Pulse", 0, 100, 40},
@@ -52,6 +52,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Dream", 0, 1000, 0},   {"Range", 0, 100, 30},   {"Spice cap", 0, 100, 70},
     {"Thump hits", 0, 17, 0}, {"Closed hits", 0, 13, 0}, {"Open hits", 0, 8, 0},
     {"Thump turn", 0, 15, 0}, {"Closed turn", 0, 11, 2}, {"Open turn", 0, 6, 3}, {"Moves", 0, 1, 0},
+    {"Song", 0, 1, 1},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -119,8 +120,8 @@ static float spoft_secs(int v) { return 10.0f * fm_exp2f((float)v * 0.04907f); }
 static float swlen_secs(int v) { return 2.0f * fm_exp2f((float)v * 0.03322f); }     /* 2 s .. 20 s */
 static float drift_secs(int v) { return 20.0f * fm_exp2f((float)v * 0.039069f); }   /* 20 s .. 5 min */
 
-static const char *const DFORM_NAME[EN_NDFORM] = {"Even 8", "Even 16", "Even 32", "Home 8", "Home 16",
-                                                  "Home 32", "Turn 8", "Turn 16", "Turn 32"};
+static const char *const DFORM_NAME[EN_NDFORM] = {"Even 12s", "Even 20s", "Even 32s", "Home 12s", "Home 20s",
+                                                  "Home 32s", "Turn 12s", "Turn 20s", "Turn 32s"};
 static const char *const RFORM_NAME[EN_NRFORM] = {"Even", "Slow", "Home", "Lift"};
 void en_param_text(int i, int v, char *b)
 {
@@ -156,6 +157,8 @@ void en_param_text(int i, int v, char *b)
         s = "Auto";
     else if (i == P_RMOVES)
         s = v ? "Still" : "Follow";
+    else if (i == P_SONG)
+        s = v ? "On" : "Off";
     if (s) {
         int k = 0;
         while (s[k] && k < 9) {
@@ -478,7 +481,8 @@ static int bars_index(const uint8_t *table, int n, int bars)
     return -1;
 }
 
-/* the chords' Form: each chord's share, in units; the cycle 8, 16 or 32 bars */
+/* the chords' Form: each chord's share, in units. The pace (12, 20 or 32 s a chord, on average) and the tempo set the
+ * cycle: 4, 8, 16, 32 or 64 bars, as phrases go */
 static const uint8_t DFORM_UNITS[3][3][4] = {
     {{1, 1}, {1, 1, 2}, {1, 1, 1, 1}},          /* Even (three: the last held, to round the phrase) */
     {{3, 1}, {2, 1, 1}, {4, 2, 1, 1}},          /* Home: the first longest */
@@ -512,7 +516,7 @@ static float chord_move(const int *st, int m, const uint8_t *dim, int d, int e, 
     return w * (1.0f - 0.6f * sp) + 3.0f * 0.6f * sp;     /* Spice evens the odds */
 }
 
-int en_deal_chords(uint32_t pool, int num, int count, int spice, int form, int16_t *slot, int16_t *len)
+int en_deal_chords(uint32_t pool, int num, int count, int spice, int form, int tempo, int16_t *slot, int16_t *len)
 {
     int st[12], m = en_scale(pool, st), n, i, e, seq[4], bars[4], total, longest = 0, attempt, ok = 0, shape, f;
     uint8_t dim[12], used[12];
@@ -521,7 +525,13 @@ int en_deal_chords(uint32_t pool, int num, int count, int spice, int form, int16
     if (n > m)
         n = m;
     f = form < 0 ? 0 : form >= EN_NDFORM ? EN_NDFORM - 1 : form;
-    total = 8 << (f % 3);
+    {                                           /* the cycle: the phrase nearest the pace's seconds, at this tempo */
+        static const float PACE[3] = {12.0f, 20.0f, 32.0f};
+        const float want = (float)n * PACE[f % 3] * (float)(tempo < 30 ? 30 : tempo) / 240.0f;
+        total = 4;
+        while (total < 64 && (float)total * 1.41421f < want)
+            total *= 2;
+    }
     {
         const uint8_t *u = DFORM_UNITS[f / 3][n - 2];
         int sum = 0, good = 1;
@@ -609,7 +619,8 @@ static float key_move(int iv, float sp)
 }
 static int key_far(int iv) { return iv == 4 || iv == 8 || iv == 1 || iv == 11 || iv == 6; }
 
-void en_deal_roots(int home, int num, int count, int spice, int form, int cycle, int16_t *rslot, int16_t *rlen)
+void en_deal_roots(int home, int num, int count, int spice, int form, int cycle, int min_bars, int16_t *rslot,
+                   int16_t *rlen)
 {
     int n, i, iv, k[4], pass[4], attempt, ok = 0, last, lift;
     float w[12], sp = (float)(spice < 0 ? 0 : spice > 100 ? 100 : spice) * 0.01f;
@@ -653,8 +664,10 @@ void en_deal_roots(int home, int num, int count, int spice, int form, int cycle,
     if (!ok)                                    /* (only at the plainest, with four keys: round the fifths) */
         for (i = 1; i < n; i++)
             k[i] = lift && i == n - 1 ? (k[i - 1] + 2) % 12 : (k[i - 1] + 7) % 12;
-    for (i = 0; i < n; i++)
-        pass[i] = form == 1 ? 2 : form == 2 && !i ? 2 : lift && !i ? 3 : 1;
+    for (i = 0; i < n; i++) {                   /* (Song: each key at least a section) */
+        const int base = min_bars > cycle ? (min_bars + cycle - 1) / cycle : 1;
+        pass[i] = base * (form == 1 ? 2 : form == 2 && !i ? 2 : lift && !i ? 3 : 1);
+    }
     for (i = 0; i < EN_NSLOT; i++) {
         int b;
         if (i >= n) {
@@ -1170,7 +1183,8 @@ static void slate_check(void)                   /* a slot changed: the slate on,
 /* Up to four roots in order, each for its bars, in place of Root while any step holds one. The scale moves with it,
  * so the chords do. A step's end starts the chords again from their first step (or, drifting, the home chord): the
  * sections line up. On the grid and the bar, so it follows MIDI clock; Freeze holds it. */
-static uint8_t root_on, root_i = SLATE_NONE;
+static uint8_t root_on, root_i = SLATE_NONE, root_stepped;   /* stepped: a step began (the song's sections) */
+static int song_bars(void);
 static uint16_t root_left;
 
 static int root_bar(void)                       /* a bar line, the garden not frozen: 1 if a new step began */
@@ -1183,6 +1197,9 @@ static int root_bar(void)                       /* a bar line, the garden not fr
         if (par[P_RSLOT1 + i]) {
             root_i = (uint8_t)i;
             root_left = EN_ROOT_BARS[par[P_RLEN1 + i]];
+            if (par[P_SONG] && root_left < song_bars())
+                root_left = (uint16_t)song_bars();   /* Song: a key lasts at least a section */
+            root_stepped = 1;
             if ((par[P_RSLOT1 + i] - 1) % 12 == cur_root)
                 return 0;                       /* the same root: nothing to start again */
             cur_root = (par[P_RSLOT1 + i] - 1) % 12;
@@ -1296,11 +1313,137 @@ static void loop_regrow(int l)
     loop_publish(l);
 }
 
+/* ------------------------------------------------------------- the song --- */
+/* Song (on by default): the garden in sections, as songs go. A section lasts whole passes of the chords, about two and
+ * a half minutes (with keys, each key's step is one; home the first). What changes the piece's character waits for a
+ * section's end: through a section the bells' loops keep their motif (what Density adds back comes from it first); at
+ * its end the motif is developed (more with Evolve) for somewhere new, or a kind of section already heard gets its own
+ * back, so a return is a return (A B A C A B ...). The arc rises and falls with the sections, not on its own clock.
+ * The rings and the arp turn, and the bass's figure changes, only between sections; the pulse may take its breath in a
+ * section's last two bars. Off: the garden as it always was, each part on its own clock. */
+#define SONG_KINDS 5
+static int8_t song_note[SONG_KINDS][EN_NLOOP][EN_LOOP_MAX];
+static uint8_t song_vel[SONG_KINDS][EN_NLOOP][EN_LOOP_MAX];
+static uint8_t song_has[SONG_KINDS], song_kind, song_edge;   /* edge: this bar began a section */
+static uint16_t song_sec, song_left;
+static const float SONG_ARC[6] = {-0.5f, 0.1f, 0.6f, -0.1f, 0.8f, -0.3f};   /* open low, build, peak, settle, peak, ease */
+static void arc_aim(float t);
+static void drums_evolve(void);
+
+static int song_bars(void)                       /* a section: whole passes of the chords, about 150 s */
+{
+    const float bar_s = 240.0f / (float)(par[P_TEMPO] < 30 ? 30 : par[P_TEMPO]);
+    int cycle = 0, i, n;
+    for (i = 0; i < EN_NSLOT; i++)
+        if (par[P_SLOT1 + i])
+            cycle += EN_SLATE_BARS[par[P_LEN1 + i]];
+    if (!cycle)
+        cycle = 8;
+    n = (int)(150.0f / (bar_s * (float)cycle) + 0.5f);
+    if (n < 1)
+        n = 1;
+    while (n > 1 && n * cycle > 256)
+        n--;
+    return n * cycle;
+}
+static void song_keep(int k)
+{
+    int l, s;
+    for (l = 0; l < EN_NLOOP; l++)
+        for (s = 0; s < EN_LOOP_MAX; s++)
+            song_note[k][l][s] = loop_note[l][s], song_vel[k][l][s] = loop_vel[l][s];
+    song_has[k] = 1;
+}
+static void song_mutate(int l)                   /* a note of the motif changed, or moved */
+{
+    int s = loop_pick(l);
+    if (s < 0)
+        return;
+    if (frand() < 0.5f) {
+        loop_note[l][s] = (int8_t)rand_offset();
+    } else {
+        int d = irand(EN_LOOP_LEN[l]);
+        if (loop_note[l][d] < 0) {
+            loop_note[l][d] = loop_note[l][s];
+            loop_vel[l][d] = loop_vel[l][s];
+            loop_note[l][s] = -1;
+        }
+    }
+}
+static void loop_add_song(int l)                 /* Density adds: the section's motif first */
+{
+    const int len = EN_LOOP_LEN[l];
+    int i, s = irand(len);
+    if (par[P_SONG] && song_has[song_kind])
+        for (i = 0; i < len; i++, s = (s + 1) % len)
+            if (loop_note[l][s] < 0 && song_note[song_kind][l][s] >= 0) {
+                loop_note[l][s] = song_note[song_kind][l][s];
+                loop_vel[l][s] = song_vel[song_kind][l][s];
+                return;
+            }
+    loop_add(l);
+}
+static void song_enter(int kind)
+{
+    int l, s, m;
+    if (song_has[kind]) {                        /* a return: its own motif again, a touch changed with Evolve */
+        for (l = 0; l < EN_NLOOP; l++) {
+            for (s = 0; s < EN_LOOP_MAX; s++)
+                loop_note[l][s] = song_note[kind][l][s], loop_vel[l][s] = song_vel[kind][l][s];
+            if (frand() < evolve)
+                song_mutate(l);
+        }
+    } else {                                     /* somewhere new: the motif developed, more with Evolve */
+        for (l = 0; l < EN_NLOOP; l++)
+            for (m = 1 + (int)(evolve * 3.0f); m > 0; m--)
+                song_mutate(l);
+        song_keep(kind);
+    }
+    for (l = 0; l < EN_NLOOP; l++)
+        loop_publish(l);
+    song_kind = (uint8_t)kind;
+    arc_aim(SONG_ARC[song_sec % 6]);
+    if (frand() < evolve)                        /* the rings may turn, between sections */
+        drums_evolve();
+    song_sec++;
+    song_edge = 1;
+}
+static void song_reset(void)                     /* from the start: what grows now is the first section's */
+{
+    int k;
+    for (k = 0; k < SONG_KINDS; k++)
+        song_has[k] = 0;
+    song_keep(0);
+    song_kind = 0;
+    song_left = (uint16_t)song_bars();
+    song_sec = 0;
+    arc_aim(SONG_ARC[0]);
+    song_sec = 1;
+    root_stepped = 0;
+}
+static void song_bar(void)                       /* a bar line, Song on */
+{
+    song_edge = 0;
+    if (root_on) {                               /* with keys: each key's step a section */
+        if (root_stepped) {
+            root_stepped = 0;
+            if (song_sec > 1 || root_i != 0)
+                song_enter(root_i);
+        }
+        return;
+    }
+    if (song_left && --song_left)
+        return;
+    song_left = (uint16_t)song_bars();
+    song_enter(song_sec % 2u ? 1 + (int)(song_sec / 2u) % 2 : 0);   /* A B A C A B ... */
+}
+static int song_ending(void) { return root_on ? root_left == 2 : song_left == 2; }
+
 static void loop_pass(int l)                    /* the end of a pass: grow, prune, evolve */
 {
     int c = loop_count(l), t = loop_target(), s;
     for (; c < t; c++)                          /* Density: to its count by the end of a pass */
-        loop_add(l);
+        loop_add_song(l);
     for (; c > t; c--) {                        /* fewer: the passing notes go first */
         if ((s = loop_pick_passing(l)) < 0 && (s = loop_pick(l)) < 0)
             break;
@@ -1309,7 +1452,7 @@ static void loop_pass(int l)                    /* the end of a pass: grow, prun
     if (passing() <= 0.0f && (s = loop_pick_passing(l)) >= 0)   /* Density turned low: one a pass to the chord */
         loop_note[l][s] = (int8_t)rand_offset();
     loop_rest[l] = frand() < evolve * 0.15f + 0.15f * fm_maxf(-arcm, 0.0f);
-    if (frand() < evolve * 0.7f && (s = loop_pick(l)) >= 0) {
+    if (!par[P_SONG] && frand() < evolve * 0.7f && (s = loop_pick(l)) >= 0) {   /* (Song: at a section's end) */
         if (frand() < 0.5f) {
             loop_note[l][s] = (int8_t)rand_offset();             /* another note */
         } else {
@@ -1511,7 +1654,7 @@ static void arp_note(int32_t wait)              /* a step of the arp, wait sampl
     int list[12], n, i, pos;
     if (arp_pos == 0) {                         /* its pattern: Density, swelled and thinned by the arc */
         float k = (float)par[P_DENSITY] * 0.16f * (1.0f + 0.8f * arcm);
-        if (frand() < evolve * 0.25f)
+        if ((!par[P_SONG] || song_edge) && frand() < evolve * 0.25f)
             arp_rot = (uint8_t)irand(16);
         arp_pat = en_euclid((int)(fm_clampf(k, 0.0f, 16.0f) + frand()), 16, arp_rot);
         arp_rest = frand() < evolve * 0.15f + 0.15f * fm_maxf(-arcm, 0.0f);
@@ -1594,7 +1737,7 @@ static void bass_step(void)                     /* a sixteenth */
             up[m++] = (chord_pcs[3] - chord_pcs[0] + 12) % 12;
     }
     j = bass_i % m;
-    if (bass_i && frand() < evolve * 0.25f)
+    if (bass_i && (!par[P_SONG] || song_edge) && frand() < evolve * 0.25f)
         j = irand(m);
     n = r + up[j];
     bass_i++;
@@ -1924,10 +2067,10 @@ static void tick(void)
     if ((sixteenth & 15u) == 0u) {              /* a bar: Evolve's rests and turns */
         if (pulse_rest > 0)
             pulse_rest--;
-        else if (frand() < evolve * 0.015f)
-            pulse_rest = 2 + irand(3);           /* a short breath: 2 to 4 bars */
+        else if (par[P_SONG] ? song_ending() && frand() < evolve * 0.5f : frand() < evolve * 0.015f)
+            pulse_rest = par[P_SONG] ? 2 : 2 + irand(3);   /* a short breath (Song: before a new section) */
         en_pulse_rest = (uint8_t)(pulse_rest > 0);
-        if (frand() < evolve * 0.25f)
+        if (!par[P_SONG] && frand() < evolve * 0.25f)   /* (Song: between sections) */
             drums_evolve();
     }
     if ((sixteenth & 15u) == 0u && !en_frozen) {   /* chords move on the bar: first, so what sounds on it is of the new chord */
@@ -1940,6 +2083,8 @@ static void tick(void)
             chord_change();
         }
     }
+    if ((sixteenth & 15u) == 0u && !en_frozen && par[P_SONG])
+        song_bar();                              /* the song: a section's end, and its next */
     if (par[P_HATS] > 50 && !pulse_rest)
         hats_more(pa);
     for (d = 0; d < EN_NDRUM; d++) {
@@ -2273,6 +2418,10 @@ static void apply(int p, int v)
         break;
     case P_GLIDE: glide_k = 1.0f / ((0.02f + 0.012f * (float)v) * EN_SR); break;   /* 20 ms .. 1.2 s */
     case P_SWING: swing = (float)v * 0.005f; break;      /* the off sixteenths up to half a step late */
+    case P_SONG:                                 /* on: the song from here, this the first section */
+        if (v)
+            song_reset();
+        break;
     case P_SEED:                                 /* a number: that garden, now; the one growing kept: nothing */
         if (v && v != en_seed_now)
             regrow();
@@ -2408,6 +2557,7 @@ static void regrow(void)                        /* a new piece: fresh loops, hom
     slate_i = SLATE_NONE;                        /* from its first step, on the next bar */
     root_i = SLATE_NONE;
     arp_reset();
+    song_reset();
 }
 
 static void notes_off(void)
@@ -2511,6 +2661,7 @@ static void play_start(int from_top)
             drum_pos[i] = 0;
         for (i = 0; i < EN_NLOOP; i++)
             loop_pos[i] = 0;
+        song_reset();
     }
     pulse_left = 0.0f;
     en_playing = 1;
@@ -3032,6 +3183,11 @@ static float slate_done(void)                   /* 0..1: how far through this st
 /* the arc: a slow tide, minutes long, between sparse (-1) and full (+1); Motion sets how far it goes */
 static float arc, arc_tgt;
 static uint32_t arc_left;
+static void arc_aim(float t)                     /* a section's arc (Song); free again, a new one at once */
+{
+    arc_tgt = t;
+    arc_left = 0;
+}
 
 static void arc_home(void)
 {
@@ -3048,7 +3204,9 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
     if (par[P_SPARK] && en_playing)
         spark_env(n);
     swoosh_env(n);
-    if (arc_left <= n) {
+    if (par[P_SONG]) {
+        /* the sections aim it (song_enter) */
+    } else if (arc_left <= n) {
         float r = frand() * 2.0f - 1.0f;
         arc_tgt = r * (0.6f + 0.4f * frand()) + (r > 0.0f ? 0.25f : -0.25f);   /* away from the middle */
         arc_left = (uint32_t)((50.0f + 100.0f * frand()) * EN_SR);

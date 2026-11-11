@@ -46,8 +46,8 @@ extern const char *const EN_NOTE_NAME[12];
 extern const uint8_t EN_LOOP_LEN[EN_NLOOP];
 extern const uint8_t EN_DRUM_N[EN_NDRUM];
 #define EN_NSLOT 4                     /* the slate's steps */
-#define EN_NBARS 8
-#define EN_NRBARS 8
+#define EN_NBARS 10
+#define EN_NRBARS 12
 #define EN_NBCOLOR 6
 #define EN_NSHAPE 6                    /* a chord's shapes: seventh, triad, sus2, sus4, add9, sixth. A slot's value: 0 empty,
                                         * else 1 + degree * EN_NSHAPE + shape */
@@ -82,6 +82,7 @@ enum {
     P_DREAM, P_DRANGE, P_DCAP,                        /* Dream: 0 Off, 1 Wild, 2-1000 the numbers 1-999; Range; Spice cap */
     P_RHITS0, P_RHITS1, P_RHITS2,                     /* the Rings: thump, closed hat, open hat: 0 Auto, else 1 + hits */
     P_RTURN0, P_RTURN1, P_RTURN2, P_RMOVES,           /* each ring's turn (steps); Moves: 0 Follow (Evolve), 1 Still */
+    P_SONG,                                           /* Song: 1 the garden in sections, as songs go (the default); 0 free */
     P_NPARAMS
 };
 typedef struct {
@@ -131,10 +132,11 @@ extern volatile float en_spark;                /* 0..1: where the Sparkle's wave
 /* the dealers (pure): from a number, a progression for the slate's four steps (slot values, EN_SLATE_BARS
  * indices) or a journey for the rotator's (root values, its bars' indices). Steps not dealt are emptied. The
  * chords' one returns the bars they come to; the keys' one takes them, each key lasting whole passes of them */
-#define EN_NDFORM 9                    /* Even, Home, Turn: each over 8, 16 or 32 bars */
+#define EN_NDFORM 9                    /* Even, Home, Turn: each chord about 12, 20 or 32 s, at the piece's tempo */
 #define EN_NRFORM 4                    /* Even, Slow, Home, Lift */
-int en_deal_chords(uint32_t pool, int num, int count, int spice, int form, int16_t *slot, int16_t *len);
-void en_deal_roots(int home, int num, int count, int spice, int form, int cycle, int16_t *rslot, int16_t *rlen);
+int en_deal_chords(uint32_t pool, int num, int count, int spice, int form, int tempo, int16_t *slot, int16_t *len);
+void en_deal_roots(int home, int num, int count, int spice, int form, int cycle, int min_bars, int16_t *rslot,
+                   int16_t *rlen);
 int en_ring_auto(int d, int hits, int hats);   /* a ring's hits on Auto: from Hits and Hats, as the pulse plays them */
 extern volatile uint16_t en_seed_now;          /* the number the garden growing now grew from, 1..999 */
 extern volatile float en_arc;                  /* the arc, -1 sparse .. +1 full (times Motion) */

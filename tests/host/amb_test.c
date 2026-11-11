@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "amb.h"
-static const uint8_t EN_ROOT_BARS_T[8] = {1, 2, 4, 8, 12, 16, 24, 32};   /* the rotator's bars */
+static const uint8_t EN_ROOT_BARS_T[12] = {1, 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128};   /* the rotator's bars */
 
 static int fails;
 #define CHECK(c, ...)                                                                                              \
@@ -659,6 +659,7 @@ int main(void)
             en_set(i, en_param_info(i)->def);
         run(0.05f);
         en_set(P_TEMPO, 120), en_set(P_MOTION, 0), en_set(P_EVOLVE, 0), en_set(P_DENSITY, 100);
+        en_set(P_SONG, 0);                         /* (the rotator free: Song would hold each key a section) */
         en_set(P_LEN1, 0), en_set(P_LEN2, 0), en_set(P_LEN3, 0);
         en_set(P_SLOT1, 1), en_set(P_SLOT2, 3 * EN_NSHAPE + 1), en_set(P_SLOT3, 2 * EN_NSHAPE + 1);
         en_set(P_RSLOT1, 2 + 1), en_set(P_RSLOT3, 7 + 1);   /* the empty step between is skipped */
@@ -800,8 +801,8 @@ int main(void)
                         for (fm = 0; fm < EN_NDFORM; fm++) {
                             int16_t s[4], l[4], s2[4], l2[4];
                             int n = cnt > m ? m : cnt, tot, sum = 0, mx = 0, d[4], ok = 1, j;
-                            tot = en_deal_chords(EN_MODE_POOL[md], num, cnt, SP[si], fm, s, l);
-                            en_deal_chords(EN_MODE_POOL[md], num, cnt, SP[si], fm, s2, l2);
+                            tot = en_deal_chords(EN_MODE_POOL[md], num, cnt, SP[si], fm, 72, s, l);
+                            en_deal_chords(EN_MODE_POOL[md], num, cnt, SP[si], fm, 72, s2, l2);
                             bad_det += memcmp(s, s2, sizeof s) || memcmp(l, l2, sizeof l);
                             for (k = 0; k < 4; k++) {
                                 if (k >= n) {
@@ -813,7 +814,7 @@ int main(void)
                                 sum += EN_SLATE_BARS[l[k]];
                                 mx = EN_SLATE_BARS[l[k]] > mx ? EN_SLATE_BARS[l[k]] : mx;
                             }
-                            ok &= d[0] == 0 && sum == tot && tot == 8 << (fm % 3);
+                            ok &= d[0] == 0 && sum == tot && tot >= 4 && tot <= 64 && !(tot & (tot - 1));
                             for (k = 0; k < n; k++) {
                                 int pcs[4], next = d[(k + 1) % n];
                                 for (j = 0; j < k; j++)
@@ -852,7 +853,7 @@ int main(void)
                             static const int CYC[3] = {8, 16, 32};
                             int16_t r[4], l[4];
                             int key[4], ok = 1, j, i, mv[4], sp = SP[si];
-                            en_deal_roots(2, num, cnt, sp, fm, CYC[k], r, l);
+                            en_deal_roots(2, num, cnt, sp, fm, CYC[k], 0, r, l);
                             for (i = 0; i < 4; i++) {
                                 if (i >= cnt) {
                                     ok &= !r[i];
@@ -886,6 +887,65 @@ int main(void)
                             bad_r += !ok;
                         }
         CHECK(!bad_r, "Deal keys: %d journeys break a guardrail", bad_r);
+    }
+
+    /* Song: a section holds its motif, even at Evolve 100; the next develops it; a return brings it back exactly.
+     * Song off: the loops change within a minute, as they always did */
+    {
+        static int8_t a[EN_NLOOP][EN_LOOP_MAX], now[EN_NLOOP][EN_LOOP_MAX];
+        int l, s, same, held, moved;
+        for (held = 0; held < 2; held++) {         /* Evolve 100, then 0 for the exact return */
+            en_init();
+            for (i = 0; i < P_NPARAMS; i++)
+                en_set(i, en_param_info(i)->def);
+            run(0.05f);
+            en_set(P_TEMPO, 120), en_set(P_MOTION, 0), en_set(P_DENSITY, 60), en_set(P_SEED, 17);
+            en_set(P_EVOLVE, held ? 0 : 100);
+            run(0.05f);
+            en_play(0), run(0.05f), en_play(1);
+            run(20.0f);                            /* (Density grown to its count) */
+            for (l = 0; l < EN_NLOOP; l++)
+                for (s = 0; s < EN_LOOP_MAX; s++)
+                    a[l][s] = en_loop_note[l][s];
+            run(100.0f);                           /* still the first section (144 s at 120) */
+            same = 1;
+            for (l = 0; l < EN_NLOOP; l++)
+                for (s = 0; s < EN_LOOP_MAX; s++)
+                    same &= en_loop_note[l][s] == a[l][s];
+            CHECK(same, "Song, Evolve %d: the motif changed within its section", held ? 0 : 100);
+            run(60.0f);                            /* the second section: developed */
+            for (l = 0, moved = 0; l < EN_NLOOP; l++)
+                for (s = 0; s < EN_LOOP_MAX; s++)
+                    moved += en_loop_note[l][s] != a[l][s];
+            CHECK(moved > 0, "Song: the second section is the first's motif unchanged");
+            if (held) {
+                run(150.0f);                       /* the third: the first's again (A B A) */
+                same = 1;
+                for (l = 0; l < EN_NLOOP; l++)
+                    for (s = 0; s < EN_LOOP_MAX; s++)
+                        same &= en_loop_note[l][s] == a[l][s];
+                CHECK(same, "Song: the return isn't the first section's motif");
+            }
+        }
+        en_init();
+        for (i = 0; i < P_NPARAMS; i++)
+            en_set(i, en_param_info(i)->def);
+        run(0.05f);
+        en_set(P_SONG, 0), en_set(P_TEMPO, 120), en_set(P_MOTION, 0), en_set(P_DENSITY, 60), en_set(P_EVOLVE, 100);
+        en_set(P_SEED, 17);
+        run(0.05f);
+        en_play(0), run(0.05f), en_play(1);
+        run(20.0f);
+        for (l = 0; l < EN_NLOOP; l++)
+            for (s = 0; s < EN_LOOP_MAX; s++)
+                now[l][s] = en_loop_note[l][s];
+        run(60.0f);
+        for (l = 0, moved = 0; l < EN_NLOOP; l++)
+            for (s = 0; s < EN_LOOP_MAX; s++)
+                moved += en_loop_note[l][s] != now[l][s];
+        CHECK(moved > 4, "Song off, Evolve 100: only %d notes moved in a minute", moved);
+        en_init();
+        en_play(1);
     }
 
     /* a deal lands from the top: en_restart takes the slate back to its first step at the next bar */

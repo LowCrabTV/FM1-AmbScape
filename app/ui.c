@@ -52,7 +52,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
 };
 /* SELECT held: a page's other knobs */
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
-    {P_SPARK, P_SPLEN, P_SPOFT, K_NONE},
+    {P_SPARK, P_SPLEN, P_SPOFT, P_SONG},
     {K_NONE, P_PADN, K_NONE, K_NONE},
     {P_BOCT, K_NONE, K_NONE, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
@@ -66,7 +66,7 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {P_RTURN0, P_RTURN1, P_RTURN2, K_NONE},
 };
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
-    {"Sparkle", "Length", "Often", ""},
+    {"Sparkle", "Length", "Often", "Song"},
     {"", "Notes", "", ""},
     {"Octave", "", "", ""},
     {"", "", "", ""},
@@ -340,7 +340,7 @@ static void deal_keys(void)
     if (!proj.par[P_RDEAL])
         return;
     en_deal_roots(proj.par[P_ROOT], proj.par[P_RDEAL], proj.par[P_RDCOUNT], proj.par[P_RDSPICE], proj.par[P_RDFORM],
-                  slate_bars(), r, l);
+                  slate_bars(), proj.par[P_SONG] ? proj.par[P_TEMPO] * 150 / 240 : 0, r, l);   /* Song: a key a section */
     for (i = 0; i < EN_NSLOT; i++) {
         put(P_RSLOT1 + i, r[i]);
         put(P_RLEN1 + i, l[i]);
@@ -364,7 +364,8 @@ static void deal_chords(void)
     int i, n = 0;
     if (!proj.par[P_DEAL])
         return;
-    en_deal_chords(proj.pool, proj.par[P_DEAL], proj.par[P_DCOUNT], proj.par[P_DSPICE], proj.par[P_DFORM], s, l);
+    en_deal_chords(proj.pool, proj.par[P_DEAL], proj.par[P_DCOUNT], proj.par[P_DSPICE], proj.par[P_DFORM],
+                   proj.par[P_TEMPO], s, l);
     for (i = 0; i < EN_NSLOT; i++) {
         put(P_SLOT1 + i, s[i]);
         put(P_LEN1 + i, l[i]);
@@ -558,7 +559,7 @@ static void knob_set(int k, int v)
         en_set(k, v);
         if (k >= P_DEAL && k <= P_DFORM)
             deal_chords();
-        else if (k >= P_RDEAL && k <= P_RDFORM)
+        else if ((k >= P_RDEAL && k <= P_RDFORM) || (k == P_SONG && proj.par[P_RDEAL]))
             deal_keys();
         else if (k == P_DREAM && v == 1)
             dream_deal(dream_fresh());
