@@ -425,6 +425,14 @@ static int dream_level(int p)
 {
     return p == P_PAD || p == P_BELLS || p == P_BASS || p == P_PULSE || p == P_SPARK || p == P_SWOOSH || p == P_HATS;
 }
+/* a flourish's Length or Often (the rest between) by the dream's character: calm, long and far apart (75 or so);
+ * lively, short and frequent (25 or so); 15 either way */
+static int flourish_time(float ch)
+{
+    const int v = (int)(75.0f - 50.0f * ch + (dream_f() - 0.5f) * 30.0f + 0.5f);
+    return v < 0 ? 0 : v > 100 ? 100 : v;
+}
+
 static void dream_deal(int num)
 {
     /* one character for the whole dream: its number, low calm, high lively (a little either way), steering every choice
@@ -528,15 +536,15 @@ static void dream_deal(int num)
         /* the flourishes, subtle: Sparkle the livelier, Swoosh the calmer */
         if (rec[P_BELLS] && dream_f() < 0.2f + 0.3f * ch) {   /* whatever Range: 1 in 5 calm, 1 in 2 lively */
             put(P_SPARK, 10 + (int)(dream_f() * 30.0f));
-            put(P_SPLEN, 20 + (int)(dream_r() % 61u));
-            put(P_SPOFT, 20 + (int)(dream_r() % 61u));
+            put(P_SPLEN, flourish_time(ch));
+            put(P_SPOFT, flourish_time(ch));
         } else {
             put(P_SPARK, rec[P_SPARK]);
         }
         if (dream_f() < 0.5f - 0.3f * ch) {         /* whatever Range: 1 in 2 calm, 1 in 5 lively */
             put(P_SWOOSH, 5 + (int)(dream_f() * 35.0f));
-            put(P_SWLEN, 20 + (int)(dream_r() % 61u));
-            put(P_SWOFT, 20 + (int)(dream_r() % 61u));
+            put(P_SWLEN, flourish_time(ch));
+            put(P_SWOFT, flourish_time(ch));
             put(P_SWTONE, (int)(dream_r() % 101u));
         } else {
             put(P_SWOOSH, rec[P_SWOOSH]);

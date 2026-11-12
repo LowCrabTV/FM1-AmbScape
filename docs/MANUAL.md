@@ -317,7 +317,8 @@ sound. Everything it deals shows on its own page and can be turned by hand after
   and the lead's Colour, **Synth** most often (about 3 dreams in 8; with it Density no higher than 45, so the
   solo sings), then Bell, Soft, Wood, Strings and Piano.
 - **The flourishes,** whatever Range: Swoosh in about 1 calm dream in 2 (1 lively in 5), Sparkle the other
-  way round; each subtle, at most 40, with its length, how often and (Swoosh) its tone dealt too.
+  way round; each subtle, at most 40, with its tone (Swoosh) dealt too, and its Length and Often by the character: calm,
+  long, slow passes far apart; lively, short ones more often.
 - **Spice cap (KNOB 3):** the most Spice either dealer may be given.
 - **The scale too,** with Range: calm dreams lean to the open, bright ones (Lydian, Ionian, major pentatonic,
   Dorian), lively ones to Mixolydian, Aeolian and minor pentatonic; Phrygian seldom.
