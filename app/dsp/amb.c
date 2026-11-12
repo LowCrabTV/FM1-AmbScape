@@ -2110,7 +2110,7 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
 #define NT_G_RAIN 0.18f
 #define NT_G_WAVES 0.9f
 #define NT_G_THUNDER 0.28f
-#define NT_G_BOLT 0.45f
+#define NT_G_BOLT 0.9f
 #define NT_G_CLAP 0.25f
 #define NT_NBOLT 6
 static uint32_t nt_rng = 0x1B873593u;
@@ -2167,9 +2167,9 @@ static void night_bolt_start(void)               /* thunder: in almost at once, 
     nt_clap = 0.7f + 0.3f * nt_dice();
     for (i = 0; i < NT_NBOLT; i++) {
         nt_tb_at[i] = at;
-        nt_tb_amp[i] = !i ? 1.0f : i < 3 || nt_dice() < 0.6f ? 0.35f + 0.5f * nt_dice() : 0.0f;
-        nt_tb_rise[i] = !i ? 0.03f + 0.03f * nt_dice() : 0.2f + 0.4f * nt_dice();   /* in at once, then the swells */
-        nt_tb_fall[i] = !i ? 1.8f + 1.2f * nt_dice() : 1.5f + 2.5f * nt_dice();
+        nt_tb_amp[i] = !i ? 1.0f : i < 4 || nt_dice() < 0.7f ? 0.45f + 0.5f * nt_dice() : 0.0f;
+        nt_tb_rise[i] = !i ? 0.002f : 0.2f + 0.4f * nt_dice();   /* in at once, then the rumble's swells */
+        nt_tb_fall[i] = !i ? 2.5f + 1.5f * nt_dice() : 2.0f + 2.5f * nt_dice();
         at += 0.25f + 0.9f * nt_dice();
     }
 }
@@ -2267,10 +2267,10 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
             }
         }
         if (nt_dice() < k * 7.0f)                /* the wind's grain: slow, uneven surges */
-            nt_th_flt = 0.5f + nt_dice();
+            nt_th_flt = 0.8f + 0.4f * nt_dice();
         nt_th_fl += (nt_th_flt - nt_th_fl) * fm_minf(k * 5.0f, 1.0f);
         nt_th_raw = e;
-        nt_th_e = e * nt_th_fl;
+        nt_th_e = (0.9f + 0.8f * e / (1.0f + e)) * nt_th_fl;   /* a floor; gusts eased: it wavers, never drops away */
         if (nt_th_t >= 0.0f && nt_th_t > end)
             night_thunder_next(0.0f);
     }
@@ -2291,9 +2291,9 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
                 e += nt_tb_amp[i] * (d < nt_tb_rise[i] ? d / nt_tb_rise[i] : fm_expf(-(d - nt_tb_rise[i]) / nt_tb_fall[i]));
             end = fm_maxf(end, nt_tb_at[i] + nt_tb_rise[i] + 5.0f * nt_tb_fall[i]);
         }
-        if (nt_dice() < k * 12.0f)               /* the rumble's own grain: quick, uneven surges, not the wind's */
-            nt_tb_flt = 0.4f + 1.2f * nt_dice();
-        nt_tb_fl += (nt_tb_flt - nt_tb_fl) * fm_minf(k * 15.0f, 1.0f);
+        if (nt_dice() < k * 25.0f)               /* the rumble's own grain: quick, deep, uneven surges, not the wind's */
+            nt_tb_flt = 0.2f + 1.6f * nt_dice();
+        nt_tb_fl += (nt_tb_flt - nt_tb_fl) * fm_minf(k * 30.0f, 1.0f);
         nt_tb_e = e * nt_tb_fl;
         nt_clap *= fm_expf(-k / 0.35f);
         if (nt_tb_t > end)
@@ -2302,7 +2302,7 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
         nt_tb_e = nt_clap = 0.0f;
     }
     nt_tb_g = nt_lv[3] * nt_play * nt_tb_e;
-    nt_clap_g = nt_lv[3] * nt_play * nt_clap * fm_minf(nt_tb_t * 30.0f, 1.0f);
+    nt_clap_g = nt_lv[3] * nt_play * nt_clap * fm_minf(nt_tb_t * 400.0f, 1.0f);
 }
 
 static void night_init(void)                     /* the creatures where they sit, all quiet */
@@ -3663,18 +3663,18 @@ static void render_night(uint32_t n)
             d = (float)(int32_t)r * (1.0f / 2147483648.0f);
             bg += db;
             cg += dc;
-            s[0] += (c - s[0]) * 0.0085f;         /* three poles at 60 Hz: the rumble */
+            s[0] += (c - s[0]) * 0.0085f;         /* three poles at 60 Hz: the weight */
             s[1] += (s[0] - s[1]) * 0.0085f;
             s[2] += (s[1] - s[2]) * 0.0085f;
-            s[3] += (c - s[3]) * 0.021f;          /* round 150 Hz: its body */
+            s[3] += (c - s[3]) * 0.021f;          /* 60-150 Hz: the rumble itself */
             s[4] += (c - s[4]) * 0.06f;           /* round 420 Hz: the clap's edge, the first moments only */
             s[5] += (d - s[5]) * 0.0085f;
             s[6] += (s[5] - s[6]) * 0.0085f;
             s[7] += (s[6] - s[7]) * 0.0085f;
             s[8] += (d - s[8]) * 0.021f;
             s[9] += (d - s[9]) * 0.06f;
-            yl = (s[2] * 9.0f + (s[3] - s[0]) * 0.5f) * bg + (s[4] - s[3]) * cg;
-            yr = (s[7] * 9.0f + (s[8] - s[5]) * 0.5f) * bg + (s[9] - s[8]) * cg;
+            yl = (s[2] * 9.0f + (s[3] - s[0]) * 1.6f) * bg + (s[4] - s[3]) * cg;   /* the rumble heard: 60-150 Hz up */
+            yr = (s[7] * 9.0f + (s[8] - s[5]) * 1.6f) * bg + (s[9] - s[8]) * cg;
             mixl[j] += yl;
             mixr[j] += yr;
             rsend[j] += (yl + yr) * 0.6f;
