@@ -588,6 +588,8 @@ static void dream_deal(int num)
             put(P_RMOVES, dream_f() < 0.25f * r * (1.6f - 1.2f * ch));
         }
     }
+    put(P_ROOT, (int)(dream_r() % 12u));          /* the key: any of the twelve, every dream (last, so the rest of a
+                                                  * dream is as it was); the song starts on its home chord */
     ui.dream_now = (uint16_t)num;
     ui.hand = 0;
     deal_chords();

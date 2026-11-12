@@ -317,11 +317,12 @@ sound. Everything it deals shows on its own page and can be turned by hand after
   and the bells' octave, one either way.
 - **Spice cap (KNOB 3):** the most Spice either dealer may be given.
 - **The scale too,** with Range: calm dreams lean to the open, bright ones (Lydian, Ionian, major pentatonic,
-  Dorian), lively ones to Mixolydian, Aeolian and minor pentatonic; Phrygian seldom. The root stays: the world
-  changes colour, not key. When Dream picks the Lead synth for the bells, it puts them an octave down (now and
+  Dorian), lively ones to Mixolydian, Aeolian and minor pentatonic; Phrygian seldom.
+- **The key,** whatever Range: any of the twelve, a new one each dream. The song still starts on its home
+  chord, so the first chord lands anywhere. When Dream picks the Lead synth for the bells, it puts them an octave down (now and
   then two).
-- **What it never does:** turn on a part the recipe has off, or turn one down to nothing; change the piece's
-  root, the tuning or MIDI.
+- **What it never does:** turn on a part the recipe has off, or turn one down to nothing; change the tuning or
+  MIDI. With Dream off, PRESETS brings a piece back in its own key.
 - **Your hand comes first.** Turn any knob, an instrument, a voicing, a level, at any time: it stays as you
   set it until Dream deals again, at the next turn of Dream, Range or Spice cap, or, in Wild, the next PLAY.
   To keep a version you've changed, turn up to its number first, then save.
