@@ -53,10 +53,10 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
 /* SELECT held: a page's other knobs */
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {P_SPARK, P_SPLEN, P_SPOFT, P_SONG},
-    {K_NONE, P_PADN, K_NONE, K_NONE},
+    {K_NONE, P_PADN, P_PSPREAD, K_NONE},
     {P_BOCT, K_NONE, K_NONE, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
-    {K_NONE, P_BASSN, K_NONE, K_NONE},
+    {K_NONE, P_BASSN, P_BPLUCK, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
     {P_SWOOSH, P_SWLEN, P_SWOFT, P_SWTONE},
     {P_DREAM, P_DRANGE, P_DCAP, P_SEED},
@@ -67,10 +67,10 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
 };
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"Sparkle", "Length", "Often", "Song"},
-    {"", "Notes", "", ""},
+    {"", "Notes", "Spread", ""},
     {"Octave", "", "", ""},
     {"", "", "", ""},
-    {"", "Notes", "", ""},
+    {"", "Notes", "Pluck", ""},
     {"", "", "", ""},
     {"Swoosh", "Length", "Often", "Tone"},
     {"Dream", "Range", "Spice cap", "Seed"},
@@ -488,6 +488,12 @@ static void dream_deal(int num)
             const int notes = range >= 30 && dream_f() < 0.5f * r ? 2 + (int)(dream_r() % 3u) : rec[P_PADN];
             put(P_PADTONE, away ? other : rec[P_PADTONE]);
             put(P_PADN, notes);
+            if (dream_f() < 0.7f * r) {              /* Spread: wider the calmer */
+                const int w = (int)((1.0f - ch) * 2.6f + dream_f() * 1.4f);
+                put(P_PSPREAD, w > 3 ? 3 : w);
+            } else {
+                put(P_PSPREAD, rec[P_PSPREAD]);
+            }
         }
         if (rec[P_BELLS]) {
             static const float W[EN_NBCOLOR] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.5f};   /* Lead, less often */
@@ -544,6 +550,10 @@ static void dream_deal(int num)
             if (dream_f() < 0.3f * r)
                 o += dream_f() < 0.5f ? -1 : 1;
             put(P_BASSOCT, o < -1 ? -1 : o > 1 ? 1 : o);
+            {                                        /* Pluck: humming when calm, plucked a little when lively */
+                const int pv = rec[P_BPLUCK] + (int)(((ch * 60.0f - 15.0f) + (dream_f() - 0.5f) * 20.0f) * r);
+                put(P_BPLUCK, pv < 0 ? 0 : pv > 100 ? 100 : pv);
+            }
         }
         if (rec[P_PULSE]) {                          /* the rings: turns now and then; Still the calmer */
             int d;

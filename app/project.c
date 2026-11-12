@@ -322,6 +322,41 @@ static void from_v10(const project_v10_t *o)
         proj.par[p] = p < V10_NPARAMS ? o->par[p] : r.par[p];
 }
 
+/* format 16 (before Spread and Pluck): carried over the same way, Close and mostly humming */
+#define V16_NPARAMS P_PSPREAD
+typedef struct {
+    int16_t par[V16_NPARAMS];
+    uint16_t pool;
+} slot_v16_t;
+typedef struct {
+    uint32_t magic, format;
+    int16_t par[V16_NPARAMS];
+    uint16_t pool;
+    uint8_t leds, piece, rsv0[2];
+    slot_v16_t slot[NPIECES];
+    uint8_t rsv[16];
+} project_v16_t;
+
+static void from_v16(const project_v16_t *o)
+{
+    slot_t r;
+    int i, p;
+    proj.magic = PROJ_MAGIC;
+    proj.format = PROJ_FORMAT;
+    proj.pool = o->pool;
+    proj.leds = o->leds;
+    proj.piece = o->piece < NPIECES ? o->piece : 0;
+    for (i = 0; i < NPIECES; i++) {
+        recipe(i, &r);
+        for (p = 0; p < P_NPARAMS; p++)
+            proj.slot[i].par[p] = p < V16_NPARAMS ? o->slot[i].par[p] : r.par[p];
+        proj.slot[i].pool = o->slot[i].pool;
+    }
+    recipe(proj.piece, &r);
+    for (p = 0; p < P_NPARAMS; p++)
+        proj.par[p] = p < V16_NPARAMS ? o->par[p] : r.par[p];
+}
+
 /* format 15 (before Song): carried over the same way, Song on */
 #define V15_NPARAMS P_SONG
 typedef struct {
@@ -526,6 +561,7 @@ int project_load(void)
         project_v13_t v13;
         project_v14_t v14;
         project_v15_t v15;
+        project_v16_t v16;
     } buf;
     int n;
     memset(&buf, 0, sizeof buf);
@@ -556,6 +592,8 @@ int project_load(void)
         from_v14(&buf.v14);
     else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 15u)
         from_v15(&buf.v15);
+    else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 16u)
+        from_v16(&buf.v16);
     else
         proj = buf.now;
     if (n >= 8 && project_valid())

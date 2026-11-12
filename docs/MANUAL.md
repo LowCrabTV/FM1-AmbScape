@@ -347,6 +347,10 @@ follows the Bells level. Turned up from 0, the first wave starts within a couple
 
 - **Pad, Notes (KNOB 2):** how much of the chord the pad sings. 4 is the whole chord; 3 its root,
   third and fifth; 2 its root and fifth, open. Under 4, the arc moves it by one as each chord comes.
+- **Pad, Spread (KNOB 3):** how the chord is spread. **Close**, as it always was; **Open**, the root an octave down at
+  the bottom; **Wide**, the top voice an octave up too; **Vast**, the next one up as well: the open, floating voicing.
+- **Bass, Pluck (KNOB 3):** how its notes sound when it steps. **0** hums, swelling in and holding to the next note,
+  a synth bass; **100** rings out as plucked. 15 in every piece: mostly humming.
 - **Bass, Notes (KNOB 2):** **Pedal**, below Held: the key's home note, held under every chord, as a drone. **Held** is the one long note. Turned up, the bass keeps a steady speed:
   1 note a bar (1 to 24), 2 (25 to 49), 4 (50 to 74) or 8 (75 to 100). The arc and Evolve never change
   that speed. It plays the root first, then the fifth (from 25), the octave (from 50), and the third
@@ -621,6 +625,8 @@ The defaults are Blue Hour's; each piece has its own.
 | Arp | Range | 1–3 octaves | 2 |
 | Arp | Poly | Off, 3:4, 5:4, 3:2, 7:4 | Off |
 | Bass | Notes (SELECT held) | Pedal, Held, 1–100 (1, 2, 4 or 8 notes a bar) | Held |
+| Bass | Pluck (SELECT held) | 0–100 (hum to plucked) | 15 |
+| Pad | Spread (SELECT held) | Close, Open, Wide, Vast | Close |
 | Pad | Level | 0–100 | 60 |
 | Pad | Swell | 0–100 | 60 |
 | Pad | Bright | 0–100 | 40 |

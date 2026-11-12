@@ -948,6 +948,40 @@ int main(void)
         en_play(1);
     }
 
+    /* Spread: Vast puts the root at the bottom, low, and opens the voicing past two octaves. Pluck: 0 hums between
+     * hits, 100 rings out */
+    {
+        int k, lo = 200, hi = 0, low_pc = -1, pass;
+        float dip[2];
+        en_init();
+        for (i = 0; i < P_NPARAMS; i++)
+            en_set(i, en_param_info(i)->def);
+        run(0.05f);
+        en_set(P_SLOT1, 1), en_set(P_PSPREAD, 3), en_set(P_EVOLVE, 0), en_set(P_MOTION, 0);
+        run(0.05f);
+        en_play(0), run(0.05f), en_play(1);
+        run(40.0f);                                /* (a voice on the root moves down at its breath's end) */
+        for (k = 0; k < EN_NPAD; k++) {
+            if (en_pad_note[k] < lo)
+                lo = en_pad_note[k], low_pc = en_pad_note[k] % 12;
+            hi = en_pad_note[k] > hi ? en_pad_note[k] : hi;
+        }
+        CHECK(low_pc == 2 && lo < 48 && hi - lo >= 24, "Spread Vast: lowest %d (pc %d), highest %d", lo, low_pc, hi);
+        for (pass = 0; pass < 2; pass++) {
+            float m = 1.0f;
+            en_set(P_BPLUCK, pass ? 100 : 0), en_set(P_BASSN, 50), en_set(P_BASS, 80), en_set(P_TEMPO, 60);
+            run(4.0f);
+            for (k = 0; k < 200; k++) {            /* 4 s: what the bass falls to between its hits */
+                run(0.02f);
+                m = en_bass_level < m ? en_bass_level : m;
+            }
+            dip[pass] = m;
+        }
+        CHECK(dip[0] > 0.6f && dip[1] < 0.5f * dip[0], "Pluck: humming falls to %f, plucked to %f", (double)dip[0], (double)dip[1]);
+        en_init();
+        en_play(1);
+    }
+
     /* a pedal: the key's home under every chord (Dm7, G7 in D: always D); held, the bass follows the chord to G */
     {
         int pass, k, home, g;

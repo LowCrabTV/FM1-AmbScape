@@ -83,6 +83,7 @@ enum {
     P_RHITS0, P_RHITS1, P_RHITS2,                     /* the Rings: thump, closed hat, open hat: 0 Auto, else 1 + hits */
     P_RTURN0, P_RTURN1, P_RTURN2, P_RMOVES,           /* each ring's turn (steps); Moves: 0 Follow (Evolve), 1 Still */
     P_SONG,                                           /* Song: 1 the garden in sections, as songs go (the default); 0 free */
+    P_PSPREAD, P_BPLUCK,                              /* the pad's Spread: Close, Open, Wide, Vast; the bass's Pluck, 0 hum .. 100 */
     P_NPARAMS
 };
 typedef struct {

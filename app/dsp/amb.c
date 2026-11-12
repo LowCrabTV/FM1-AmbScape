@@ -53,6 +53,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Thump hits", 0, 17, 0}, {"Closed hits", 0, 13, 0}, {"Open hits", 0, 8, 0},
     {"Thump turn", 0, 15, 0}, {"Closed turn", 0, 11, 2}, {"Open turn", 0, 6, 3}, {"Moves", 0, 1, 0},
     {"Song", 0, 1, 1},
+    {"Spread", 0, 3, 0},     {"Pluck", 0, 100, 15},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -95,6 +96,7 @@ static const uint8_t APOLY_NUM[EN_NAPOLY] = {1, 3, 5, 3, 7}, APOLY_DEN[EN_NAPOLY
 static const float ARATE_DEC[EN_NARATE] = {1.0f, 0.8f, 0.6f, 0.4f};   /* the faster, the shorter the bell */
 static const char *const BCOLOR_NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano", "Lead"};
 static const char *const PADTONE_NAME[4] = {"Rhodes", "Voices", "Strings", "Noir"};
+static const char *const SPREAD_NAME[4] = {"Close", "Open", "Wide", "Vast"};
 static const char *const ETIME_NAME[6] = {"1/4.", "1/2", "1/2.", "1 bar", "2 bars", "4 bars"};
 static const float ETIME_BEATS[6] = {1.5f, 2.0f, 3.0f, 4.0f, 8.0f, 16.0f};
 
@@ -160,6 +162,8 @@ void en_param_text(int i, int v, char *b)
         s = v ? "Still" : "Follow";
     else if (i == P_SONG)
         s = v ? "On" : "Off";
+    else if (i == P_PSPREAD)
+        s = SPREAD_NAME[(unsigned)v < 4u ? v : 0];
     if (s) {
         int k = 0;
         while (s[k] && k < 9) {
@@ -983,6 +987,7 @@ static struct {
     uint8_t midi_note, rest, pend;              /* rest: sitting this chord out */
 } bass;
 static float bass_vol, glide_k = 1.0f / (0.25f * EN_SR);      /* glide_k: 1 / the glide's time in samples */
+static float bass_att = 0.006f;                 /* its attack, by Pluck: ~4 ms plucked .. ~40 ms humming */
 
 /* ----------------------------------------------------------------- bells --- */
 #define NBELL 6
@@ -1085,6 +1090,23 @@ static void pad_retarget(void)                  /* the chord's tones to the four
     en_voice_lead(from, pad_pcs, pad_nt, to, 48, 77);
     if (par[P_PADN] < 4)                        /* the screen names the whole chord, whatever the pad leaves out */
         en_voice_lead(from, chord_pcs, chord_nt, all, 48, 77);
+    if (par[P_PSPREAD] > 0) {                   /* Spread: the root an octave down at the bottom; Wide, the top voice an
+                                                 * octave up; Vast, the next one too: the open voicing ambient keeps */
+        int r = -1, k, up;
+        for (i = 0; i < EN_NPAD; i++)
+            if (to[i] % 12 == chord_pcs[0] && (r < 0 || to[i] < to[r]))
+                r = i;
+        if (r >= 0 && to[r] >= 48)
+            to[r] -= 12;
+        for (up = 1; up < par[P_PSPREAD]; up++) {
+            int hi = -1;
+            for (k = 0; k < EN_NPAD; k++)
+                if (k != r && to[k] <= 79 && (hi < 0 || to[k] > to[hi]))
+                    hi = k;
+            if (hi >= 0)
+                to[hi] += 12;
+        }
+    }
     for (i = 0; i < EN_NPAD; i++) {             /* each voice takes its note at its next breath */
         pad[i].target = (float)to[i];
         en_chord[i] = (uint8_t)(par[P_PADN] < 4 ? all[i] : to[i]);
@@ -1725,7 +1747,8 @@ static void bass_pattern(void)
 static void bass_sound(int n)
 {
     /* it rings until about the next hit: longer the fewer they are */
-    float t60 = fm_clampf(24.0f / (float)bass_k * step_len * (1.0f / EN_SR), 0.3f, 4.0f);
+    const float pl = (float)par[P_BPLUCK] * 0.01f;  /* Pluck: 0 hums on to the next note, 100 rings out as plucked */
+    float t60 = fm_clampf(24.0f / (float)bass_k * step_len * (1.0f / EN_SR), 0.3f, 4.0f) * pl + 30.0f * (1.0f - pl);
     if (en_playing) {
         midi(0x82, bass.midi_note, 0);
         midi(0x92, (uint32_t)n, 80);
@@ -2439,6 +2462,15 @@ static void apply(int p, int v)
         break;
     case P_GLIDE: glide_k = 1.0f / ((0.02f + 0.012f * (float)v) * EN_SR); break;   /* 20 ms .. 1.2 s */
     case P_SWING: swing = (float)v * 0.005f; break;      /* the off sixteenths up to half a step late */
+    case P_PSPREAD:
+        if (nsteps) {
+            pad_retarget();
+            pad_handoff();
+        }
+        break;
+    case P_BPLUCK:
+        bass_att = 0.0006f + 0.0054f * (float)v * 0.01f;
+        break;
     case P_SONG:                                 /* on: the song from here, this the first section */
         if (v)
             song_reset();
@@ -2941,7 +2973,7 @@ static void render_bass(uint32_t n)
             ph -= 2.0f;
         amp += (tgt - amp) * rate;
         env *= edec;
-        lvl += (env - lvl) * 0.006f;             /* ~4 ms */
+        lvl += (env - lvl) * bass_att;           /* the attack: ~4 ms plucked, ~40 ms humming */
         x *= amp * lvl * g;
         mixl[j] += x;
         mixr[j] += x;
