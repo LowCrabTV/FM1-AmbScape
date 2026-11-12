@@ -2111,7 +2111,7 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
 #define NT_G_WAVES 0.9f
 #define NT_G_THUNDER 0.28f
 #define NT_G_BOLT 0.9f
-#define NT_G_CLAP 0.25f
+#define NT_G_CLAP 0.15f
 #define NT_NBOLT 6
 static uint32_t nt_rng = 0x1B873593u;
 static float nt_play, nt_lv[4], nt_want[4];      /* crickets, peepers, water, thunder: as sounding, as wanted */
@@ -2159,18 +2159,27 @@ static void night_bolt_next(float soon)          /* the next thunder: in soon se
     nt_tb_t = -1.0f;
 }
 
-static void night_bolt_start(void)               /* thunder: in almost at once, a clap's edge, then a long rumble */
+static void night_bolt_start(void)               /* thunder, far off: a crack at once, then the rumble swelling past it */
 {
     int i;
-    float at = 0.0f;
+    float at;
     nt_tb_t = 0.0f;
     nt_clap = 0.7f + 0.3f * nt_dice();
-    for (i = 0; i < NT_NBOLT; i++) {
+    nt_tb_at[0] = 0.0f;                          /* the crack's own low thump: at once, small, short */
+    nt_tb_amp[0] = 0.3f;
+    nt_tb_rise[0] = 0.002f;
+    nt_tb_fall[0] = 0.4f;
+    at = 0.08f + 0.15f * nt_dice();              /* the rumble, close behind: the loudest of it, swelling in */
+    nt_tb_at[1] = at;
+    nt_tb_amp[1] = 1.0f;
+    nt_tb_rise[1] = 0.45f + 0.5f * nt_dice();
+    nt_tb_fall[1] = 2.5f + 1.5f * nt_dice();
+    for (i = 2; i < NT_NBOLT; i++) {             /* and its rolls after */
+        at += 0.35f + 0.9f * nt_dice();
         nt_tb_at[i] = at;
-        nt_tb_amp[i] = !i ? 1.0f : i < 4 || nt_dice() < 0.7f ? 0.45f + 0.5f * nt_dice() : 0.0f;
-        nt_tb_rise[i] = !i ? 0.002f : 0.2f + 0.4f * nt_dice();   /* in at once, then the rumble's swells */
-        nt_tb_fall[i] = !i ? 2.5f + 1.5f * nt_dice() : 2.0f + 2.5f * nt_dice();
-        at += 0.25f + 0.9f * nt_dice();
+        nt_tb_amp[i] = i < 4 || nt_dice() < 0.7f ? 0.45f + 0.45f * nt_dice() : 0.0f;
+        nt_tb_rise[i] = 0.2f + 0.4f * nt_dice();
+        nt_tb_fall[i] = 2.0f + 2.5f * nt_dice();
     }
 }
 
@@ -2295,9 +2304,9 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
             nt_tb_flt = 0.2f + 1.6f * nt_dice();
         nt_tb_fl += (nt_tb_flt - nt_tb_fl) * fm_minf(k * 30.0f, 1.0f);
         nt_tb_e = e * nt_tb_fl;
-        nt_clap *= fm_expf(-k / 0.6f);
-        /* the strike's highs: a lowpass falling from 3 kHz to 120 Hz in half a second; then only the rumble */
-        nt_tb_sw = 1.0f - fm_expf(-2.0f * FM_PI * (120.0f + 3000.0f * fm_expf(-nt_tb_t / 0.15f)) * (1.0f / EN_SR));
+        nt_clap *= fm_expf(-k / 0.2f);
+        /* the crack's highs: a lowpass falling from 3 kHz to 120 Hz in a fifth of a second; then only the rumble */
+        nt_tb_sw = 1.0f - fm_expf(-2.0f * FM_PI * (120.0f + 3000.0f * fm_expf(-nt_tb_t / 0.05f)) * (1.0f / EN_SR));
         if (nt_tb_t > end)
             night_bolt_next(0.0f);
     } else {
