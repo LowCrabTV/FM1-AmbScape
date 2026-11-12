@@ -2123,10 +2123,10 @@ static float nt_lp[4], nt_brown, nt_cf, nt_rain_a, nt_rain_g, nt_low_g, nt_tick;
 static float nt_wv_ph, nt_wv_len, nt_wv_pan, nt_wv_e, nt_wv_tl, nt_wv_tr, nt_wv_gl, nt_wv_gr, nt_wv_a, nt_wv_foam;
 static float nt_th_t, nt_th_wait, nt_th_pan, nt_th_e, nt_th_g, nt_th_gl, nt_th_gr, nt_th_fl, nt_th_flt, nt_th_raw, nt_th_carry;
 static float nt_th_lp[6];                         /* the wind, each side: two poles round 90 Hz, the body round 220 */
-static float nt_tb_lp[10];                        /* thunder, each side: three poles round 60 Hz, 150, the clap's 420 */
+static float nt_tb_lp[14];                        /* thunder, each side: three poles round 60 Hz, 150; the strike's sweep */
 /* a bolt of thunder, its own: a quick onset, then the rumble's swells; and the clap's brightness at the start */
 static float nt_tb_at[NT_NBOLT], nt_tb_amp[NT_NBOLT], nt_tb_rise[NT_NBOLT], nt_tb_fall[NT_NBOLT];
-static float nt_tb_t, nt_tb_wait, nt_tb_e, nt_tb_g, nt_tb_gnow, nt_clap, nt_clap_g, nt_clap_gnow, nt_tb_fl, nt_tb_flt;
+static float nt_tb_t, nt_tb_wait, nt_tb_e, nt_tb_g, nt_tb_gnow, nt_clap, nt_clap_g, nt_clap_gnow, nt_tb_fl, nt_tb_flt, nt_tb_sw;
 static int nt_th_v;
 static float nt_th_at[NT_NTB], nt_th_amp[NT_NTB], nt_th_rise[NT_NTB], nt_th_fall[NT_NTB];
 
@@ -2295,7 +2295,9 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
             nt_tb_flt = 0.2f + 1.6f * nt_dice();
         nt_tb_fl += (nt_tb_flt - nt_tb_fl) * fm_minf(k * 30.0f, 1.0f);
         nt_tb_e = e * nt_tb_fl;
-        nt_clap *= fm_expf(-k / 0.35f);
+        nt_clap *= fm_expf(-k / 0.6f);
+        /* the strike's highs: a lowpass falling from 3 kHz to 120 Hz in half a second; then only the rumble */
+        nt_tb_sw = 1.0f - fm_expf(-2.0f * FM_PI * (120.0f + 3000.0f * fm_expf(-nt_tb_t / 0.15f)) * (1.0f / EN_SR));
         if (nt_tb_t > end)
             night_bolt_next(0.0f);
     } else {
@@ -2343,8 +2345,9 @@ static void night_init(void)                     /* the creatures where they sit
     }
     for (i = 0; i < 6; i++)
         nt_th_lp[i] = 0.0f;
-    for (i = 0; i < 10; i++)
+    for (i = 0; i < 14; i++)
         nt_tb_lp[i] = 0.0f;
+    nt_tb_sw = 0.0f;
     nt_tb_t = -1.0f;
     nt_tb_wait = 1e9f;
     nt_tb_e = nt_tb_g = nt_tb_gnow = nt_clap = nt_clap_g = nt_clap_gnow = 0.0f;
@@ -3655,6 +3658,7 @@ static void render_night(uint32_t n)
         uint32_t r = nt_rng;
         float *s = nt_tb_lp, bg = nt_tb_gnow, cg = nt_clap_gnow;
         const float kk = 1.0f / (float)n, db = (nt_tb_g * NT_G_BOLT - bg) * kk, dc = (nt_clap_g * NT_G_CLAP - cg) * kk;
+        const float sw = nt_tb_sw;
         for (j = 0; j < n; j++) {
             float c, d, yl, yr;
             r ^= r << 13, r ^= r >> 17, r ^= r << 5;
@@ -3666,18 +3670,25 @@ static void render_night(uint32_t n)
             s[0] += (c - s[0]) * 0.0085f;         /* three poles at 60 Hz: the weight */
             s[1] += (s[0] - s[1]) * 0.0085f;
             s[2] += (s[1] - s[2]) * 0.0085f;
-            s[3] += (c - s[3]) * 0.021f;          /* 60-150 Hz: the rumble itself */
-            s[4] += (c - s[4]) * 0.06f;           /* round 420 Hz: the clap's edge, the first moments only */
+            s[3] += (c - s[3]) * 0.021f;          /* 60-150 Hz: the rumble itself, two poles: no highs leak */
+            s[4] += (s[3] - s[4]) * 0.021f;
             s[5] += (d - s[5]) * 0.0085f;
             s[6] += (s[5] - s[6]) * 0.0085f;
             s[7] += (s[6] - s[7]) * 0.0085f;
             s[8] += (d - s[8]) * 0.021f;
-            s[9] += (d - s[9]) * 0.06f;
-            yl = (s[2] * 9.0f + (s[3] - s[0]) * 1.6f) * bg + (s[4] - s[3]) * cg;   /* the rumble heard: 60-150 Hz up */
-            yr = (s[7] * 9.0f + (s[8] - s[5]) * 1.6f) * bg + (s[9] - s[8]) * cg;
+            s[9] += (s[8] - s[9]) * 0.021f;
+            s[10] += (c - s[10]) * sw;            /* the strike: bright, then falling away fast, two poles */
+            s[11] += (s[10] - s[11]) * sw;
+            s[12] += (d - s[12]) * sw;
+            s[13] += (s[12] - s[13]) * sw;
+            yl = (s[2] * 9.0f + (s[4] - s[1]) * 2.4f) * bg;   /* the rumble heard: 60-150 Hz */
+            yr = (s[7] * 9.0f + (s[9] - s[6]) * 2.4f) * bg;
+            rsend[j] += (yl + yr) * 0.6f;         /* the rumble into the reverb; the strike's highs stay dry, so they go */
+            yl += (s[11] - s[0]) * cg;
+            yr += (s[13] - s[5]) * cg;
+            rsend[j] += (yl + yr) * 0.05f;
             mixl[j] += yl;
             mixr[j] += yr;
-            rsend[j] += (yl + yr) * 0.6f;
         }
         nt_rng = r;
         nt_tb_gnow = nt_tb_g * NT_G_BOLT;
