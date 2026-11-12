@@ -26,7 +26,7 @@ fails to start twice comes up in a safe mode it can reach.
 |---|---|
 | Keys | The scale: each key adds its note or takes it out |
 | PLAY · REC · EDIT | Grow / rest · freeze · the next chord |
-| HOME · ENV · ARP · LFO · SEQ · FX · GLO | The pages: Garden, Pad, Lead, Bass, Pulse, Space, Setup; KNOB 1–4 set their values, a layer's level on KNOB 1 |
+| HOME · ENV · ARP · LFO · SEQ · FX · GLO | The pages: Garden, Pad, Lead, Bass, Pulse, Space (again: Night), Setup; KNOB 1–4 set their values, a layer's level on KNOB 1 |
 | SELECT | The previous or next page; with HOME held, the tempo |
 | ALGORITHM · PRESETS | The mode · the piece (eight of them) |
 | OCT− / OCT+ | The lead's octave |

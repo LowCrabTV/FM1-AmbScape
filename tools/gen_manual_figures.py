@@ -101,7 +101,7 @@ def panel(screen_png):
         s.append(knob(610 + i * 104, 92, 22, f"KNOB{i + 1}"))
     s.append(what(766, 136, "The page's four values (KNOB1: a layer's level)"))
     s.append(f'<rect x="568" y="146" width="400" height="236" rx="18" fill="{TRAY}"/>')
-    top = [("FX", "Space"), ("SEL", ""), ("ENV", "Pad"), ("LFO", "Bass"), ("EDIT", "Next|chord"), ("GLO", "Setup")]
+    top = [("FX", "Space,|Night"), ("SEL", ""), ("ENV", "Pad"), ("LFO", "Bass"), ("EDIT", "Next|chord"), ("GLO", "Setup")]
     bot = [("HOME", "Dream"), ("SAVE", "Save, hold:|recipe"), ("ARP", "Lead"), ("SEQ", "Pulse"),
            (("PLAY", "STOP"), "Grow /|rest"), ("REC", "Freeze")]
     for i in range(6):

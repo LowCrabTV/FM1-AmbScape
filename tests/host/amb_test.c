@@ -1196,6 +1196,59 @@ int main(void)
         en_play(1);
     }
 
+    /* the Night: each sound alone sounds, clean and bounded, under the piece (dB against the whole piece's level:
+     * crickets and peepers -16..-8, water's places -18..-3, thunder over a minute -12..-3); all at 0, silence */
+    {
+        static const struct { int p, v; double lo, hi; const char *name; } NT[] = {
+            {P_CRICKET, 100, -16, -8, "crickets"}, {P_PEEP, 100, -16, -8, "peepers"}, {P_WATER, 10, -18, -10, "creek"},
+            {P_WATER, 35, -18, -10, "drizzle"}, {P_WATER, 52, -13, -5, "rain"}, {P_WATER, 70, -9, -2, "downpour"},
+            {P_WATER, 92, -11, -3, "waves"}, {P_THUNDER, 100, -12, -3, "thunder"}, {-1, 0, -200, -90, "the night off"}};
+        double lv[10], piece = 0.0;
+        int c, b2, j, k;
+        for (k = -1; k < (int)(sizeof NT / sizeof NT[0]); k++) {
+            double s = 0.0, pk = 0.0;
+            long n = 0;
+            int badn = 0;
+            en_init();
+            for (i = 0; i < P_NPARAMS; i++)
+                en_set(i, en_param_info(i)->def);
+            if (k >= 0) {
+                en_set(P_PAD, 0), en_set(P_BELLS, 0), en_set(P_BASS, 0), en_set(P_PULSE, 0);
+                if (NT[k].p >= 0)
+                    en_set(NT[k].p, NT[k].v);
+            }
+            en_play(1);
+            for (b2 = 0; b2 < 62 * 44100 / 256; b2++) {
+                en_render(buf, 256, 2048);
+                if (b2 < 2 * 44100 / 256)
+                    continue;
+                for (j = 0; j < 512; j++) {
+                    double x = (double)buf[j] / 8388608.0;
+                    if (x != x)
+                        badn++;
+                    if (fabs(x) > pk)
+                        pk = fabs(x);
+                    s += x * x;
+                    n++;
+                }
+            }
+            if (k < 0) {
+                piece = 10.0 * log10(s / (double)n + 1e-20);
+                continue;
+            }
+            lv[k] = 10.0 * log10(s / (double)n + 1e-20) - piece;
+            CHECK(!badn && pk < 0.95, "night %s: %d bad samples, peak %.2f", NT[k].name, badn, pk);
+            CHECK(lv[k] >= NT[k].lo && lv[k] <= NT[k].hi, "night %s: %.1f dB against the piece (want %.0f..%.0f)", NT[k].name,
+                  lv[k], NT[k].lo, NT[k].hi);
+        }
+        printf("  Night against the piece:");
+        for (c = 0; c < (int)(sizeof NT / sizeof NT[0]) - 1; c++)
+            printf(" %s %.1f", NT[c].name, lv[c]);
+        printf(" dB\n");
+        en_init();
+        en_play(1);
+    }
+
     /* the lead's six voices level with each other (long-run RMS through the echo and reverb, two melodies):
      * each within 1.5 dB of the Bell, Strings 3 dB over for its slow swell */
     {

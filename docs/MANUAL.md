@@ -73,7 +73,7 @@ Nightscape FM starts playing as soon as it's on. A few minutes with it:
 5. **Freeze.** Press REC: the chord holds and the reverb rings on forever, while the bells and
    pulse go on above it. Press REC again to let it go.
 6. **Shape a layer.** Each layer has a button: ENV the pad, ARP the bells, LFO the bass, SEQ the
-   pulse, FX the space, HOME the garden as a whole, GLO the setup. KNOB 1–4 set the four values
+   pulse, FX the space (again: the night), HOME the garden as a whole, GLO the setup. KNOB 1–4 set the four values
    at the bottom of the screen, a layer's level always on KNOB 1. SELECT steps through the pages.
 7. **Rest.** Press PLAY: the garden stops growing and its sounds fade out slowly. PLAY again and
    it grows back.
@@ -96,7 +96,7 @@ The drawing at the top shows them all; here they are in more detail.
 | EDIT | The next chord, at the start of the next bar (at once while resting). |
 | HOME | The Dream page, where it starts: Dream, Range, Spice cap, Seed. Again: the Garden page. |
 | ENV · ARP · LFO · SEQ | The layers' pages: Pad, Lead, Bass, Pulse. |
-| FX · GLO | The Space and Setup pages. The lit button shows the page. |
+| FX · GLO | The Space and Setup pages; FX again, the Night (crickets, peepers, water, thunder). The lit button shows the page. |
 | SELECT | The previous or next page. Hold HOME and turn it for the tempo, from any page. |
 | ALGORITHM | Mode: Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, pentatonic major and minor. Loads the mode's scale; editing it with the keys makes it Custom. |
 | PRESETS | The piece (see [The pieces](#s6)). |
@@ -497,6 +497,30 @@ any chord or root. The garden plays the same notes with it or without.
 Each pass varies a little in length, height and direction. Echo and Reverb set how much of a trail it
 leaves. Turned up from 0, the first pass starts within a couple of seconds.
 
+### FX again: Night
+
+![The Night page: CRICKETS 60, PEEPERS 70, WATER Waves, THUNDER 50](img/screen-night.png "The Night page")
+
+The night around the music, synthesized: impressions, not recordings. Press FX from the Space page,
+and again to go back. All four start off. They are yours, not the piece's: they stay as you set them
+through PRESETS and every dream (Dream never touches them), and SAVE keeps them. They follow PLAY as
+the music does, sit in its reverb, and the garden plays the same notes with them or without.
+
+- **Crickets (KNOB 1):** a few crickets, each chirping its own few pulses of a high tone, left and
+  right. Up from 0 one sings; from 41 a second; from 76 a third. Off at 0.
+- **Peepers (KNOB 2):** spring peepers, little whistles bending upward, each frog about once a second,
+  some near and some far. Turned up, more frogs join, up to eight, and they get louder.
+- **Water (KNOB 3):** one journey through water, each place crossfading into the next as you turn:
+  **Creek** (1–20), a quiet trickle and bubbles; **Drizzle** (21–42); **Rain** (43–59); **Downpour**
+  (60–79), a roar beneath the hiss; **Waves** (80–100), the sea: a slow swell, the crash, the wash going
+  back, every 8 to 12 seconds. Each place has its own loudness: the creek is quiet, the downpour is not.
+- **Thunder (KNOB 4):** now and then a far roll, slow bumps of deep noise over 5 to 12 seconds. Low,
+  seldom and distant (about one roll in three minutes); turned up, more often (about one in 25 seconds)
+  and nearer, and from 61 now and then a crack before the roll. Turned up from 0, the first roll comes
+  within ten seconds.
+
+Together the four ask a little more of the FM-1 (about a tenth more work), well within what it has.
+
 ### GLO: Setup
 
 ![The Setup page: ROOT D, TUNE 0, MIDI OUT On, LIGHTS On](img/screen-setup.png "The Setup page")
@@ -668,6 +692,9 @@ The defaults are Blue Hour's; each piece has its own.
 | Space | Length (SELECT held) | 2–20 s | 6 s |
 | Space | Often (SELECT held) | 10 s – 5 min | 28 s |
 | Space | Tone (SELECT held) | 0–100 (white to brown) | 50 |
+| Night | Crickets, Peepers | 0–100 | 0 |
+| Night | Water | Off, Creek, Drizzle, Rain, Downpour, Waves (0–100) | Off |
+| Night | Thunder | 0–100 | 0 |
 | Dream | Seed | Wild, 1–999 | Wild |
 | Rings | Thump, Closed, Open | Auto, 0–16; Auto, 0–12; Auto, 0–7 | Auto |
 | Rings | Moves | Follow, Still | Follow |

@@ -9,7 +9,10 @@ project_t proj;
 
 const char *piece_name(int i) { return en_piece_name(i); }
 
-static int global_par(int p) { return p == P_TUNE || p == P_MIDI; }
+static int global_par(int p)                     /* the player's, not the piece's: tuning, MIDI, the weather */
+{
+    return p == P_TUNE || p == P_MIDI || (p >= P_CRICKET && p <= P_THUNDER);
+}
 
 static void recipe(int i, slot_t *s) { en_piece(i, s->par, &s->pool); }
 
@@ -322,6 +325,41 @@ static void from_v10(const project_v10_t *o)
         proj.par[p] = p < V10_NPARAMS ? o->par[p] : r.par[p];
 }
 
+/* format 17 (before the Night): carried over the same way, the night quiet */
+#define V17_NPARAMS P_CRICKET
+typedef struct {
+    int16_t par[V17_NPARAMS];
+    uint16_t pool;
+} slot_v17_t;
+typedef struct {
+    uint32_t magic, format;
+    int16_t par[V17_NPARAMS];
+    uint16_t pool;
+    uint8_t leds, piece, rsv0[2];
+    slot_v17_t slot[NPIECES];
+    uint8_t rsv[16];
+} project_v17_t;
+
+static void from_v17(const project_v17_t *o)
+{
+    slot_t r;
+    int i, p;
+    proj.magic = PROJ_MAGIC;
+    proj.format = PROJ_FORMAT;
+    proj.pool = o->pool;
+    proj.leds = o->leds;
+    proj.piece = o->piece < NPIECES ? o->piece : 0;
+    for (i = 0; i < NPIECES; i++) {
+        recipe(i, &r);
+        for (p = 0; p < P_NPARAMS; p++)
+            proj.slot[i].par[p] = p < V17_NPARAMS ? o->slot[i].par[p] : r.par[p];
+        proj.slot[i].pool = o->slot[i].pool;
+    }
+    recipe(proj.piece, &r);
+    for (p = 0; p < P_NPARAMS; p++)
+        proj.par[p] = p < V17_NPARAMS ? o->par[p] : r.par[p];
+}
+
 /* format 16 (before Spread and Pluck): carried over the same way, Close and mostly humming */
 #define V16_NPARAMS P_PSPREAD
 typedef struct {
@@ -562,6 +600,7 @@ int project_load(void)
         project_v14_t v14;
         project_v15_t v15;
         project_v16_t v16;
+        project_v17_t v17;
     } buf;
     int n;
     memset(&buf, 0, sizeof buf);
@@ -594,6 +633,8 @@ int project_load(void)
         from_v15(&buf.v15);
     else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 16u)
         from_v16(&buf.v16);
+    else if (n >= 8 && buf.now.magic == PROJ_MAGIC && buf.now.format == 17u)
+        from_v17(&buf.v17);
     else
         proj = buf.now;
     if (n >= 8 && project_valid())

@@ -54,6 +54,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Thump turn", 0, 15, 0}, {"Closed turn", 0, 11, 2}, {"Open turn", 0, 6, 3}, {"Moves", 0, 1, 0},
     {"Song", 0, 1, 1},
     {"Spread", 0, 3, 0},     {"Pluck", 0, 100, 15},
+    {"Crickets", 0, 100, 0}, {"Peepers", 0, 100, 0}, {"Water", 0, 100, 0}, {"Thunder", 0, 100, 0},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -164,6 +165,10 @@ void en_param_text(int i, int v, char *b)
         s = v ? "On" : "Off";
     else if (i == P_PSPREAD)
         s = SPREAD_NAME[(unsigned)v < 4u ? v : 0];
+    else if (i == P_WATER)                       /* where on the water's journey */
+        s = !v ? "Off" : v < 21 ? "Creek" : v < 43 ? "Drizzle" : v < 60 ? "Rain" : v < 80 ? "Downpour" : "Waves";
+    else if ((i == P_CRICKET || i == P_PEEP || i == P_THUNDER) && !v)
+        s = "Off";
     if (s) {
         int k = 0;
         while (s[k] && k < 9) {
@@ -2084,6 +2089,227 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
     sw_tr = a * sine(pan * 0.25f);
 }
 
+/* ----------------------------------------------------------------- night --- */
+/* The Night page: crickets, spring peepers, water and distant thunder, synthesized: impressions, not recordings.
+ * Crickets: a few, each chirping its own few pulses of a high tone, left and right. Peepers: little rising whistles,
+ * each frog about once a second, near and far; the knob calls up more of them. Water, one journey: a creek's
+ * trickle and bubbles, then rain from a drizzle to a downpour, then the sea's waves, each crossfading into the next.
+ * Thunder: now and then a far roll, slow bumps of deep noise; turned up, more often and nearer. Each follows PLAY
+ * as the music does and sits in its reverb; their own dice, so the garden grows as it would without them; and
+ * nothing is computed for what's off. They belong to the player, not the piece (the weather). */
+#define NT_NCR 3
+#define NT_NPE 8
+#define NT_NBL 6
+#define NT_NTB 5
+#define NT_PULSE 706u                            /* a cricket's pulse, 16 ms; a pulse every 30 ms */
+#define NT_STEP 1323u
+/* how loud each, at 100 (set by ear and measured against the pad: see the tests) */
+#define NT_G_CRICKET 0.24f
+#define NT_G_PEEP 0.22f
+#define NT_G_BLIP 0.4f
+#define NT_G_RAIN 0.18f
+#define NT_G_CREEK 0.03f
+#define NT_G_WAVES 0.9f
+#define NT_G_THUNDER 6.0f
+#define NT_G_CRACK 0.25f
+static uint32_t nt_rng = 0x1B873593u;
+static float nt_play, nt_lv[4], nt_want[4];      /* crickets, peepers, water, thunder: as sounding, as wanted */
+static struct { float ph, inc, gl, gr; uint32_t t, period, pt; uint8_t k, np; } nt_cr[NT_NCR];
+static struct { float ph, inc0, dinc, gl, gr; uint32_t t, period, dur; } nt_pe[NT_NPE];
+static struct { float ph, inc, glide, amp, dec, gl, gr; } nt_bl[NT_NBL];   /* bubbles and drops */
+static float nt_wx;                              /* where on the water's journey: 0 creek .. 3 waves */
+static float nt_lp[4], nt_brown, nt_cf, nt_rain_a, nt_rain_g, nt_low_g, nt_creek_g, nt_creek_f, nt_creek_ph;
+static float nt_wv_ph, nt_wv_len, nt_wv_pan, nt_wv_e, nt_wv_tl, nt_wv_tr, nt_wv_gl, nt_wv_gr, nt_wv_a, nt_wv_foam;
+static float nt_th_b1, nt_th_b2, nt_th_hp, nt_th_t, nt_th_wait, nt_th_pan, nt_th_crack, nt_th_e, nt_th_g, nt_th_gl, nt_th_gr;
+static float nt_creek_low, nt_creek_band;
+static int nt_th_v;
+static float nt_th_at[NT_NTB], nt_th_amp[NT_NTB], nt_th_rise[NT_NTB], nt_th_fall[NT_NTB];
+
+static float nt_dice(void)
+{
+    uint32_t r = nt_rng;
+    r ^= r << 13, r ^= r >> 17, r ^= r << 5;
+    nt_rng = r;
+    return (float)(r >> 8) * (1.0f / 16777216.0f);
+}
+
+static void nt_pan(float p, float *gl, float *gr)   /* p -1 left .. +1 right, equal power */
+{
+    p = 0.5f + 0.5f * p;
+    *gl = sine((1.0f - p) * 0.25f);
+    *gr = sine(p * 0.25f);
+}
+
+static void night_thunder_next(float soon)       /* the next roll: in soon seconds or, from 0, by Thunder */
+{
+    const float v = (float)par[P_THUNDER] * 0.01f;
+    nt_th_wait = soon > 0.0f ? soon : (200.0f * fm_exp2f(-3.0f * v)) * (0.5f + nt_dice());   /* 3 min .. 25 s */
+    nt_th_t = -1.0f;
+}
+
+static void night_thunder_start(void)            /* a roll: three to five bumps over 5-12 s, far off; nearer the higher */
+{
+    const float v = (float)par[P_THUNDER] * 0.01f;
+    int i;
+    float at = 0.0f;
+    nt_th_t = 0.0f;
+    nt_th_pan = (nt_dice() * 2.0f - 1.0f) * 0.7f;
+    nt_pan(nt_th_pan, &nt_th_gl, &nt_th_gr);
+    for (i = 0; i < NT_NTB; i++) {
+        const int on = i < 3 || nt_dice() < 0.6f;
+        nt_th_at[i] = at;
+        nt_th_amp[i] = on ? (i ? 0.35f + 0.65f * nt_dice() : 0.6f + 0.4f * nt_dice()) : 0.0f;
+        nt_th_rise[i] = 0.25f + 0.8f * nt_dice();
+        nt_th_fall[i] = 1.2f + 2.0f * nt_dice();
+        at += 0.6f + 1.8f * nt_dice();
+    }
+    nt_th_crack = v > 0.6f && nt_dice() < (v - 0.6f) * 1.5f ? 0.6f + 0.4f * nt_dice() : 0.0f;
+}
+
+static void night_env(uint32_t n)                /* the slow part: levels, who sings, the water's place, the rolls */
+{
+    const float k = (float)n * (1.0f / EN_SR);
+    int i;
+    nt_play += ((en_playing ? 1.0f : 0.0f) - nt_play) * fm_minf(k * 0.5f, 1.0f);
+    for (i = 0; i < 4; i++)
+        nt_lv[i] += (nt_want[i] - nt_lv[i]) * fm_minf(k * 4.0f, 1.0f);
+    if (nt_lv[2] > 1e-5f) {                      /* water */
+        const float x = nt_wx, rain = fm_clampf((x - 0.4f) * 1.6f, 0.0f, 1.0f) * fm_clampf((2.9f - x) * 1.6f, 0.0f, 1.0f);
+        const float heavy = fm_clampf(x - 1.0f, 0.0f, 1.0f), creek = fm_clampf(1.4f - x, 0.0f, 1.0f);
+        const float waves = fm_clampf((x - 2.3f) * 1.6f, 0.0f, 1.0f), g = nt_lv[2] * nt_play;
+        float rate, e, p;
+        nt_cf = fm_sinf(FM_PI * (2600.0f - 1500.0f * heavy) * (1.0f / EN_SR)) * 2.0f;   /* the hiss: from 2.6 kHz, lower when heavy */
+        nt_rain_a = nt_cf * 0.5f;
+        nt_rain_g = g * rain * (0.35f + 0.65f * heavy) * 0.9f;
+        nt_low_g = heavy * 0.7f;                 /* a downpour's roar underneath */
+        nt_creek_ph += k * 0.07f;
+        nt_creek_f = 2.0f * fm_sinf(FM_PI * (420.0f + 160.0f * sine(nt_creek_ph)) * (1.0f / EN_SR));
+        nt_creek_g = g * creek * 0.5f;
+        rate = creek * 22.0f;                    /* bubbles a second */
+        if (nt_dice() < rate * k) {
+            for (i = 0; i < NT_NBL && nt_bl[i].amp > 1e-4f; i++)
+                ;
+            if (i < NT_NBL) {
+                const float f = 350.0f * fm_exp2f(1.8f * nt_dice());
+                nt_bl[i].ph = 0.0f;
+                nt_bl[i].inc = f * (1.0f / EN_SR);
+                nt_bl[i].glide = fm_exp2f((1.0f + nt_dice()) / (0.05f * EN_SR));   /* up an octave or two in 50 ms */
+                nt_bl[i].amp = g * creek * (0.12f + 0.25f * nt_dice());
+                nt_bl[i].dec = fm_exp2f(-1.4427f / ((0.015f + 0.03f * nt_dice()) * EN_SR));
+                nt_pan(nt_dice() * 1.6f - 0.8f, &nt_bl[i].gl, &nt_bl[i].gr);
+            }
+        }
+        rate = rain * (6.0f + 40.0f * heavy);    /* drops a second, on the leaves */
+        if (nt_dice() < rate * k) {
+            for (i = 0; i < NT_NBL && nt_bl[i].amp > 1e-4f; i++)
+                ;
+            if (i < NT_NBL) {
+                const float f = 1800.0f * fm_exp2f(1.4f * nt_dice());
+                nt_bl[i].ph = 0.0f;
+                nt_bl[i].inc = f * (1.0f / EN_SR);
+                nt_bl[i].glide = 1.0f;
+                nt_bl[i].amp = g * rain * (0.08f + 0.2f * nt_dice());
+                nt_bl[i].dec = fm_exp2f(-1.4427f / ((0.003f + 0.006f * nt_dice()) * EN_SR));
+                nt_pan(nt_dice() * 1.8f - 0.9f, &nt_bl[i].gl, &nt_bl[i].gr);
+            }
+        }
+        if (waves > 0.0f || nt_wv_gl + nt_wv_gr > 1e-6f) {   /* the sea: swell, crash, the wash going back */
+            nt_wv_ph += k / nt_wv_len;
+            if (nt_wv_ph >= 1.0f) {
+                nt_wv_ph -= 1.0f;
+                nt_wv_len = 8.0f + 4.0f * nt_dice();
+                nt_wv_pan = (nt_dice() * 2.0f - 1.0f) * 0.35f;
+            }
+            p = nt_wv_ph;
+            e = p < 0.4f ? 0.15f + 0.35f * (p * 2.5f) * (p * 2.5f)
+                : p < 0.45f ? 0.5f + 10.0f * (p - 0.4f)
+                : 0.12f + 0.88f * fm_expf(-(p - 0.45f) * 5.5f);
+            nt_wv_e = e;
+            nt_wv_a = 1.0f - fm_expf(-2.0f * FM_PI * (180.0f + 2600.0f * e * e) * (1.0f / EN_SR));
+            nt_wv_foam = e * e * e;
+            nt_pan(nt_wv_pan * (p < 0.45f ? 1.0f : 1.0f - 2.0f * (p - 0.45f)), &nt_wv_tl, &nt_wv_tr);
+            nt_wv_tl *= g * waves * e * 1.1f;
+            nt_wv_tr *= g * waves * e * 1.1f;
+        }
+    } else {
+        nt_rain_g = nt_creek_g = 0.0f;
+        nt_wv_tl = nt_wv_tr = 0.0f;
+    }
+    if (nt_want[3] > 0.0f && en_playing) {       /* thunder: wait, then a roll */
+        if (nt_th_t < 0.0f) {
+            nt_th_wait -= k;
+            if (nt_th_wait <= 0.0f)
+                night_thunder_start();
+        }
+    }
+    if (nt_th_t >= 0.0f) {
+        float e = 0.0f, end = 0.0f;
+        nt_th_t += k;
+        for (i = 0; i < NT_NTB; i++) {
+            const float d = nt_th_t - nt_th_at[i];
+            if (nt_th_amp[i] <= 0.0f)
+                continue;
+            if (d > 0.0f)
+                e += nt_th_amp[i] * (d < nt_th_rise[i] ? d / nt_th_rise[i] : fm_expf(-(d - nt_th_rise[i]) / nt_th_fall[i]));
+            end = fm_maxf(end, nt_th_at[i] + nt_th_rise[i] + 5.0f * nt_th_fall[i]);
+        }
+        nt_th_e = e;
+        nt_th_crack *= fm_expf(-k * 6.0f);
+        if (nt_th_t > end)
+            night_thunder_next(0.0f);
+    } else {
+        nt_th_e = 0.0f;
+    }
+    nt_th_g = nt_lv[3] * nt_play * nt_th_e;
+}
+
+static void night_init(void)                     /* the creatures where they sit, all quiet */
+{
+    static const float CF[NT_NCR] = {4400.0f, 4750.0f, 4150.0f}, CP[NT_NCR] = {-0.65f, 0.7f, 0.1f}, CG[NT_NCR] = {1.0f, 0.8f, 0.55f};
+    int i;
+    nt_rng = 0x1B873593u;
+    nt_play = nt_wx = 0.0f;
+    for (i = 0; i < 4; i++)
+        nt_lv[i] = nt_want[i] = 0.0f;
+    for (i = 0; i < NT_NCR; i++) {
+        nt_cr[i].ph = 0.0f;
+        nt_cr[i].inc = CF[i] * (1.0f / EN_SR);
+        nt_cr[i].np = (uint8_t)(i == 1 ? 3 : 4);
+        nt_cr[i].k = nt_cr[i].np;
+        nt_cr[i].t = nt_cr[i].pt = 0;
+        nt_cr[i].period = (uint32_t)((0.1f + 0.5f * nt_dice()) * EN_SR);
+        nt_pan(CP[i], &nt_cr[i].gl, &nt_cr[i].gr);
+        nt_cr[i].gl *= CG[i];
+        nt_cr[i].gr *= CG[i];
+    }
+    for (i = 0; i < NT_NPE; i++) {
+        const float f = 2550.0f + 450.0f * nt_dice(), g = 0.35f + 0.65f * nt_dice();
+        nt_pe[i].ph = 0.0f;
+        nt_pe[i].dur = (uint32_t)((0.1f + 0.05f * nt_dice()) * EN_SR);
+        nt_pe[i].inc0 = f * (1.0f / EN_SR);
+        nt_pe[i].dinc = nt_pe[i].inc0 * 0.2f / (float)nt_pe[i].dur;   /* up about 20% through the peep */
+        nt_pe[i].period = (uint32_t)((0.2f + 1.2f * nt_dice()) * EN_SR);
+        nt_pe[i].t = nt_pe[i].dur;
+        nt_pan(nt_dice() * 1.8f - 0.9f, &nt_pe[i].gl, &nt_pe[i].gr);
+        nt_pe[i].gl *= g;
+        nt_pe[i].gr *= g;
+    }
+    for (i = 0; i < NT_NBL; i++)
+        nt_bl[i].amp = 0.0f;
+    for (i = 0; i < 4; i++)
+        nt_lp[i] = 0.0f;
+    nt_brown = nt_creek_low = nt_creek_band = nt_creek_ph = nt_rain_g = nt_creek_g = nt_low_g = 0.0f;
+    nt_cf = nt_rain_a = nt_creek_f = 0.0f;
+    nt_wv_ph = 0.0f;
+    nt_wv_len = 10.0f;
+    nt_wv_pan = nt_wv_e = nt_wv_tl = nt_wv_tr = nt_wv_gl = nt_wv_gr = nt_wv_a = nt_wv_foam = 0.0f;
+    nt_th_b1 = nt_th_b2 = nt_th_hp = nt_th_crack = nt_th_e = nt_th_g = 0.0f;
+    nt_th_gl = nt_th_gr = 0.7f;
+    nt_th_t = -1.0f;
+    nt_th_wait = 1e9f;
+    nt_th_v = 0;
+}
+
 /* Hats above 50, a closed hat's sixteenth: ghost notes between the hits; near the top, a roll, a soft hit half a
  * step after this one and into the next */
 static void hats_more(float pa)
@@ -2439,6 +2665,21 @@ static void apply(int p, int v)
             sw_left = (uint32_t)(1.5f * EN_SR);
         }
         break;
+    case P_CRICKET: nt_want[0] = v ? fm_exp2f((float)(v - 100) * 0.035f) : 0.0f; break;   /* gentler: more join too */
+    case P_PEEP: nt_want[1] = v ? fm_exp2f((float)(v - 100) * 0.035f) : 0.0f; break;
+    case P_WATER:                                /* a place on the journey, not a level: each has its own */
+        nt_want[2] = v ? 1.0f : 0.0f;
+        if (v)
+            nt_wx = (float)(v - 1) * (3.0f / 99.0f);
+        break;
+    case P_THUNDER: {                            /* far and seldom to nearer and often; up from 0, a first roll soon */
+        const int was = nt_th_v;
+        nt_th_v = v;
+        nt_want[3] = v ? fm_exp2f((float)(v - 100) * 0.025f) : 0.0f;
+        if (v && nt_th_t < 0.0f && (!was || nt_th_wait > 200.0f * fm_exp2f(-0.03f * (float)v)))
+            night_thunder_next(was ? 0.0f : 4.0f + 6.0f * nt_dice());
+        break;
+    }
     case P_SWOFT:                                /* a shorter gap needn't wait out the long one it was in */
         if (!sw_in && (float)sw_left > spoft_secs(v) * EN_SR)
             sw_left = (uint32_t)(spoft_secs(v) * EN_SR);
@@ -2675,6 +2916,7 @@ void en_init(void)
     sw_left = (uint32_t)(1.5f * EN_SR);
     sw_rng = 0x2545F491u;
     sw_lv = sw_play = sw_gl = sw_gr = sw_tl = sw_tr = sw_low = sw_band = sw_brown = 0.0f;
+    night_init();
     for (i = 0; i < P_NPARAMS; i++)
         apply(i, PARAMS[i].def);
     pool_set(EN_MODE_POOL[par[P_MODE]]);
@@ -3204,6 +3446,146 @@ static void render_swoosh(uint32_t n)
     sw_low = low, sw_band = band, sw_brown = brown, sw_gl = gl, sw_gr = gr, sw_rng = r;
 }
 
+static void render_night(uint32_t n)
+{
+    uint32_t j;
+    int i;
+    float g = nt_lv[0] * nt_play * NT_G_CRICKET;
+    if (g > 1e-5f) {                             /* crickets: a few pulses of a high tone, then a rest */
+        const int on = 1 + (par[P_CRICKET] > 40) + (par[P_CRICKET] > 75);
+        for (i = 0; i < NT_NCR; i++) {
+            float ph = nt_cr[i].ph;
+            const float inc = nt_cr[i].inc, gl = nt_cr[i].gl * g, gr = nt_cr[i].gr * g;
+            for (j = 0; j < n; j++) {
+                if (nt_cr[i].k < nt_cr[i].np) {
+                    if (nt_cr[i].pt < NT_PULSE) {
+                        const float x = sine((float)nt_cr[i].pt * (0.5f / (float)NT_PULSE)) * sine(ph);
+                        mixl[j] += x * gl;
+                        mixr[j] += x * gr;
+                        rsend[j] += x * (gl + gr) * 0.3f;
+                    }
+                    ph += inc;
+                    if (ph >= 1.0f)
+                        ph -= 1.0f;
+                    if (++nt_cr[i].pt >= NT_STEP) {
+                        nt_cr[i].pt = 0;
+                        nt_cr[i].k++;
+                    }
+                }
+                if (++nt_cr[i].t >= nt_cr[i].period) {
+                    nt_cr[i].t = nt_cr[i].pt = 0;
+                    nt_cr[i].k = i < on ? 0 : nt_cr[i].np;
+                    nt_cr[i].period = (uint32_t)((0.42f + 0.3f * nt_dice()) * EN_SR);
+                }
+            }
+            nt_cr[i].ph = ph;
+        }
+    }
+    g = nt_lv[1] * nt_play * NT_G_PEEP;
+    if (g > 1e-5f) {                             /* peepers: a little whistle bending up, about once a second each */
+        const int on = 1 + par[P_PEEP] * (NT_NPE - 1) / 100;
+        for (i = 0; i < NT_NPE; i++) {
+            float ph = nt_pe[i].ph;
+            const float gl = nt_pe[i].gl * g, gr = nt_pe[i].gr * g, inv = 0.5f / (float)nt_pe[i].dur;
+            for (j = 0; j < n; j++) {
+                if (nt_pe[i].t < nt_pe[i].dur) {
+                    const float s = sine((float)nt_pe[i].t * inv), x = s * s * sine(ph);
+                    mixl[j] += x * gl;
+                    mixr[j] += x * gr;
+                    rsend[j] += x * (gl + gr) * 0.35f;
+                    ph += nt_pe[i].inc0 + nt_pe[i].dinc * (float)nt_pe[i].t;
+                    if (ph >= 1.0f)
+                        ph -= 1.0f;
+                }
+                if (++nt_pe[i].t >= nt_pe[i].period) {
+                    if (i >= on) {
+                        nt_pe[i].t = nt_pe[i].period;   /* resting */
+                    } else {
+                        nt_pe[i].t = 0;
+                        ph = 0.0f;
+                        nt_pe[i].period = (uint32_t)((0.8f + 0.6f * nt_dice()) * EN_SR);
+                    }
+                }
+            }
+            nt_pe[i].ph = ph;
+        }
+    }
+    for (i = 0; i < NT_NBL; i++) {               /* bubbles and drops */
+        float ph = nt_bl[i].ph, inc = nt_bl[i].inc, a = nt_bl[i].amp;
+        const float glide = nt_bl[i].glide, dec = nt_bl[i].dec, gl = nt_bl[i].gl, gr = nt_bl[i].gr;
+        if (nt_bl[i].amp <= 1e-4f)
+            continue;
+        for (j = 0; j < n; j++) {
+            const float x = sine(ph) * a * NT_G_BLIP;
+            mixl[j] += x * gl;
+            mixr[j] += x * gr;
+            rsend[j] += x * 0.4f;
+            ph += inc;
+            if (ph >= 1.0f)
+                ph -= 1.0f;
+            inc *= glide;
+            a *= dec;
+        }
+        nt_bl[i].ph = ph, nt_bl[i].inc = inc, nt_bl[i].amp = a;
+    }
+    if (nt_rain_g + nt_creek_g > 1e-6f || nt_wv_tl + nt_wv_tr + nt_wv_gl + nt_wv_gr > 1e-6f) {   /* water */
+        uint32_t r = nt_rng;
+        float l0 = nt_lp[0], l1 = nt_lp[1], w0 = nt_lp[2], w1 = nt_lp[3], br = nt_brown;
+        float cl = nt_creek_low, cb = nt_creek_band, wgl = nt_wv_gl, wgr = nt_wv_gr;
+        const float ra = nt_rain_a, rg = nt_rain_g * NT_G_RAIN, lowg = nt_low_g, cf = nt_creek_f;
+        const float cg = nt_creek_g * NT_G_CREEK, wa = nt_wv_a, foam = nt_wv_foam, k = 1.0f / (float)n;
+        const float dl = (nt_wv_tl * NT_G_WAVES - wgl) * k, dr = (nt_wv_tr * NT_G_WAVES - wgr) * k;
+        for (j = 0; j < n; j++) {
+            float a, b, yl, yr;
+            r ^= r << 13, r ^= r >> 17, r ^= r << 5;
+            a = (float)(int32_t)r * (1.0f / 2147483648.0f);
+            r ^= r << 13, r ^= r >> 17, r ^= r << 5;
+            b = (float)(int32_t)r * (1.0f / 2147483648.0f);
+            l0 += ra * (a - l0);                 /* rain: the hiss over a cutoff, a downpour's roar under it */
+            l1 += ra * (b - l1);
+            yl = ((a - l0) + lowg * l0) * rg;
+            yr = ((b - l1) + lowg * l1) * rg;
+            cl += cf * cb;                       /* the creek: a babble round 400 Hz */
+            cb += cf * (a + b - cl - 0.35f * cb);
+            yl += cb * cg;
+            yr += cb * cg;
+            br += (a - br) * 0.02f;              /* the sea: deep noise opening with the swell, foam at the crash */
+            w0 += wa * (br * 5.0f + a * foam - w0);
+            w1 += wa * (br * 5.0f + b * foam - w1);
+            wgl += dl;
+            wgr += dr;
+            yl += w0 * wgl;
+            yr += w1 * wgr;
+            mixl[j] += yl;
+            mixr[j] += yr;
+            rsend[j] += (yl + yr) * 0.15f;
+        }
+        nt_rng = r;
+        nt_lp[0] = l0, nt_lp[1] = l1, nt_lp[2] = w0, nt_lp[3] = w1, nt_brown = br;
+        nt_creek_low = cl, nt_creek_band = cb, nt_wv_gl = wgl, nt_wv_gr = wgr;
+    }
+    if (nt_th_g > 1e-6f || nt_th_crack * nt_lv[3] > 1e-5f) {   /* thunder: a deep roll, a crack before it when near */
+        uint32_t r = nt_rng;
+        float b1 = nt_th_b1, b2 = nt_th_b2, hp = nt_th_hp;
+        const float tg = nt_th_g * NT_G_THUNDER, cg = nt_th_crack * nt_lv[3] * nt_play * NT_G_CRACK;
+        const float gl = nt_th_gl, gr = nt_th_gr;
+        for (j = 0; j < n; j++) {
+            float a, y;
+            r ^= r << 13, r ^= r >> 17, r ^= r << 5;
+            a = (float)(int32_t)r * (1.0f / 2147483648.0f);
+            b1 += (a - b1) * 0.02f;
+            b2 += (b1 - b2) * 0.01f;
+            hp += (a - hp) * 0.1f;
+            y = b2 * tg + (a - hp) * cg;
+            mixl[j] += y * gl;
+            mixr[j] += y * gr;
+            rsend[j] += y * 0.3f;
+        }
+        nt_rng = r;
+        nt_th_b1 = b1, nt_th_b2 = b2, nt_th_hp = hp;
+    }
+}
+
 static void render_chunk(int32_t *out, uint32_t n, float gain)
 {
     uint32_t j;
@@ -3216,6 +3598,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     render_lead(n);
     render_drums(n);
     render_swoosh(n);
+    render_night(n);
     for (j = 0; j < n; j++) {
         float wl, wr, l, r, el, er, xl, xr;
         echoes(esend[j] * eg, &el, &er, &xl, &xr);
@@ -3258,6 +3641,7 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
     if (par[P_SPARK] && en_playing)
         spark_env(n);
     swoosh_env(n);
+    night_env(n);
     if (par[P_SONG]) {
         /* the sections aim it (song_enter) */
     } else if (arc_left <= n) {

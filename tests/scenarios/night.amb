@@ -1,0 +1,618 @@
+# The Night: FX again from the Space page. Crickets, Peepers, Water (Creek, Drizzle, Rain, Downpour, Waves),
+# Thunder; all off at first; the player's, not the piece's: they stay through PRESETS and a dream; saved; a format-17
+# project comes up with the night quiet.
+wait 300
+listen
+expect view 12
+tap FX
+wait 100
+expect view 6
+tap FX
+wait 100
+expect view 13
+expect par80 0
+expect par81 0
+expect par82 0
+expect par83 0
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+spin K1 1
+wait 150
+expect par80 60
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+spin K2 1
+wait 150
+expect par81 70
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+wait 800
+said Water Creek
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+wait 800
+said Water Drizzle
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+wait 800
+said Water Downpour
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+spin K3 1
+wait 150
+wait 800
+said Water Waves
+expect par82 95
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+spin K4 1
+wait 150
+expect par83 50
+wait 20000
+shot night.png
+turn PRESET 1
+wait 300
+expect par80 60
+expect par82 95
+expect par83 50
+tap HOME
+wait 100
+expect view 12
+spin K1 1
+wait 300
+expect par67 1
+expect par80 60
+expect par81 70
+spin K1 -1
+wait 300
+expect par67 0
+tap FX
+wait 100
+tap FX
+wait 100
+expect view 13
+tap SAVE
+wait 200
+reboot
+wait 300
+expect par80 60
+expect par82 95
+tap FX
+wait 100
+expect view 6
+storev17 33
+reboot
+wait 300
+expect par0 33
+expect par80 0
+expect par81 0
+expect par82 0
+expect par83 0
