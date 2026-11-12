@@ -308,19 +308,21 @@ sound. Everything it deals shows on its own page and can be turned by hand after
 - **Dream (KNOB 1):** **Off** leaves the piece as you set it. **Wild** deals a new dream at each PLAY and each
   time you come to the piece. A number, 1 to 999, deals the same dream each time. Turned up from Wild, the knob
   keeps the dream playing; on from there, its neighbours. A toast names it (**DREAM 417**, and its chords).
-- **Range (KNOB 2):** how far the sound may move from the piece's recipe. At 0 only the notes, the chords and
-  the keys are dealt. On up, the levels, Density, Evolve, Motion, Hits, Hats, Swing, the echo and reverb, the
+- **Range (KNOB 2):** how far the sound may move from the piece's recipe. At 0 only the notes, the chords, the
+  key and the voices are dealt. On up, the levels, Density, Evolve, Motion, Hits, Hats, Swing, the echo and reverb, the
   pad's Swell and Bright, the bells' tone, Glide, Fifth, Sparkle and Swoosh move too, each within a window round
-  the recipe, so the piece stays itself. The tempo moves at most 15%. The instruments and voicings come
-  too, more often the higher it is: the pad's Colour (Rhodes, Voices, Strings, Noir), the bells' Colour
-  (Lead less often, and with it Density no higher than 45, so the solo sings), the pad's Notes (from 30)
-  and the bells' octave, one either way.
+  the recipe, so the piece stays itself. The tempo moves at most 15%. The voicings come too, more often
+  the higher it is: the pad's Notes (from 30) and the bells' octave, one either way, and the pad's Spread.
+- **The voices,** whatever Range, a new pair each dream: the pad's Colour (Rhodes, Voices, Strings, Noir),
+  and the bells' Colour, **Lead** most often (about 3 dreams in 8; with it Density no higher than 45, so the
+  solo sings), then Bell, Soft, Wood, Strings and Piano.
 - **Spice cap (KNOB 3):** the most Spice either dealer may be given.
 - **The scale too,** with Range: calm dreams lean to the open, bright ones (Lydian, Ionian, major pentatonic,
   Dorian), lively ones to Mixolydian, Aeolian and minor pentatonic; Phrygian seldom.
 - **The key,** whatever Range: any of the twelve, a new one each dream. The song still starts on its home
-  chord, so the first chord lands anywhere. When Dream picks the Lead synth for the bells, it puts them an octave down (now and
-  then two).
+  chord, so the first chord lands anywhere.
+- **The Lead** sits an octave down (now and then two), so it sings rather than pierces. The bells' level
+  stays at the piece's (33).
 - **What it never does:** turn on a part the recipe has off, or turn one down to nothing; change the tuning or
   MIDI. With Dream off, PRESETS brings a piece back in its own key.
 - **Your hand comes first.** Turn any knob, an instrument, a voicing, a level, at any time: it stays as you

@@ -492,7 +492,7 @@ static void dream_deal(int num)
         }
     if (range > 0) {                             /* the instruments and voicings: more often away as Range grows */
         if (rec[P_PAD]) {
-            const int away = dream_f() < 0.6f * r, other = (rec[P_PADTONE] + 1 + (int)(dream_r() % 3u)) % 4;
+            const int away = dream_f() < 2.0f, other = (rec[P_PADTONE] + (int)(dream_r() % 4u)) % 4;   /* every dream */
             const int notes = range >= 30 && dream_f() < 0.5f * r ? 2 + (int)(dream_r() % 3u) : rec[P_PADN];
             put(P_PADTONE, away ? other : rec[P_PADTONE]);
             put(P_PADN, notes);
@@ -504,15 +504,15 @@ static void dream_deal(int num)
             }
         }
         if (rec[P_BELLS]) {
-            static const float W[EN_NBCOLOR] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.5f};   /* Lead, less often */
+            static const float W[EN_NBCOLOR] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 3.0f};   /* Lead first: ambient's voice */
             int c = rec[P_BCOLOR], o = rec[P_BOCT], k;
-            if (dream_f() < 0.6f * r) {
+            if (dream_f() < 2.0f) {                  /* every dream, whatever Range */
                 float sum = 0.0f, y;
                 for (k = 0; k < EN_NBCOLOR; k++)
-                    sum += k == rec[P_BCOLOR] ? 0.0f : W[k];
+                    sum += W[k];
                 y = dream_f() * sum;
                 for (k = 0; k < EN_NBCOLOR; k++)
-                    if (k != rec[P_BCOLOR] && (y -= W[k]) < 0.0f)
+                    if ((y -= W[k]) < 0.0f)
                         break;
                 c = k < EN_NBCOLOR ? k : EN_NBCOLOR - 1;
             }
