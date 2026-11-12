@@ -54,7 +54,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Thump turn", 0, 15, 0}, {"Closed turn", 0, 11, 2}, {"Open turn", 0, 6, 3}, {"Moves", 0, 1, 0},
     {"Song", 0, 1, 1},
     {"Spread", 0, 3, 0},     {"Pluck", 0, 100, 15},
-    {"Crickets", 0, 100, 0}, {"Peepers", 0, 100, 0}, {"Water", 0, 100, 0}, {"Thunder", 0, 100, 0},
+    {"Crickets", 0, 100, 0}, {"Peepers", 0, 100, 0}, {"Water", 0, 100, 0}, {"Storms", 0, 100, 0},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -2109,7 +2109,10 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
 #define NT_G_DROP 0.5f
 #define NT_G_RAIN 0.18f
 #define NT_G_WAVES 0.9f
-#define NT_G_THUNDER 0.9f
+#define NT_G_THUNDER 0.28f
+#define NT_G_BOLT 0.8f
+#define NT_G_CLAP 0.25f
+#define NT_NBOLT 6
 static uint32_t nt_rng = 0x1B873593u;
 static float nt_play, nt_lv[4], nt_want[4];      /* crickets, peepers, water, thunder: as sounding, as wanted */
 static struct { float ph, inc, gl, gr; uint32_t t, period, pt; uint8_t k, np; } nt_cr[NT_NCR];
@@ -2118,8 +2121,11 @@ static struct { float amp, dec, gl, gr; } nt_bl[NT_NBL];   /* drops: ticks of no
 static float nt_wx;                              /* where on the water's journey: 1 drizzle .. 3 waves */
 static float nt_lp[4], nt_brown, nt_cf, nt_rain_a, nt_rain_g, nt_low_g, nt_tick;
 static float nt_wv_ph, nt_wv_len, nt_wv_pan, nt_wv_e, nt_wv_tl, nt_wv_tr, nt_wv_gl, nt_wv_gr, nt_wv_a, nt_wv_foam;
-static float nt_th_t, nt_th_wait, nt_th_pan, nt_th_e, nt_th_g, nt_th_gl, nt_th_gr, nt_th_fl, nt_th_flt;
-static float nt_th_lp[6];                         /* each side: two poles round 90 Hz, and the body round 220 */
+static float nt_th_t, nt_th_wait, nt_th_pan, nt_th_e, nt_th_g, nt_th_gl, nt_th_gr, nt_th_fl, nt_th_flt, nt_th_raw, nt_th_carry;
+static float nt_th_lp[8];                         /* each side: two poles round 90 Hz, the body round 220, the clap's 600 */
+/* a bolt of thunder, its own: a quick onset, then the rumble's swells; and the clap's brightness at the start */
+static float nt_tb_at[NT_NBOLT], nt_tb_amp[NT_NBOLT], nt_tb_rise[NT_NBOLT], nt_tb_fall[NT_NBOLT];
+static float nt_tb_t, nt_tb_wait, nt_tb_e, nt_tb_g, nt_clap, nt_clap_g;
 static int nt_th_v;
 static float nt_th_at[NT_NTB], nt_th_amp[NT_NTB], nt_th_rise[NT_NTB], nt_th_fall[NT_NTB];
 
@@ -2138,17 +2144,40 @@ static void nt_pan(float p, float *gl, float *gr)   /* p -1 left .. +1 right, eq
     *gr = sine(p * 0.25f);
 }
 
-static void night_thunder_next(float soon)       /* the next roll: in soon seconds or, from 0, by Thunder */
+static void night_thunder_next(float soon)       /* the wind's next gust: soon after, the stormier the sooner */
 {
     const float v = (float)par[P_THUNDER] * 0.01f;
-    nt_th_wait = soon > 0.0f ? soon : (200.0f * fm_exp2f(-3.0f * v)) * (0.5f + nt_dice());   /* 3 min .. 25 s */
+    nt_th_wait = soon > 0.0f ? soon : (0.5f + 4.0f * nt_dice()) * (1.0f + 3.0f * (1.0f - v));
     nt_th_t = -1.0f;
+}
+
+static void night_bolt_next(float soon)          /* the next thunder: in soon seconds or, by Storms, 3 min .. 25 s */
+{
+    const float v = (float)par[P_THUNDER] * 0.01f;
+    nt_tb_wait = soon > 0.0f ? soon : (200.0f * fm_exp2f(-3.0f * v)) * (0.5f + nt_dice());
+    nt_tb_t = -1.0f;
+}
+
+static void night_bolt_start(void)               /* thunder: in almost at once, a clap's edge, then a long rumble */
+{
+    int i;
+    float at = 0.0f;
+    nt_tb_t = 0.0f;
+    nt_clap = 0.7f + 0.3f * nt_dice();
+    for (i = 0; i < NT_NBOLT; i++) {
+        nt_tb_at[i] = at;
+        nt_tb_amp[i] = !i ? 1.0f : i < 3 || nt_dice() < 0.6f ? 0.35f + 0.5f * nt_dice() : 0.0f;
+        nt_tb_rise[i] = !i ? 0.12f + 0.13f * nt_dice() : 0.2f + 0.4f * nt_dice();
+        nt_tb_fall[i] = !i ? 1.8f + 1.2f * nt_dice() : 1.5f + 2.5f * nt_dice();
+        at += 0.25f + 0.9f * nt_dice();
+    }
 }
 
 static void night_thunder_start(void)            /* a roll, far off: up to eight slow swells, overlapping, over 10-20 s */
 {
     int i;
     float at = 0.0f;
+    nt_th_carry = nt_th_raw;                     /* the last gust's tail goes on under this one */
     nt_th_t = 0.0f;
     nt_th_pan = (nt_dice() * 2.0f - 1.0f) * 0.35f;
     nt_pan(nt_th_pan, &nt_th_gl, &nt_th_gr);
@@ -2196,13 +2225,18 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
                 nt_wv_pan = (nt_dice() * 2.0f - 1.0f) * 0.35f;
             }
             p = nt_wv_ph;
-            e = p < 0.4f ? 0.15f + 0.35f * (p * 2.5f) * (p * 2.5f)
-                : p < 0.45f ? 0.5f + 10.0f * (p - 0.4f)
-                : 0.12f + 0.88f * fm_expf(-(p - 0.45f) * 5.5f);
+            if (p < 0.42f) {                     /* the swell coming in */
+                const float u = p * (1.0f / 0.42f);
+                e = 0.15f + 0.45f * u * u;
+            } else if (p < 0.56f) {              /* the crash: eased in, a broad peak a little over the swell */
+                e = 0.6f + 0.25f * (0.5f - 0.5f * fm_cosf(FM_PI * (p - 0.42f) * (1.0f / 0.14f)));
+            } else {                             /* the wash going back */
+                e = 0.1f + 0.75f * fm_expf(-(p - 0.56f) * 6.0f);
+            }
             nt_wv_e = e;
             nt_wv_a = 1.0f - fm_expf(-2.0f * FM_PI * (180.0f + 2600.0f * e * e) * (1.0f / EN_SR));
             nt_wv_foam = e * e * e;
-            nt_pan(nt_wv_pan * (p < 0.45f ? 1.0f : 1.0f - 2.0f * (p - 0.45f)), &nt_wv_tl, &nt_wv_tr);
+            nt_pan(nt_wv_pan * (p < 0.56f ? 1.0f : 1.0f - 2.2f * (p - 0.56f)), &nt_wv_tl, &nt_wv_tr);
             nt_wv_tl *= g * waves * e * 1.1f;
             nt_wv_tr *= g * waves * e * 1.1f;
         }
@@ -2217,27 +2251,54 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
                 night_thunder_start();
         }
     }
-    if (nt_th_t >= 0.0f) {
-        float e = 0.0f, end = 0.0f;
-        nt_th_t += k;
-        for (i = 0; i < NT_NTB; i++) {
-            const float d = nt_th_t - nt_th_at[i];
-            if (nt_th_amp[i] <= 0.0f)
-                continue;
-            if (d > 0.0f)
-                e += nt_th_amp[i] * (d < nt_th_rise[i] ? d / nt_th_rise[i] : fm_expf(-(d - nt_th_rise[i]) / nt_th_fall[i]));
-            end = fm_maxf(end, nt_th_at[i] + nt_th_rise[i] + 5.0f * nt_th_fall[i]);
+    {                                            /* the wind: gusts, each the last one's tail carried on, never quite still */
+        float e = nt_th_carry, end = 0.0f;
+        nt_th_carry *= fm_expf(-k / 6.0f);
+        if (nt_th_t >= 0.0f) {
+            nt_th_t += k;
+            for (i = 0; i < NT_NTB; i++) {
+                const float d = nt_th_t - nt_th_at[i];
+                if (nt_th_amp[i] <= 0.0f)
+                    continue;
+                if (d > 0.0f)
+                    e += nt_th_amp[i] * (d < nt_th_rise[i] ? d / nt_th_rise[i] : fm_expf(-(d - nt_th_rise[i]) / nt_th_fall[i]));
+                end = fm_maxf(end, nt_th_at[i] + nt_th_rise[i] + 1.5f * nt_th_fall[i]);
+            }
         }
-        if (nt_dice() < k * 7.0f)                /* the roll's grain: slow, uneven surges */
+        if (nt_dice() < k * 7.0f)                /* the wind's grain: slow, uneven surges */
             nt_th_flt = 0.5f + nt_dice();
         nt_th_fl += (nt_th_flt - nt_th_fl) * fm_minf(k * 5.0f, 1.0f);
+        nt_th_raw = e;
         nt_th_e = e * nt_th_fl;
-        if (nt_th_t > end)
+        if (nt_th_t >= 0.0f && nt_th_t > end)
             night_thunder_next(0.0f);
-    } else {
-        nt_th_e = 0.0f;
     }
     nt_th_g = nt_lv[3] * nt_play * nt_th_e;
+    if (nt_want[3] > 0.0f && en_playing && nt_tb_t < 0.0f) {   /* thunder: wait, then a bolt */
+        nt_tb_wait -= k;
+        if (nt_tb_wait <= 0.0f)
+            night_bolt_start();
+    }
+    if (nt_tb_t >= 0.0f) {
+        float e = 0.0f, end = 0.0f;
+        nt_tb_t += k;
+        for (i = 0; i < NT_NBOLT; i++) {
+            const float d = nt_tb_t - nt_tb_at[i];
+            if (nt_tb_amp[i] <= 0.0f)
+                continue;
+            if (d > 0.0f)
+                e += nt_tb_amp[i] * (d < nt_tb_rise[i] ? d / nt_tb_rise[i] : fm_expf(-(d - nt_tb_rise[i]) / nt_tb_fall[i]));
+            end = fm_maxf(end, nt_tb_at[i] + nt_tb_rise[i] + 5.0f * nt_tb_fall[i]);
+        }
+        nt_tb_e = e * (0.75f + 0.25f * nt_th_fl);   /* the rumble shares the wind's surges, a little */
+        nt_clap *= fm_expf(-k / 0.35f);
+        if (nt_tb_t > end)
+            night_bolt_next(0.0f);
+    } else {
+        nt_tb_e = nt_clap = 0.0f;
+    }
+    nt_tb_g = nt_lv[3] * nt_play * nt_tb_e;
+    nt_clap_g = nt_lv[3] * nt_play * nt_clap * fm_minf(nt_tb_t * 8.0f, 1.0f);
 }
 
 static void night_init(void)                     /* the creatures where they sit, all quiet */
@@ -2276,14 +2337,17 @@ static void night_init(void)                     /* the creatures where they sit
     for (i = 0; i < 4; i++) {
         nt_lp[i] = 0.0f;
     }
-    for (i = 0; i < 6; i++)
+    for (i = 0; i < 8; i++)
         nt_th_lp[i] = 0.0f;
+    nt_tb_t = -1.0f;
+    nt_tb_wait = 1e9f;
+    nt_tb_e = nt_tb_g = nt_clap = nt_clap_g = 0.0f;
     nt_brown = nt_rain_g = nt_low_g = nt_tick = 0.0f;
     nt_cf = nt_rain_a = 0.0f;
     nt_wv_ph = 0.0f;
     nt_wv_len = 10.0f;
     nt_wv_pan = nt_wv_e = nt_wv_tl = nt_wv_tr = nt_wv_gl = nt_wv_gr = nt_wv_a = nt_wv_foam = 0.0f;
-    nt_th_e = nt_th_g = 0.0f;
+    nt_th_e = nt_th_g = nt_th_raw = nt_th_carry = 0.0f;
     nt_th_fl = nt_th_flt = 1.0f;
     nt_th_gl = nt_th_gr = 0.7f;
     nt_th_t = -1.0f;
@@ -2653,12 +2717,14 @@ static void apply(int p, int v)
         if (v)
             nt_wx = 1.0f + (float)(v - 1) * (2.0f / 99.0f);
         break;
-    case P_THUNDER: {                            /* far and seldom to nearer and often; up from 0, a first roll soon */
+    case P_THUNDER: {                            /* Storms: the wind softer to stronger, thunder seldom to often; up from 0, the wind at once */
         const int was = nt_th_v;
         nt_th_v = v;
         nt_want[3] = v ? fm_exp2f((float)(v - 100) * 0.025f) : 0.0f;
-        if (v && nt_th_t < 0.0f && (!was || nt_th_wait > 200.0f * fm_exp2f(-0.03f * (float)v)))
-            night_thunder_next(was ? 0.0f : 4.0f + 6.0f * nt_dice());
+        if (v && nt_th_t < 0.0f && (!was || nt_th_wait > 4.5f * (1.0f + 3.0f * (1.0f - 0.01f * (float)v))))
+            night_thunder_next(was ? 0.0f : 1.0f + 2.0f * nt_dice());   /* the wind at once */
+        if (v && nt_tb_t < 0.0f && (!was || nt_tb_wait > 200.0f * fm_exp2f(-0.03f * (float)v)))
+            night_bolt_next(was ? 0.0f : 12.0f + 10.0f * nt_dice());   /* the first thunder once the wind is up */
         break;
     }
     case P_SWOFT:                                /* a shorter gap needn't wait out the long one it was in */
@@ -3553,10 +3619,12 @@ static void render_night(uint32_t n)
         nt_lp[0] = l0, nt_lp[1] = l1, nt_lp[2] = w0, nt_lp[3] = w1, nt_brown = br;
         nt_wv_gl = wgl, nt_wv_gr = wgr;
     }
-    if (nt_th_g > 1e-6f) {                       /* thunder: a far rumble, deep and wide, much of it the reverb's */
+    if (nt_th_g + nt_tb_g + nt_clap_g > 1e-6f) {   /* storms: the wind's deep surges; thunder in it, wide, the reverb's */
         uint32_t r = nt_rng;
         float l1 = nt_th_lp[0], l2 = nt_th_lp[1], lb = nt_th_lp[2], r1 = nt_th_lp[3], r2 = nt_th_lp[4], rb = nt_th_lp[5];
-        const float tg = nt_th_g * NT_G_THUNDER, gl = nt_th_gl * tg, gr = nt_th_gr * tg;
+        float lm = nt_th_lp[6], rm = nt_th_lp[7];
+        const float tg = nt_th_g * NT_G_THUNDER, bg = nt_tb_g * NT_G_BOLT, cg = nt_clap_g * NT_G_CLAP;
+        const float gl = nt_th_gl * tg + 0.75f * bg, gr = nt_th_gr * tg + 0.75f * bg, bodyb = 0.35f * bg;
         for (j = 0; j < n; j++) {
             float a, b, yl, yr;
             r ^= r << 13, r ^= r >> 17, r ^= r << 5;
@@ -3569,14 +3637,17 @@ static void render_night(uint32_t n)
             r1 += (b - r1) * 0.0128f;
             r2 += (r1 - r2) * 0.0128f;
             rb += (b - rb) * 0.031f;
-            yl = (l2 * 4.0f + (lb - l1) * 0.35f) * gl;
-            yr = (r2 * 4.0f + (rb - r1) * 0.35f) * gr;
+            lm += (a - lm) * 0.083f;             /* round 600 Hz: the clap's edge, under the first second */
+            rm += (b - rm) * 0.083f;
+            yl = (l2 * 4.0f + (lb - l1) * 0.35f) * gl + (lb - l1) * bodyb + (lm - l1) * cg;
+            yr = (r2 * 4.0f + (rb - r1) * 0.35f) * gr + (rb - r1) * bodyb + (rm - r1) * cg;
             mixl[j] += yl;
             mixr[j] += yr;
             rsend[j] += (yl + yr) * 0.6f;
         }
         nt_rng = r;
         nt_th_lp[0] = l1, nt_th_lp[1] = l2, nt_th_lp[2] = lb, nt_th_lp[3] = r1, nt_th_lp[4] = r2, nt_th_lp[5] = rb;
+        nt_th_lp[6] = lm, nt_th_lp[7] = rm;
     }
 }
 

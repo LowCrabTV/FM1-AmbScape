@@ -84,7 +84,7 @@ enum {
     P_RTURN0, P_RTURN1, P_RTURN2, P_RMOVES,           /* each ring's turn (steps); Moves: 0 Follow (Evolve), 1 Still */
     P_SONG,                                           /* Song: 1 the garden in sections, as songs go (the default); 0 free */
     P_PSPREAD, P_BPLUCK,                              /* the pad's Spread: Close, Open, Wide, Vast; the bass's Pluck, 0 hum .. 100 */
-    P_CRICKET, P_PEEP, P_WATER, P_THUNDER,            /* the Night: crickets, peepers, water (creek, rain, waves), thunder; 0 off */
+    P_CRICKET, P_PEEP, P_WATER, P_THUNDER,            /* the Night: crickets, peepers, water (rain, waves), storms (wind, thunder) */
     P_NPARAMS
 };
 typedef struct {

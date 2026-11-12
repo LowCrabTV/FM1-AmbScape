@@ -52,7 +52,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Deal", "Chords", "Spice", "Form"},
     {"Thump", "Closed", "Open", "Moves"},
     {"Dream", "Range", "Spice cap", "Seed"},
-    {"Crickets", "Peepers", "Water", "Thunder"},
+    {"Crickets", "Peepers", "Water", "Storms"},
 };
 /* SELECT held: a page's other knobs */
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
@@ -1382,7 +1382,7 @@ static int help_lines(int b, const char *l[HELP_LINES])
     case B_SEL: L("SELECT"); L("TAP: CHORDS, KEYS, DEAL"); L("HOLD: THIS PAGE'S"); L("OTHER KNOBS (+)"); break;
     case B_LFO: L("THE BASS"); L("LEVEL, OCTAVE, GLIDE, FIFTH"); break;
     case B_SEQ: L("THE PULSE"); L("LEVEL, HITS, SWING, HATS"); L("AGAIN: THE RINGS"); break;
-    case B_FX: L("THE SPACE: ECHO, ECHO TIME,"); L("REVERB, SIZE"); L("AGAIN: THE NIGHT: CRICKETS,"); L("PEEPERS, WATER, THUNDER"); break;
+    case B_FX: L("THE SPACE: ECHO, ECHO TIME,"); L("REVERB, SIZE"); L("AGAIN: THE NIGHT: CRICKETS,"); L("PEEPERS, WATER, STORMS"); break;
     case B_GLO: L("SETUP"); L("ROOT, TUNE, MIDI OUT, LIGHTS"); break;
     case B_EDIT: L("THE NEXT CHORD,"); L("ON THE NEXT BAR"); break;
     case B_REC: L("FREEZE: THE CHORD HOLDS"); L(" AND THE REVERB RINGS ON"); L("AGAIN: THAW"); break;

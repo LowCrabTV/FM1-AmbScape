@@ -96,7 +96,7 @@ The drawing at the top shows them all; here they are in more detail.
 | EDIT | The next chord, at the start of the next bar (at once while resting). |
 | HOME | The Dream page, where it starts: Dream, Range, Spice cap, Seed. Again: the Garden page. |
 | ENV · ARP · LFO · SEQ | The layers' pages: Pad, Lead, Bass, Pulse. |
-| FX · GLO | The Space and Setup pages; FX again, the Night (crickets, peepers, water, thunder). The lit button shows the page. |
+| FX · GLO | The Space and Setup pages; FX again, the Night (crickets, peepers, water, storms). The lit button shows the page. |
 | SELECT | The previous or next page. Hold HOME and turn it for the tempo, from any page. |
 | ALGORITHM | Mode: Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, pentatonic major and minor. Loads the mode's scale; editing it with the keys makes it Custom. |
 | PRESETS | The piece (see [The pieces](#s6)). |
@@ -499,7 +499,7 @@ leaves. Turned up from 0, the first pass starts within a couple of seconds.
 
 ### FX again: Night
 
-![The Night page: CRICKETS 60, PEEPERS 70, WATER Waves, THUNDER 50](img/screen-night.png "The Night page")
+![The Night page: CRICKETS 60, PEEPERS 70, WATER Waves, STORMS 50](img/screen-night.png "The Night page")
 
 The night around the music, synthesized: impressions, not recordings. Press FX from the Space page,
 and again to go back. All four start off. They are yours, not the piece's: they stay as you set them
@@ -513,11 +513,12 @@ the music does, sit in its reverb, and the garden plays the same notes with them
 - **Water (KNOB 3):** one journey through water, each place crossfading into the next as you turn:
   **Drizzle** (1–23); **Rain** (24–48); **Downpour** (49–75), a roar beneath the hiss; **Waves** (76–100),
   the sea: a slow swell, the crash, the wash going
-  back, every 8 to 12 seconds. Each place has its own loudness: the drizzle is quiet, the downpour is not.
-- **Thunder (KNOB 4):** now and then a far roll, slow overlapping swells of deep noise over 10 to 20 seconds,
-  mostly in the reverb: always far, a rumble, never a clap. Low, seldom and quiet (about one roll in
-  three minutes); turned up, more often (about one in 25 seconds) and louder. Turned up from 0, the first
-  roll comes within ten seconds.
+  back, every 8 to 12 seconds; the crash eased in, broad and only a little louder than the swell. Each place has its own loudness: the drizzle is quiet, the downpour is not.
+- **Storms (KNOB 4):** a storm far off. Deep, shifting wind that never quite settles, and in it, now and
+  then, thunder: in almost at once, with a clap's edge, then a long rumble that fades back into the wind.
+  Low, the wind is soft and the thunder seldom (about once in three minutes); turned up, the wind is
+  stronger and the thunder comes more often (about every 25 seconds). Turned up from 0, the wind rises at
+  once and the first thunder comes within half a minute.
 
 Together the four ask a little more of the FM-1 (about a tenth more work), well within what it has.
 
@@ -694,7 +695,7 @@ The defaults are Blue Hour's; each piece has its own.
 | Space | Tone (SELECT held) | 0–100 (white to brown) | 50 |
 | Night | Crickets, Peepers | 0–100 | 0 |
 | Night | Water | Off, Drizzle, Rain, Downpour, Waves (0–100) | Off |
-| Night | Thunder | 0–100 | 0 |
+| Night | Storms | 0–100 | 0 |
 | Dream | Seed | Wild, 1–999 | Wild |
 | Rings | Thump, Closed, Open | Auto, 0–16; Auto, 0–12; Auto, 0–7 | Auto |
 | Rings | Moves | Follow, Still | Follow |
