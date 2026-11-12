@@ -25,7 +25,7 @@ const uint8_t EN_SLATE_BARS[EN_NBARS] = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32};
 static const uint8_t EN_ROOT_BARS[EN_NRBARS] = {1, 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128};
 
 static const en_param_t PARAMS[P_NPARAMS] = {
-    {"Pad", 0, 100, 60},      {"Lead", 0, 100, 33},    {"Bass", 0, 100, 45},     {"Pulse", 0, 100, 40},
+    {"Pad", 0, 100, 60},      {"Lead", 0, 100, 50},    {"Bass", 0, 100, 45},     {"Pulse", 0, 100, 40},
     {"Density", 0, 100, 40},  {"Evolve", 0, 100, 35},   {"Drift", 0, 100, 25},    {"Hits", 0, 100, 35},
     {"Echo", 0, 100, 45},     {"Echo time", 0, 5, 3},   {"Reverb", 0, 100, 65},   {"Size", 0, 100, 80},
     {"Bright", 0, 100, 40},   {"Swell", 0, 100, 60},    {"Lead tone", 0, 100, 50}, {"Motion", 0, 100, 50},
@@ -67,14 +67,14 @@ static const struct {
     const char *name;
     int8_t v[P_NPARAMS];
 } PIECES[EN_NPIECES] = {
-    {"Blue Hour",  {60, 33, 45, 40, 40, 35, 25, 35, 45, 3, 65, 80, 40, 60, 50, 50, 0, 1, 72, 2, 1, 0, 0, 0, 20, 35, 0, 0}},
-    {"Last Light", {35, 33, 0, 0, 35, 30, 40, 0, 30, 3, 70, 85, 20, 55, 5, 40, 0, 1, 60, 1, 0, -1, 0, 0, 30, 25, 0, 0}},
+    {"Blue Hour",  {60, 50, 45, 40, 40, 35, 25, 35, 45, 3, 65, 80, 40, 60, 50, 50, 0, 1, 72, 2, 1, 0, 0, 0, 20, 35, 0, 0}},
+    {"Last Light", {35, 50, 0, 0, 35, 30, 40, 0, 30, 3, 70, 85, 20, 55, 5, 40, 0, 1, 60, 1, 0, -1, 0, 0, 30, 25, 0, 0}},
     {"Pines",      {85, 0, 25, 0, 30, 30, 50, 0, 20, 5, 80, 90, 67, 70, 30, 55, 0, 1, 56, 5, 5, 0, 1, -1, 45, 30, 0, 0}},
-    {"Ember Line", {50, 33, 35, 25, 55, 45, 20, 30, 50, 2, 60, 75, 60, 50, 60, 55, 0, 1, 84, 7, 3, 0, 0, 0, 15, 40, 15, 0}},
-    {"Chevrons",   {45, 33, 55, 60, 45, 50, 15, 45, 55, 1, 55, 70, 35, 40, 75, 70, 0, 1, 96, 9, 5, 0, 0, 0, 10, 45, 30, 0}},
-    {"Afterglow",  {40, 33, 30, 0, 30, 40, 40, 0, 85, 4, 55, 95, 30, 80, 0, 85, 0, 1, 64, 4, 6, 0, 0, 0, 40, 20, 0, 0}},
-    {"Headlights", {35, 33, 30, 20, 60, 55, 25, 25, 45, 2, 65, 80, 55, 45, 90, 50, 0, 1, 76, 3, 7, 1, 0, 1, 10, 30, 10, 0}},
-    {"Gravel",     {55, 33, 40, 35, 45, 75, 10, 40, 50, 3, 65, 85, 60, 60, 55, 95, 0, 1, 70, 10, 4, 0, 1, 0, 25, 55, 10, 0}},
+    {"Ember Line", {50, 50, 35, 25, 55, 45, 20, 30, 50, 2, 60, 75, 60, 50, 60, 55, 0, 1, 84, 7, 3, 0, 0, 0, 15, 40, 15, 0}},
+    {"Chevrons",   {45, 50, 55, 60, 45, 50, 15, 45, 55, 1, 55, 70, 35, 40, 75, 70, 0, 1, 96, 9, 5, 0, 0, 0, 10, 45, 30, 0}},
+    {"Afterglow",  {40, 50, 30, 0, 30, 40, 40, 0, 85, 4, 55, 95, 30, 80, 0, 85, 0, 1, 64, 4, 6, 0, 0, 0, 40, 20, 0, 0}},
+    {"Headlights", {35, 50, 30, 20, 60, 55, 25, 25, 45, 2, 65, 80, 55, 45, 90, 50, 0, 1, 76, 3, 7, 1, 0, 1, 10, 30, 10, 0}},
+    {"Gravel",     {55, 50, 40, 35, 45, 75, 10, 40, 50, 3, 65, 85, 60, 60, 55, 95, 0, 1, 70, 10, 4, 0, 1, 0, 25, 55, 10, 0}},
 };
 
 const char *en_piece_name(int i) { return PIECES[(unsigned)i < EN_NPIECES ? i : 0].name; }
@@ -1516,16 +1516,17 @@ static const int8_t LOOP_RAT[EN_NLOOP] = {0, 0, 1, -1};
 
 /* the bells' colours: the same two operators, set differently. ratio: the modulator's (0: Tone's, as the Bell);
  * index: idx0 + idx1 Tone^2; it fades over isec0 + isec1 Tone (0: it holds); ring: the decay's length, times this;
- * arate: the strike (0: Tone's, as the Bell); gain: to sit level with the Bell */
+ * arate: the strike (0: Tone's, as the Bell); gain: to sit level with the Bell, measured (long-run RMS through the
+ * echo and reverb; Strings 3 dB over, for its slow swell) */
 static const struct {
     float ratio, idx0, idx1, isec0, isec1, ring, arate, gain;
 } BCOLOR[EN_NBCOLOR] = {
     {0.0f, 0.15f, 6.5f, 0.35f, 2.6f, 1.0f, 0.0f, 1.0f},          /* Bell */
     {1.0f, 0.05f, 1.4f, 1.0f, 2.0f, 1.15f, 0.00025f, 1.1f},      /* Soft: round, no strike */
-    {2.0f, 0.55f, 2.0f, 0.0f, 0.0f, 1.7f, 0.0006f, 0.85f},       /* Wood: odd harmonics, hollow, holding */
-    {1.0f, 0.7f, 1.6f, 6.0f, 6.0f, 2.2f, 0.00007f, 0.8f},        /* Strings: a slow swell that hangs */
-    {1.0f, 1.3f, 3.0f, 0.22f, 0.5f, 0.95f, 0.008f, 1.0f},        /* Piano: a warm strike that mellows */
-    {1.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.001f, 1.0f},          /* Lead: (not a bell: its own voice, below) */
+    {2.0f, 0.55f, 2.0f, 0.0f, 0.0f, 1.7f, 0.0006f, 0.62f},       /* Wood: odd harmonics, hollow, holding */
+    {1.0f, 0.7f, 1.6f, 6.0f, 6.0f, 2.2f, 0.00007f, 1.4f},        /* Strings: a slow swell that hangs */
+    {1.0f, 1.3f, 3.0f, 0.22f, 0.5f, 0.95f, 0.008f, 1.05f},        /* Piano: a warm strike that mellows */
+    {1.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.001f, 1.0f},          /* Synth: (not a bell: its own voice, below) */
 };
 
 /* Lead: a solo synth. With the bells' colour on Lead, their notes go to it instead: two voices taking turns, so

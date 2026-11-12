@@ -1196,6 +1196,43 @@ int main(void)
         en_play(1);
     }
 
+    /* the lead's six voices level with each other (long-run RMS through the echo and reverb, two melodies):
+     * each within 1.5 dB of the Bell, Strings 3 dB over for its slow swell */
+    {
+        static const float WANT[EN_NBCOLOR] = {0.0f, 0.0f, 0.0f, 3.0f, 0.0f, 0.0f};
+        double lv[EN_NBCOLOR];
+        int c, sd, b2, j;
+        for (c = 0; c < EN_NBCOLOR; c++) {
+            double s = 0.0;
+            long n = 0;
+            for (sd = 1; sd <= 2; sd++) {
+                en_init();
+                for (i = 0; i < P_NPARAMS; i++)
+                    en_set(i, en_param_info(i)->def);
+                en_set(P_PAD, 0), en_set(P_BASS, 0), en_set(P_PULSE, 0), en_set(P_BCOLOR, c), en_set(P_SEED, sd * 97);
+                en_play(1);
+                for (b2 = 0; b2 < 50 * 44100 / 256; b2++) {
+                    en_render(buf, 256, 2048);
+                    if (b2 < 10 * 44100 / 256)
+                        continue;
+                    for (j = 0; j < 512; j++) {
+                        double x = (double)buf[j] / 8388608.0;
+                        s += x * x;
+                        n++;
+                    }
+                }
+            }
+            lv[c] = 10.0 * log10(s / (double)n + 1e-20);
+        }
+        for (c = 1; c < EN_NBCOLOR; c++)
+            CHECK(fabs(lv[c] - lv[0] - (double)WANT[c]) < 1.5, "lead voice %d against the Bell: %+.1f dB (want %+.1f)", c,
+                  lv[c] - lv[0], (double)WANT[c]);
+        printf("  Lead voices against the Bell: %+.1f %+.1f %+.1f %+.1f %+.1f dB\n", lv[1] - lv[0], lv[2] - lv[0],
+               lv[3] - lv[0], lv[4] - lv[0], lv[5] - lv[0]);
+        en_init();
+        en_play(1);
+    }
+
     /* the bells' colours: each sounds, stays bounded and clean; the strike comes as it should */
     {
         static const char *const NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano", "Synth"};

@@ -477,7 +477,7 @@ static void dream_deal(int num)
             u = u < -1.0f ? -1.0f : u > 1.0f ? 1.0f : u;
             if (dream_level(p) && !c)
                 continue;                            /* off in the recipe: off */
-            if (p == P_BELLS) {                      /* the bells stay at the piece's 33: never too loud */
+            if (p == P_BELLS) {                      /* the lead stays at the piece's 50: never too loud */
                 put(p, c);
                 continue;
             }
@@ -526,14 +526,14 @@ static void dream_deal(int num)
                 put(P_DENSITY, 45);                 /* the solo sings rather than runs */
         }
         /* the flourishes, subtle: Sparkle the livelier, Swoosh the calmer */
-        if (rec[P_BELLS] && dream_f() < 0.35f * r * (0.4f + 1.2f * ch)) {
+        if (rec[P_BELLS] && dream_f() < 0.2f + 0.3f * ch) {   /* whatever Range: 1 in 5 calm, 1 in 2 lively */
             put(P_SPARK, 10 + (int)(dream_f() * 30.0f));
             put(P_SPLEN, 20 + (int)(dream_r() % 61u));
             put(P_SPOFT, 20 + (int)(dream_r() % 61u));
         } else {
             put(P_SPARK, rec[P_SPARK]);
         }
-        if (dream_f() < 0.35f * r * (1.6f - 1.2f * ch)) {
+        if (dream_f() < 0.5f - 0.3f * ch) {         /* whatever Range: 1 in 2 calm, 1 in 5 lively */
             put(P_SWOOSH, 5 + (int)(dream_f() * 35.0f));
             put(P_SWLEN, 20 + (int)(dream_r() % 61u));
             put(P_SWOFT, 20 + (int)(dream_r() % 61u));

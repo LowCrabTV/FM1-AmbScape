@@ -310,19 +310,21 @@ sound. Everything it deals shows on its own page and can be turned by hand after
   keeps the dream playing; on from there, its neighbours. A toast names it (**DREAM 417**, and its chords).
 - **Range (KNOB 2):** how far the sound may move from the piece's recipe. At 0 only the notes, the chords, the
   key and the voices are dealt. On up, the levels, Density, Evolve, Motion, Hits, Hats, Swing, the echo and reverb, the
-  pad's Swell and Bright, the lead's tone, Glide, Fifth, Sparkle and Swoosh move too, each within a window round
+  pad's Swell and Bright, the lead's tone, Glide and Fifth move too, each within a window round
   the recipe, so the piece stays itself. The tempo moves at most 15%. The voicings come too, more often
   the higher it is: the pad's Notes (from 30) and the lead's octave, one either way, and the pad's Spread.
 - **The voices,** whatever Range, a new pair each dream: the pad's Colour (Rhodes, Voices, Strings, Noir),
   and the lead's Colour, **Synth** most often (about 3 dreams in 8; with it Density no higher than 45, so the
   solo sings), then Bell, Soft, Wood, Strings and Piano.
+- **The flourishes,** whatever Range: Swoosh in about 1 calm dream in 2 (1 lively in 5), Sparkle the other
+  way round; each subtle, at most 40, with its length, how often and (Swoosh) its tone dealt too.
 - **Spice cap (KNOB 3):** the most Spice either dealer may be given.
 - **The scale too,** with Range: calm dreams lean to the open, bright ones (Lydian, Ionian, major pentatonic,
   Dorian), lively ones to Mixolydian, Aeolian and minor pentatonic; Phrygian seldom.
 - **The key,** whatever Range: any of the twelve, a new one each dream. The song still starts on its home
   chord, so the first chord lands anywhere.
 - **Synth** sits an octave down (now and then two), so it sings rather than pierces. The lead's level
-  stays at the piece's (33).
+  stays at the piece's (50), and its six voices are level with each other.
 - **What it never does:** turn on a part the recipe has off, or turn one down to nothing; change the tuning or
   MIDI. With Dream off, PRESETS brings a piece back in its own key.
 - **Your hand comes first.** Turn any knob, an instrument, a voicing, a level, at any time: it stays as you
@@ -645,7 +647,7 @@ The defaults are Blue Hour's; each piece has its own.
 | Pad | Swell | 0–100 | 60 |
 | Pad | Bright | 0–100 | 40 |
 | Pad | Colour | Rhodes, Voices, Strings, Noir | Rhodes |
-| Lead | Level | 0–100 | 33 |
+| Lead | Level | 0–100 | 50 |
 | Lead | Density | 0–100 (0 to 5 notes a loop) | 40 |
 | Lead | Tone | 0–100 | 50 |
 | Lead | Octave (SELECT held) | −2 – +2 | 0 |
