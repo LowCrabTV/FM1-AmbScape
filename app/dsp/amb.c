@@ -2110,7 +2110,7 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
 #define NT_G_RAIN 0.18f
 #define NT_G_WAVES 0.9f
 #define NT_G_THUNDER 0.28f
-#define NT_G_BOLT 0.8f
+#define NT_G_BOLT 0.45f
 #define NT_G_CLAP 0.25f
 #define NT_NBOLT 6
 static uint32_t nt_rng = 0x1B873593u;
@@ -2122,10 +2122,11 @@ static float nt_wx;                              /* where on the water's journey
 static float nt_lp[4], nt_brown, nt_cf, nt_rain_a, nt_rain_g, nt_low_g, nt_tick;
 static float nt_wv_ph, nt_wv_len, nt_wv_pan, nt_wv_e, nt_wv_tl, nt_wv_tr, nt_wv_gl, nt_wv_gr, nt_wv_a, nt_wv_foam;
 static float nt_th_t, nt_th_wait, nt_th_pan, nt_th_e, nt_th_g, nt_th_gl, nt_th_gr, nt_th_fl, nt_th_flt, nt_th_raw, nt_th_carry;
-static float nt_th_lp[8];                         /* each side: two poles round 90 Hz, the body round 220, the clap's 600 */
+static float nt_th_lp[6];                         /* the wind, each side: two poles round 90 Hz, the body round 220 */
+static float nt_tb_lp[10];                        /* thunder, each side: three poles round 60 Hz, 150, the clap's 420 */
 /* a bolt of thunder, its own: a quick onset, then the rumble's swells; and the clap's brightness at the start */
 static float nt_tb_at[NT_NBOLT], nt_tb_amp[NT_NBOLT], nt_tb_rise[NT_NBOLT], nt_tb_fall[NT_NBOLT];
-static float nt_tb_t, nt_tb_wait, nt_tb_e, nt_tb_g, nt_clap, nt_clap_g;
+static float nt_tb_t, nt_tb_wait, nt_tb_e, nt_tb_g, nt_tb_gnow, nt_clap, nt_clap_g, nt_clap_gnow, nt_tb_fl, nt_tb_flt;
 static int nt_th_v;
 static float nt_th_at[NT_NTB], nt_th_amp[NT_NTB], nt_th_rise[NT_NTB], nt_th_fall[NT_NTB];
 
@@ -2167,7 +2168,7 @@ static void night_bolt_start(void)               /* thunder: in almost at once, 
     for (i = 0; i < NT_NBOLT; i++) {
         nt_tb_at[i] = at;
         nt_tb_amp[i] = !i ? 1.0f : i < 3 || nt_dice() < 0.6f ? 0.35f + 0.5f * nt_dice() : 0.0f;
-        nt_tb_rise[i] = !i ? 0.12f + 0.13f * nt_dice() : 0.2f + 0.4f * nt_dice();
+        nt_tb_rise[i] = !i ? 0.03f + 0.03f * nt_dice() : 0.2f + 0.4f * nt_dice();   /* in at once, then the swells */
         nt_tb_fall[i] = !i ? 1.8f + 1.2f * nt_dice() : 1.5f + 2.5f * nt_dice();
         at += 0.25f + 0.9f * nt_dice();
     }
@@ -2290,7 +2291,10 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
                 e += nt_tb_amp[i] * (d < nt_tb_rise[i] ? d / nt_tb_rise[i] : fm_expf(-(d - nt_tb_rise[i]) / nt_tb_fall[i]));
             end = fm_maxf(end, nt_tb_at[i] + nt_tb_rise[i] + 5.0f * nt_tb_fall[i]);
         }
-        nt_tb_e = e * (0.75f + 0.25f * nt_th_fl);   /* the rumble shares the wind's surges, a little */
+        if (nt_dice() < k * 12.0f)               /* the rumble's own grain: quick, uneven surges, not the wind's */
+            nt_tb_flt = 0.4f + 1.2f * nt_dice();
+        nt_tb_fl += (nt_tb_flt - nt_tb_fl) * fm_minf(k * 15.0f, 1.0f);
+        nt_tb_e = e * nt_tb_fl;
         nt_clap *= fm_expf(-k / 0.35f);
         if (nt_tb_t > end)
             night_bolt_next(0.0f);
@@ -2298,7 +2302,7 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
         nt_tb_e = nt_clap = 0.0f;
     }
     nt_tb_g = nt_lv[3] * nt_play * nt_tb_e;
-    nt_clap_g = nt_lv[3] * nt_play * nt_clap * fm_minf(nt_tb_t * 8.0f, 1.0f);
+    nt_clap_g = nt_lv[3] * nt_play * nt_clap * fm_minf(nt_tb_t * 30.0f, 1.0f);
 }
 
 static void night_init(void)                     /* the creatures where they sit, all quiet */
@@ -2337,11 +2341,14 @@ static void night_init(void)                     /* the creatures where they sit
     for (i = 0; i < 4; i++) {
         nt_lp[i] = 0.0f;
     }
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < 6; i++)
         nt_th_lp[i] = 0.0f;
+    for (i = 0; i < 10; i++)
+        nt_tb_lp[i] = 0.0f;
     nt_tb_t = -1.0f;
     nt_tb_wait = 1e9f;
-    nt_tb_e = nt_tb_g = nt_clap = nt_clap_g = 0.0f;
+    nt_tb_e = nt_tb_g = nt_tb_gnow = nt_clap = nt_clap_g = nt_clap_gnow = 0.0f;
+    nt_tb_fl = nt_tb_flt = 1.0f;
     nt_brown = nt_rain_g = nt_low_g = nt_tick = 0.0f;
     nt_cf = nt_rain_a = 0.0f;
     nt_wv_ph = 0.0f;
@@ -3619,12 +3626,10 @@ static void render_night(uint32_t n)
         nt_lp[0] = l0, nt_lp[1] = l1, nt_lp[2] = w0, nt_lp[3] = w1, nt_brown = br;
         nt_wv_gl = wgl, nt_wv_gr = wgr;
     }
-    if (nt_th_g + nt_tb_g + nt_clap_g > 1e-6f) {   /* storms: the wind's deep surges; thunder in it, wide, the reverb's */
+    if (nt_th_g > 1e-6f) {                       /* storms: the wind, deep surges, wide, much of it the reverb's */
         uint32_t r = nt_rng;
         float l1 = nt_th_lp[0], l2 = nt_th_lp[1], lb = nt_th_lp[2], r1 = nt_th_lp[3], r2 = nt_th_lp[4], rb = nt_th_lp[5];
-        float lm = nt_th_lp[6], rm = nt_th_lp[7];
-        const float tg = nt_th_g * NT_G_THUNDER, bg = nt_tb_g * NT_G_BOLT, cg = nt_clap_g * NT_G_CLAP;
-        const float gl = nt_th_gl * tg + 0.75f * bg, gr = nt_th_gr * tg + 0.75f * bg, bodyb = 0.35f * bg;
+        const float tg = nt_th_g * NT_G_THUNDER, gl = nt_th_gl * tg, gr = nt_th_gr * tg;
         for (j = 0; j < n; j++) {
             float a, b, yl, yr;
             r ^= r << 13, r ^= r >> 17, r ^= r << 5;
@@ -3637,17 +3642,46 @@ static void render_night(uint32_t n)
             r1 += (b - r1) * 0.0128f;
             r2 += (r1 - r2) * 0.0128f;
             rb += (b - rb) * 0.031f;
-            lm += (a - lm) * 0.083f;             /* round 600 Hz: the clap's edge, under the first second */
-            rm += (b - rm) * 0.083f;
-            yl = (l2 * 4.0f + (lb - l1) * 0.35f) * gl + (lb - l1) * bodyb + (lm - l1) * cg;
-            yr = (r2 * 4.0f + (rb - r1) * 0.35f) * gr + (rb - r1) * bodyb + (rm - r1) * cg;
+            yl = (l2 * 4.0f + (lb - l1) * 0.35f) * gl;
+            yr = (r2 * 4.0f + (rb - r1) * 0.35f) * gr;
             mixl[j] += yl;
             mixr[j] += yr;
             rsend[j] += (yl + yr) * 0.6f;
         }
         nt_rng = r;
         nt_th_lp[0] = l1, nt_th_lp[1] = l2, nt_th_lp[2] = lb, nt_th_lp[3] = r1, nt_th_lp[4] = r2, nt_th_lp[5] = rb;
-        nt_th_lp[6] = lm, nt_th_lp[7] = rm;
+    }
+    if (nt_tb_g + nt_tb_gnow + nt_clap_g + nt_clap_gnow > 1e-6f) {   /* thunder: its own noise, deeper, over the wind */
+        uint32_t r = nt_rng;
+        float *s = nt_tb_lp, bg = nt_tb_gnow, cg = nt_clap_gnow;
+        const float kk = 1.0f / (float)n, db = (nt_tb_g * NT_G_BOLT - bg) * kk, dc = (nt_clap_g * NT_G_CLAP - cg) * kk;
+        for (j = 0; j < n; j++) {
+            float c, d, yl, yr;
+            r ^= r << 13, r ^= r >> 17, r ^= r << 5;
+            c = (float)(int32_t)r * (1.0f / 2147483648.0f);
+            r ^= r << 13, r ^= r >> 17, r ^= r << 5;
+            d = (float)(int32_t)r * (1.0f / 2147483648.0f);
+            bg += db;
+            cg += dc;
+            s[0] += (c - s[0]) * 0.0085f;         /* three poles at 60 Hz: the rumble */
+            s[1] += (s[0] - s[1]) * 0.0085f;
+            s[2] += (s[1] - s[2]) * 0.0085f;
+            s[3] += (c - s[3]) * 0.021f;          /* round 150 Hz: its body */
+            s[4] += (c - s[4]) * 0.06f;           /* round 420 Hz: the clap's edge, the first moments only */
+            s[5] += (d - s[5]) * 0.0085f;
+            s[6] += (s[5] - s[6]) * 0.0085f;
+            s[7] += (s[6] - s[7]) * 0.0085f;
+            s[8] += (d - s[8]) * 0.021f;
+            s[9] += (d - s[9]) * 0.06f;
+            yl = (s[2] * 9.0f + (s[3] - s[0]) * 0.5f) * bg + (s[4] - s[3]) * cg;
+            yr = (s[7] * 9.0f + (s[8] - s[5]) * 0.5f) * bg + (s[9] - s[8]) * cg;
+            mixl[j] += yl;
+            mixr[j] += yr;
+            rsend[j] += (yl + yr) * 0.6f;
+        }
+        nt_rng = r;
+        nt_tb_gnow = nt_tb_g * NT_G_BOLT;
+        nt_clap_gnow = nt_clap_g * NT_G_CLAP;
     }
 }
 

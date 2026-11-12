@@ -515,7 +515,8 @@ the music does, sit in its reverb, and the garden plays the same notes with them
   the sea: a slow swell, the crash, the wash going
   back, every 8 to 12 seconds; the crash eased in, broad and only a little louder than the swell. Each place has its own loudness: the drizzle is quiet, the downpour is not.
 - **Storms (KNOB 4):** a storm far off. Deep, shifting wind that never quite settles, and in it, now and
-  then, thunder: in almost at once, with a clap's edge, then a long rumble that fades back into the wind.
+  then, thunder, a sound of its own: in at once, deep, with a clap's edge, then a long rumble that fades,
+  the wind going on under it all the while.
   Low, the wind is soft and the thunder seldom (about once in three minutes); turned up, the wind is
   stronger and the thunder comes more often (about every 25 seconds). Turned up from 0, the wind rises at
   once and the first thunder comes within half a minute.
