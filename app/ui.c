@@ -477,6 +477,10 @@ static void dream_deal(int num)
             u = u < -1.0f ? -1.0f : u > 1.0f ? 1.0f : u;
             if (dream_level(p) && !c)
                 continue;                            /* off in the recipe: off */
+            if (p == P_BELLS) {                      /* the bells stay at the piece's 33: never too loud */
+                put(p, c);
+                continue;
+            }
             d = p == P_TEMPO ? u * (float)c * 0.15f * r : p == P_ETIME ? u * 2.0f * r : u * 0.35f * (float)(hi - lo) * r;
             v = c + (int)(d + (d < 0.0f ? -0.5f : 0.5f));
             v = v < lo ? lo : v > hi ? hi : v;
