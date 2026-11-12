@@ -524,6 +524,15 @@ the music does, sit in its reverb, and the garden plays the same notes with them
 
 Together the four ask a little more of the FM-1 (about a tenth more work), well within what it has.
 
+### Hold SELECT: Sleep, on the Night page
+
+- **Sleep (KNOB 1):** Off, 15, 30, 60, 120 or 180 minutes, counting from when you set it. While it
+  runs, the knob shows the minutes left. In the last fifth of the time (the last 3 minutes of 15, the
+  last 36 of 180) everything fades out together, slowly at first. At the end the screen says GOOD
+  NIGHT and the garden rests, quiet, the night sounds too, until you press PLAY again. Set it again
+  or turn it to Off at any time: the sound comes back up within a second. It is never saved: every
+  time the FM-1 is switched on, Sleep is Off.
+
 ### GLO: Setup
 
 ![The Setup page: ROOT D, TUNE 0, MIDI OUT On, LIGHTS On](img/screen-setup.png "The Setup page")
@@ -698,6 +707,7 @@ The defaults are Blue Hour's; each piece has its own.
 | Night | Crickets, Peepers | 0–100 | 0 |
 | Night | Water | Off, Drizzle, Rain, Downpour, Waves (0–100) | Off |
 | Night | Storms | 0–100 | 0 |
+| Night | Sleep (SELECT held; not saved) | Off, 15, 30, 60, 120, 180 min | Off |
 | Dream | Seed | Wild, 1–999 | Wild |
 | Rings | Thump, Closed, Open | Auto, 0–16; Auto, 0–12; Auto, 0–7 | Auto |
 | Rings | Moves | Follow, Still | Follow |

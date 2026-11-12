@@ -21,7 +21,7 @@ enum { V_GARDEN, V_PAD, V_BELLS, V_ARP, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHO
 static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Lead", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Keys", "Deal", "Rings", "Dream", "Night"};
 static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL, B_SEL, B_SEQ, B_HOME, B_FX};
 /* the four knobs of each page: a parameter, or one of these; and what the knob is called there */
-enum { K_LEDS = 100, K_CPU, K_NONE };
+enum { K_LEDS = 100, K_CPU, K_SLEEP, K_NONE };
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_TEMPO, P_EVOLVE, P_MOTION, P_DRIFT},
     {P_PAD, P_SWELL, P_BRIGHT, P_PADTONE},
@@ -69,7 +69,7 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {P_RDEAL, P_RDCOUNT, P_RDSPICE, P_RDFORM},
     {P_RTURN0, P_RTURN1, P_RTURN2, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
-    {K_NONE, K_NONE, K_NONE, K_NONE},
+    {K_SLEEP, K_NONE, K_NONE, K_NONE},
 };
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"Sparkle", "Length", "Often", "Song"},
@@ -85,7 +85,7 @@ static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"Key deal", "Keys", "Spice", "Form"},
     {"Thump", "Closed", "Open", ""},
     {"", "", "", ""},
-    {"", "", "", ""},
+    {"Sleep", "", "", ""},
 };
 
 /* the screen's colours (Nightscape FM): LowCrabTV's photograph of a pine-lined road at the edge of dusk. The
@@ -223,6 +223,68 @@ static const char *mode_name(void)
     return proj.pool == EN_MODE_POOL[proj.par[P_MODE]] ? EN_MODE_NAME[proj.par[P_MODE]] : "Custom";
 }
 
+/* ------------------------------------------------------------ sleep --- */
+/* the sleep timer (the Night page, SELECT held): Off, or minutes. Never saved: each power-on it is Off. The last
+ * fifth of the time everything fades (by the square: slow at first); at the end it rests, as PLAY, and the output
+ * stays shut until PLAY again (the tails, the night, all of it quiet). */
+static const uint8_t SLEEP_MIN[6] = {0, 15, 30, 60, 120, 180};
+static struct {
+    uint8_t set, done;                 /* the setting (0 Off); it ran out and rests */
+    uint32_t end, len, t;              /* when it ends, how long it was set for, the last tick */
+} sl;
+static volatile float sl_gain = 1.0f;  /* the output's share (app_render), eased toward sl_want */
+static float sl_want = 1.0f;
+static void sleep_arm(int v)
+{
+    sl.set = (uint8_t)v;
+    sl.done = 0;
+    sl.len = (uint32_t)SLEEP_MIN[v] * 60000u;
+    sl.end = plat_ms() + sl.len;
+    sl_want = 1.0f;
+}
+static uint32_t sleep_left_min(void)     /* minutes to go, rounded up */
+{
+    int32_t left = (int32_t)(sl.end - plat_ms());
+    return left > 0 ? ((uint32_t)left + 59999u) / 60000u : 0u;
+}
+static void sleep_tick(void)
+{
+    uint32_t now = plat_ms(), dt = now - sl.t;
+    float g = sl_gain, a;
+    sl.t = now;
+    if (sl.set) {
+        int32_t left = (int32_t)(sl.end - now);
+        float fade = (float)(sl.len / 5u), u;
+        if (left <= 0) {                         /* time: it rests, and the output stays shut */
+            sl.set = 0;
+            sl.done = 1;
+            sl_want = 0.0f;
+            if (en_playing) {
+                sp_tp.playing = 0;
+                sp_tp.play_t = now;
+                en_play(0);
+            }
+            say("GOOD NIGHT", 0);
+        } else {
+            u = (float)left < fade ? (float)left / fade : 1.0f;
+            sl_want = u * u;
+        }
+    } else if (sl.done) {
+        if (en_playing) {                        /* PLAY again: awake */
+            sl.done = 0;
+            sl_want = g = 1.0f;
+        }
+    } else {
+        sl_want = 1.0f;
+    }
+    a = dt > 1000u ? 1.0f : (float)dt * (1.0f / 1000.0f);   /* a second's easing: no step is heard */
+    if (sl_want < g && sl.set)
+        g = sl_want;                             /* the fade itself is already slow: followed exactly */
+    else
+        g += (sl_want - g) * a;
+    sl_gain = g;
+}
+
 /* ------------------------------------------------------------ values --- */
 static int knob_get(int k)
 {
@@ -232,6 +294,8 @@ static int knob_get(int k)
         return proj.leds;
     if (k == K_CPU)
         return (int)plat_cpu_pct();
+    if (k == K_SLEEP)
+        return sl.set;
     return 0;
 }
 static int is_slot(int k) { return k >= P_SLOT1 && k < P_SLOT1 + EN_NSLOT; }
@@ -248,14 +312,14 @@ static void knob_range(int k, int *lo, int *hi)
         *hi = is_slot(k) ? pool_count(proj.pool) * EN_NSHAPE : en_param_info(k)->hi;   /* a slot: the scale's chords */
     } else {
         *lo = 0;
-        *hi = k == K_LEDS ? 2 : k == K_CPU ? 100 : 0;
+        *hi = k == K_LEDS ? 2 : k == K_CPU ? 100 : k == K_SLEEP ? 5 : 0;
     }
 }
 static const char *knob_name(int k)
 {
     if (k < P_NPARAMS)
         return en_param_info(k)->name;
-    return k == K_LEDS ? "Lights" : k == K_CPU ? "CPU" : "";
+    return k == K_LEDS ? "Lights" : k == K_CPU ? "CPU" : k == K_SLEEP ? "Sleep" : "";
 }
 static void knob_text(int k, char *b)
 {
@@ -307,6 +371,17 @@ static void knob_text(int k, char *b)
             b++;
         *b++ = '%';
         *b = 0;
+    } else if (k == K_SLEEP) {                   /* Off, or the minutes still to go: "29 min" */
+        const char *n = " min";
+        if (!v) {
+            n = "Off";
+        } else {
+            itoa_u(sleep_left_min(), b);
+            while (*b)
+                b++;
+        }
+        while ((*b++ = *n++))
+            ;
     } else {
         b[0] = 0;
     }
@@ -653,6 +728,9 @@ static void knob_set(int k, int v)
             dream_deal(ui.dream_now);                /* the same dream, within the new bounds */
     } else if (k == K_LEDS) {
         proj.leds = (uint8_t)v;
+    } else if (k == K_SLEEP) {                   /* armed from now; never saved */
+        sleep_arm(v);
+        return;
     }
     mark_dirty();
 }
@@ -1464,7 +1542,7 @@ static void draw_knobs(void)
     int now_touch = plat_ms() < ui.touch_until;
     for (i = 0; i < 4; i++)
         h = hash(h, (uint32_t)knob_get(view_knob(ui.view, (int)i)));
-    h = hash(h, (uint32_t)now_touch);
+    h = hash(h, (uint32_t)now_touch | (sl.set ? sleep_left_min() : 0u) << 1);   /* Sleep counts down */
     h = hash(h, (uint32_t)layer_held(ui.view) | proj.pool << 1 | (uint32_t)root_now() << 13);   /* a slot names its chord */
     h = hash(h, (ui.btn >> B_SEL & 1u) | (uint32_t)(proj.par[P_DREAM] != 0) << 1 | (uint32_t)ui.hand << 2 |
                 (uint32_t)any_step(P_SLOT1) << 6);
@@ -2002,6 +2080,8 @@ void ui_init(void)
 {
     memset(&ui, 0, sizeof ui);
     ui.touched = -1;
+    memset(&sl, 0, sizeof sl);                   /* the sleep timer: Off at every power-on */
+    sl_gain = sl_want = 1.0f;
     ui.view = V_DREAM;                           /* a dreamer's first: the Dream page */
     if (proj.par[P_DREAM] == 1)
         dream_deal(dream_fresh());
@@ -2026,6 +2106,7 @@ void ui_frame(void)
         ui.boot_t = 0;
     }
     input();
+    sleep_tick();
     autosave();
     draw_header();
     draw_main();

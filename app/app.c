@@ -16,7 +16,10 @@ void app_init(void)
     project_load();                      /* defaults when nothing (or another format) is saved */
     project_apply();
 }
-void app_render(int32_t *lr, uint32_t n, uint32_t gain_q12) { en_render(lr, n, gain_q12); }
+void app_render(int32_t *lr, uint32_t n, uint32_t gain_q12)   /* the sleep timer's fade on the volume (ui.c) */
+{
+    en_render(lr, n, (uint32_t)((float)gain_q12 * sl_gain + 0.5f));
+}
 void app_panic(void)
 {
     en_play(0);

@@ -1,0 +1,66 @@
+# The sleep timer: the Night page, SELECT held, K1: Off, 15, 30, 60, 120, 180 min. Not saved (each power-on Off). The
+# last fifth fades everything; at the end it rests and stays quiet until PLAY; PLAY wakes it, full again.
+wait 300
+listen
+expect sleep 0
+tap FX
+wait 100
+tap FX
+wait 100
+expect view 13
+press SEL
+wait 100
+spin K1 1
+wait 150
+release SEL
+wait 100
+expect sleep 1
+expect dirty 0
+expect sleepgain 100
+# 11 minutes: not fading yet (the last fifth: 3 min)
+wait 660000
+expect sleepgain 100
+expect playing 1
+# 13.5 minutes: fading (1.5 min to go: a quarter)
+wait 150000
+expect sleepgain >15
+expect sleepgain <35
+# the end: resting, silent
+wait 95000
+said GOOD NIGHT
+expect playing 0
+expect sleep 0
+expect sleepgain 0
+wait 20000
+peakreset
+wait 5000
+expect peak_db_max <-90
+# PLAY: awake, full
+tap PLAY
+wait 2000
+expect playing 1
+expect sleepgain 100
+# armed then turned Off: full, and a reboot has it Off
+press SEL
+wait 100
+spin K1 2
+wait 150
+release SEL
+expect sleep 2
+press SEL
+wait 100
+spin K1 -2
+wait 150
+release SEL
+expect sleep 0
+expect sleepgain 100
+press SEL
+wait 100
+spin K1 3
+wait 150
+release SEL
+expect sleep 3
+reboot
+wait 300
+expect sleep 0
+expect sleepgain 100

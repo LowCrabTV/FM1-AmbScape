@@ -29,6 +29,10 @@ int app_expect(const char *what, int *got)
         g = (int)en_bars;
     else if (!strcmp(what, "ext"))
         g = en_ext;
+    else if (!strcmp(what, "sleep"))              /* the sleep timer's setting (0 Off .. 5); sleepgain: its share, % */
+        g = sl.set;
+    else if (!strcmp(what, "sleepgain"))
+        g = (int)(sl_gain * 100.0f + 0.5f);
     else if (!strcmp(what, "pad_level"))
         g = (int)(en_pad_level * 100.0f);
     else if (!strcmp(what, "bass_level"))
