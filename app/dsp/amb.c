@@ -879,20 +879,22 @@ static void pad_breathe(pad_t *v, int i)        /* a new breath: its length, its
  * breathe again on the new chord; a voice at rest just takes its new note. Chord drift doesn't do
  * this: there the old notes are meant to hang over */
 #define HAND_STEP (32.0f / (1.0f * EN_SR))
+static uint8_t pad_snap;                       /* the slate or the rotator moved it: the pad goes on the bar, not a breath later */
 static void pad_handoff(void)
 {
     int i;
     for (i = 0; i < EN_NPAD; i++) {
         pad_t *v = &pad[i];
         if (v->amp > 0.002f && ((float)v->midi_note != v->target || v->voices != par[P_PADTONE]))
-            v->hand = 1;
+            v->hand = pad_snap ? 3 : 1;
         else if (!v->hand)
             v->note = v->target;
     }
 }
 
 /* a chord change: a voice singing a note the new chord doesn't have fades out in about a second and
- * breathes in on its new note; a voice on a shared note holds it to the end of its breath */
+ * breathes in on its new note; a voice on a shared note holds it to the end of its breath. When the slate or the
+ * rotator moves it (the bass there on the bar), a quarter of a second, and in at the top of its breath */
 static void pad_leave(void)
 {
     int i, k;
@@ -902,7 +904,7 @@ static void pad_leave(void)
         for (k = 0; k < pad_nt; k++)
             shared |= pad_pcs[k] == pc;
         if (v->amp > 0.002f && !shared && !v->hand)
-            v->hand = 1;
+            v->hand = pad_snap ? 3 : 1;
         else if (v->amp <= 0.002f && !v->hand)
             v->note = v->target;
     }
@@ -912,16 +914,16 @@ static void pad_coefs(pad_t *v, int i)          /* every 32 samples: the breath,
 {
     float f, vw, f1, f2;
     int a;
-    if (v->hand == 1) {                         /* out of the old key */
-        v->hf -= HAND_STEP;
+    if (v->hand == 1 || v->hand == 3) {         /* out of the old key (3: the snap, in a quarter of a second) */
+        v->hf -= HAND_STEP * (v->hand == 3 ? 4.0f : 1.0f);
         if (v->hf <= 0.0f) {
             v->hf = 0.0f;
-            v->hand = 2;
-            v->t = 0.15f;                       /* a breath already rising, on the new chord */
+            v->t = v->hand == 3 ? 0.4f : 0.15f; /* a breath already rising (the snap: at its top), on the new chord */
+            v->hand = v->hand == 3 ? 4 : 2;
             pad_breathe(v, i);
         }
-    } else if (v->hand == 2) {                  /* into the new */
-        v->hf += HAND_STEP * 0.6f;
+    } else if (v->hand == 2 || v->hand == 4) {  /* into the new */
+        v->hf += HAND_STEP * (v->hand == 4 ? 3.0f : 0.6f);
         if (v->hf >= 1.0f) {
             v->hf = 1.0f;
             v->hand = 0;
@@ -1095,6 +1097,8 @@ static void bass_to(int pc)
 {
     int n = 36 + pc % 12 + 12 * par[P_BASSOCT];     /* C2..B2, an octave down or up */
     bass.target = (float)n;
+    if (par[P_BASSN] > 0)
+        return;                                 /* stepping: each hit sends its own note (once, not twice) */
     if (en_playing && bass.midi_note != n) {
         midi(0x82, bass.midi_note, 0);
         midi(0x92, (uint32_t)n, 80);
@@ -1166,7 +1170,9 @@ static void slate_next(void)                    /* to the next filled slot after
             slate_i = (uint8_t)i;
             slate_total = slate_left = EN_SLATE_BARS[par[P_LEN1 + i]];
             shape = (par[P_SLOT1 + i] - 1) % EN_NSHAPE;
+            pad_snap = 1;
             chord_to((par[P_SLOT1 + i] - 1) / EN_NSHAPE % nsteps);
+            pad_snap = 0;
             return;
         }
     }
@@ -1225,7 +1231,9 @@ static int root_bar(void)                       /* a bar line, the garden not fr
                 shape = 0;
                 chord_to(0);
             }
-            pad_handoff();                      /* the voices cross over, as for any new key */
+            pad_snap = 1;
+            pad_handoff();                      /* the voices cross over, as for any new key: on the bar */
+            pad_snap = 0;
             return 1;
         }
     }
