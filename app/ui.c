@@ -18,7 +18,7 @@
 
 /* the pages, one a layer (a button each); SELECT steps through them in this order */
 enum { V_GARDEN, V_PAD, V_BELLS, V_ARP, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, V_ROOTS, V_DEAL, V_RINGS, V_DREAM, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Keys", "Deal", "Rings", "Dream"};
+static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Lead", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Keys", "Deal", "Rings", "Dream"};
 static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL, B_SEL, B_SEQ, B_HOME};
 /* the four knobs of each page: a parameter, or one of these; and what the knob is called there */
 enum { K_LEDS = 100, K_CPU, K_NONE };
@@ -823,7 +823,7 @@ static void button(int b)
         {
             char t[8];
             en_param_text(P_BOCT, proj.par[P_BOCT], t);
-            say("BELL OCTAVE", t);
+            say("LEAD OCTAVE", t);
         }
         break;
     case B_SAVE:
@@ -1362,7 +1362,7 @@ static int help_lines(int b, const char *l[HELP_LINES])
     switch (b) {
     case B_HOME: L("THE DREAM: DREAM, RANGE,"); L("SPICE CAP, SEED"); L("AGAIN: THE GARDEN"); L("+ SELECT: TEMPO"); break;
     case B_ENV: L("THE PAD"); L("LEVEL, SWELL, BRIGHT,"); L("COLOUR"); break;
-    case B_ARP: L("THE BELLS"); L("LEVEL, DENSITY, TONE,"); L("COLOUR; AGAIN: THE ARP"); break;
+    case B_ARP: L("THE LEAD"); L("LEVEL, DENSITY, TONE,"); L("COLOUR; AGAIN: THE ARP"); break;
     case B_SEL: L("SELECT"); L("TAP: CHORDS, KEYS, DEAL"); L("HOLD: THIS PAGE'S"); L("OTHER KNOBS (+)"); break;
     case B_LFO: L("THE BASS"); L("LEVEL, OCTAVE, GLIDE, FIFTH"); break;
     case B_SEQ: L("THE PULSE"); L("LEVEL, HITS, SWING, HATS"); L("AGAIN: THE RINGS"); break;
@@ -1370,8 +1370,8 @@ static int help_lines(int b, const char *l[HELP_LINES])
     case B_GLO: L("SETUP"); L("ROOT, TUNE, MIDI OUT, LIGHTS"); break;
     case B_EDIT: L("THE NEXT CHORD,"); L("ON THE NEXT BAR"); break;
     case B_REC: L("FREEZE: THE CHORD HOLDS"); L(" AND THE REVERB RINGS ON"); L("AGAIN: THAW"); break;
-    case B_OCTDN: L("THE BELLS AN OCTAVE DOWN"); L("WITH OCT+, 5 S: UPDATE MODE"); break;
-    case B_OCTUP: L("THE BELLS AN OCTAVE UP"); L("WITH OCT-, 5 S: UPDATE MODE"); break;
+    case B_OCTDN: L("THE LEAD AN OCTAVE DOWN"); L("WITH OCT+, 5 S: UPDATE MODE"); break;
+    case B_OCTUP: L("THE LEAD AN OCTAVE UP"); L("WITH OCT-, 5 S: UPDATE MODE"); break;
     case B_SAVE: L("SAVES ALL EIGHT PIECES"); L("KEEP HOLDING: THE PIECE"); L(" BACK TO ITS RECIPE"); break;
     default: break;
     }
@@ -1958,7 +1958,7 @@ static void speak_dump(void)
     for (x = -2; x <= 2; x++) {
         char o[8];
         en_param_text(P_BOCT, x, o);
-        msg_text("BELL OCTAVE", o, t);
+        msg_text("LEAD OCTAVE", o, t);
         sp_print("MSG", t);
     }
     for (x = 30; x <= 120; x += 45) {

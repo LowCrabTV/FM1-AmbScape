@@ -25,12 +25,12 @@ const uint8_t EN_SLATE_BARS[EN_NBARS] = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32};
 static const uint8_t EN_ROOT_BARS[EN_NRBARS] = {1, 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128};
 
 static const en_param_t PARAMS[P_NPARAMS] = {
-    {"Pad", 0, 100, 60},      {"Bells", 0, 100, 33},    {"Bass", 0, 100, 45},     {"Pulse", 0, 100, 40},
+    {"Pad", 0, 100, 60},      {"Lead", 0, 100, 33},    {"Bass", 0, 100, 45},     {"Pulse", 0, 100, 40},
     {"Density", 0, 100, 40},  {"Evolve", 0, 100, 35},   {"Drift", 0, 100, 25},    {"Hits", 0, 100, 35},
     {"Echo", 0, 100, 45},     {"Echo time", 0, 5, 3},   {"Reverb", 0, 100, 65},   {"Size", 0, 100, 80},
-    {"Bright", 0, 100, 40},   {"Swell", 0, 100, 60},    {"Bell tone", 0, 100, 50}, {"Motion", 0, 100, 50},
+    {"Bright", 0, 100, 40},   {"Swell", 0, 100, 60},    {"Lead tone", 0, 100, 50}, {"Motion", 0, 100, 50},
     {"Tune", -50, 50, 0},     {"MIDI out", 0, 1, 1},    {"Tempo", 30, 120, 72},   {"Root", 0, 11, 2},
-    {"Mode", 0, EN_NMODES - 1, 1}, {"Bell oct", -2, 2, 0}, {"Pad tone", 0, 3, 0},
+    {"Mode", 0, EN_NMODES - 1, 1}, {"Lead oct", -2, 2, 0}, {"Pad tone", 0, 3, 0},
     {"Bass oct", -1, 1, 0},   {"Glide", 0, 100, 20},    {"Fifth", 0, 100, 35},
     {"Swing", 0, 100, 0},     {"Hats", 0, 100, 50},
     {"Chord 1", 0, 12 * EN_NSHAPE, 0}, {"Chord 2", 0, 12 * EN_NSHAPE, 0},
@@ -44,7 +44,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Root 1", 0, 12, 0},     {"Root 2", 0, 12, 0},     {"Root 3", 0, 12, 0},     {"Root 4", 0, 12, 0},
     {"Root bars 1", 0, EN_NRBARS - 1, 3}, {"Root bars 2", 0, EN_NRBARS - 1, 3}, {"Root bars 3", 0, EN_NRBARS - 1, 3},
     {"Root bars 4", 0, EN_NRBARS - 1, 3},
-    {"Bell colour", 0, EN_NBCOLOR - 1, 0},
+    {"Lead colour", 0, EN_NBCOLOR - 1, 0},
     {"Swoosh", 0, 100, 0},    {"Swsh length", 0, 100, 50}, {"Swsh often", 0, 100, 30}, {"Swsh tone", 0, 100, 50},
     {"Seed", 0, 999, 0},
     {"Deal", 0, 999, 0},     {"Deal count", 2, 4, 4}, {"Spice", 0, 100, 30}, {"Form", 0, EN_NDFORM - 1, 1},
@@ -94,7 +94,7 @@ static const uint8_t ARATE_STEPS[EN_NARATE] = {4, 3, 2, 1};      /* sixteenths a
 static const char *const APOLY_NAME[EN_NAPOLY] = {"Off", "3:4", "5:4", "3:2", "7:4"};
 static const uint8_t APOLY_NUM[EN_NAPOLY] = {1, 3, 5, 3, 7}, APOLY_DEN[EN_NAPOLY] = {1, 4, 4, 2, 4};
 static const float ARATE_DEC[EN_NARATE] = {1.0f, 0.8f, 0.6f, 0.4f};   /* the faster, the shorter the bell */
-static const char *const BCOLOR_NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano", "Lead"};
+static const char *const BCOLOR_NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano", "Synth"};
 static const char *const PADTONE_NAME[4] = {"Rhodes", "Voices", "Strings", "Noir"};
 static const char *const SPREAD_NAME[4] = {"Close", "Open", "Wide", "Vast"};
 static const char *const ETIME_NAME[6] = {"1/4.", "1/2", "1/2.", "1 bar", "2 bars", "4 bars"};

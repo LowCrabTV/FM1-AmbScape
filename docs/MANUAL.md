@@ -95,13 +95,13 @@ The drawing at the top shows them all; here they are in more detail.
 | REC | **Freeze**: the chord holds and the reverb rings on forever, while the bells and pulse go on dry above it. Press again to thaw. Lit while frozen. |
 | EDIT | The next chord, at the start of the next bar (at once while resting). |
 | HOME | The Dream page, where it starts: Dream, Range, Spice cap, Seed. Again: the Garden page. |
-| ENV · ARP · LFO · SEQ | The layers' pages: Pad, Bells, Bass, Pulse. |
+| ENV · ARP · LFO · SEQ | The layers' pages: Pad, Lead, Bass, Pulse. |
 | FX · GLO | The Space and Setup pages. The lit button shows the page. |
 | SELECT | The previous or next page. Hold HOME and turn it for the tempo, from any page. |
 | ALGORITHM | Mode: Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, pentatonic major and minor. Loads the mode's scale; editing it with the keys makes it Custom. |
 | PRESETS | The piece (see [The pieces](#s6)). |
 | KNOB 1–4 | The four values on the screen. A few clicks are always single steps; a quick turn speeds up, so half a turn sweeps the range. |
-| OCT− / OCT+ | The bells' octave, two down to two up, from any page. |
+| OCT− / OCT+ | The lead's octave, two down to two up, from any page. |
 | MASTER | Volume. |
 | SAVE | Saves all eight pieces. Held for 1.5 s: puts the piece back to its recipe. |
 
@@ -150,7 +150,7 @@ Nightscape FM grows four layers from one scale and one chord.
   a filtered Rhodes that blooms brighter as it swells, or sung voices. Every so often (**Drift**)
   the chord moves to another one in the scale. Voices on notes the new chord shares hold to the
   end of their breath; the others fade out and breathe in again on their new notes.
-- **Bells:** FM bells, soft-struck like a piano slowed to half speed, played by four tape loops
+- **Lead:** the melody, in six voices. Its first, **Bell**: FM bells, soft-struck like a piano slowed to half speed, played by four tape loops
   13, 17, 23 and 29 beats long. Each loop holds a few notes, so the loops slide against each other
   and the melody never quite repeats. Each loop is its own shade of bell, and now and then a
   note rings with its octave.
@@ -197,7 +197,7 @@ the same for all.
 
 ## 7. The pages
 
-**Hold SELECT** on the Garden, Pad, Bells, Bass, Space, Setup, Chords, Keys or Deal page and the knobs change to that
+**Hold SELECT** on the Garden, Pad, Lead, Bass, Space, Setup, Chords, Keys or Deal page and the knobs change to that
 page's other settings; let go and they're back. Holding and turning doesn't change the page. While it's held the
 page's name has a **+** (or a **-** where a page has no second layer), and a place with nothing in it shows a dash.
 Hold SELECT for two seconds without turning and a card says what it does.
@@ -310,18 +310,18 @@ sound. Everything it deals shows on its own page and can be turned by hand after
   keeps the dream playing; on from there, its neighbours. A toast names it (**DREAM 417**, and its chords).
 - **Range (KNOB 2):** how far the sound may move from the piece's recipe. At 0 only the notes, the chords, the
   key and the voices are dealt. On up, the levels, Density, Evolve, Motion, Hits, Hats, Swing, the echo and reverb, the
-  pad's Swell and Bright, the bells' tone, Glide, Fifth, Sparkle and Swoosh move too, each within a window round
+  pad's Swell and Bright, the lead's tone, Glide, Fifth, Sparkle and Swoosh move too, each within a window round
   the recipe, so the piece stays itself. The tempo moves at most 15%. The voicings come too, more often
-  the higher it is: the pad's Notes (from 30) and the bells' octave, one either way, and the pad's Spread.
+  the higher it is: the pad's Notes (from 30) and the lead's octave, one either way, and the pad's Spread.
 - **The voices,** whatever Range, a new pair each dream: the pad's Colour (Rhodes, Voices, Strings, Noir),
-  and the bells' Colour, **Lead** most often (about 3 dreams in 8; with it Density no higher than 45, so the
+  and the lead's Colour, **Synth** most often (about 3 dreams in 8; with it Density no higher than 45, so the
   solo sings), then Bell, Soft, Wood, Strings and Piano.
 - **Spice cap (KNOB 3):** the most Spice either dealer may be given.
 - **The scale too,** with Range: calm dreams lean to the open, bright ones (Lydian, Ionian, major pentatonic,
   Dorian), lively ones to Mixolydian, Aeolian and minor pentatonic; Phrygian seldom.
 - **The key,** whatever Range: any of the twelve, a new one each dream. The song still starts on its home
   chord, so the first chord lands anywhere.
-- **The Lead** sits an octave down (now and then two), so it sings rather than pierces. The bells' level
+- **Synth** sits an octave down (now and then two), so it sings rather than pierces. The lead's level
   stays at the piece's (33).
 - **What it never does:** turn on a part the recipe has off, or turn one down to nothing; change the tuning or
   MIDI. With Dream off, PRESETS brings a piece back in its own key.
@@ -336,7 +336,7 @@ changing on its own clock.
 
 - **A section** lasts whole passes of the chords, about two and a half minutes. With keys dealt or set, each key is a
   section, home the first, and lasts at least that long.
-- **Through a section** the bells' loops keep their melody. What Density adds back comes from it first.
+- **Through a section** the lead's loops keep their melody. What Density adds back comes from it first.
 - **At a section's end** the melody moves on (further with Evolve), and the rings, the arp and the bass's figure may
   turn. The pulse may breathe for the last two bars before it.
 - **A section comes back as itself:** without keys the sections go A B A C A B..., and an A brings back the first
@@ -354,10 +354,10 @@ pad's note up high, and a rising chord when one comes. All of the chord and its 
 - **Length (KNOB 2):** how long each wave swells and wanes, 5 s to 1 minute.
 - **Often (KNOB 3):** the rest between waves, 10 s to 5 minutes.
 
-Each wave varies a little, and the arc leans on it. It shares the bells' voices, and its volume
-follows the Bells level. Turned up from 0, the first wave starts within a couple of seconds.
+Each wave varies a little, and the arc leans on it. It shares the lead's voice, and its volume
+follows the Lead level. Turned up from 0, the first wave starts within a couple of seconds.
 
-### Hold SELECT: Pad, Bass and Bells
+### Hold SELECT: Pad, Bass and Lead
 
 - **Pad, Notes (KNOB 2):** how much of the chord the pad sings. 4 is the whole chord; 3 its root,
   third and fifth; 2 its root and fifth, open. Under 4, the arc moves it by one as each chord comes.
@@ -370,19 +370,19 @@ follows the Bells level. Turned up from 0, the first wave starts within a couple
   that speed. It plays the root first, then the fifth (from 25), the octave (from 50), and the third
   and seventh (from 75). Only the chord's tones, so it follows the slate and the drift. Fifth is for
   the held bass; with Notes up, Glide is capped so each note arrives.
-- **Bells, Octave (KNOB 1):** two down to two up (OCT− and OCT+ too).
-- **Bells, Colour** is on the Bells page itself now, KNOB 4: the bells' sound. **Bell** is the one they've always had; **Soft** is round,
+- **Lead, Octave (KNOB 1):** two down to two up (OCT− and OCT+ too).
+- **Lead, Colour** is on the Lead page itself, KNOB 4: the lead's voice. **Bell** is the one it's always had; **Soft** is round,
   with no strike; **Wood** is hollow and holds; **Strings** swell slowly and hang; **Piano** strikes
   warm and mellows. Tone still shapes each one. The loops, the arp and Sparkle all play through it.
   They are the same two operators set differently: impressions, not the instruments themselves.
-  **Lead** is not a bell: a solo synth that takes all their notes, two voices in turn, so each starts clean on its
+  **Synth** is not a bell: a solo synth that takes all their notes, two voices in turn, so each starts clean on its
   pitch while the one before trails off:
   two saws through a filter that opens as it sounds, a late vibrato, into the echo and reverb.
-  Bell tone is its brightness. With busy loops it runs; with few, it sings.
+  Tone is its brightness. With busy loops it runs; with few, it sings.
 
 ### ARP again: Arp
 
-Press ARP from the Bells page for the arp's own page, and again to go back.
+Press ARP from the Lead page for the arp's own page, and again to go back.
 
 - **Arp (KNOB 1):** **Off**, or an arpeggio of the chord's tones in place of the loops: **Up**,
   **Down**, **Up/Dn**, **Dn/Up**, **Random**, **Converge** (in from both ends) or **Diverge** (out
@@ -392,7 +392,7 @@ Press ARP from the Bells page for the arp's own page, and again to go back.
 - **Poly (KNOB 4):** **Off**, or the arp against the grid: **3:4**, **5:4**, **3:2** or **7:4**
   (so many notes in the time of so many Rate steps). It stays locked to the tempo, shifts against
   the pulse and comes back around. Every note takes the chord as it's struck.
-- **With the arp on, Density** (on the Bells page) picks which of 16 steps sound, spread as Hits does
+- **With the arp on, Density** (on the Lead page) picks which of 16 steps sound, spread as Hits does
   the pulse: 100 plays every step. The arc and Evolve act on it, and Swing does while Poly is off.
 
 ### ENV: Pad
@@ -407,16 +407,16 @@ Press ARP from the Bells page for the arp's own page, and again to go back.
   warm filter that Bright opens; or **Noir**, brass in the manner of a CS-80, a filter that blooms
   open with each breath and a slow vibrato, for the rain-and-neon feel. Each piece keeps its own.
 
-### ARP: Bells
+### ARP: Lead
 
-![The Bells page: LEVEL 65, DENSITY 40, TONE 50, OCTAVE 0](img/screen-bells.png "The Bells page")
+![The Lead page: LEVEL, DENSITY, TONE, COLOUR](img/screen-bells.png "The Lead page")
 
 - **Level.**
 - **Density:** how many notes each loop holds, none at 0 to five at the top. Low, they're the
   chord's tones; from 20, passing notes come in. A change shows up as
   each loop comes round.
 - **Tone:** from round and soft-struck to a long metallic clang.
-- **Colour:** the bells' sound: Bell, Soft, Wood, Strings, Piano, or Lead, a solo synth (below). The pad's
+- **Colour:** the lead's voice: Bell, Soft, Wood, Strings, Piano, or Synth, a solo synth (above). The pad's
   Colour is its page's KNOB 4 too. Octave is with SELECT held.
 
 ### LFO: Bass
@@ -470,7 +470,7 @@ and the open hat (7). Press SEQ again from the Pulse page, and again to go back.
 ### Seed, on the Dream page
 
 **KNOB 4**, beside Dream, Range and Spice cap: the piece's dice together. A piece's knobs are its personality; the dice decide the rest: which notes
-the bells' loops hold, how the patterns turn, where the chords drift, how the arc rises and falls.
+the lead's loops hold, how the patterns turn, where the chords drift, how the arc rises and falls.
 
 - **Wild** (all the way down) is a new garden each time, as it always was.
 - **A number, 1 to 999,** grows the same garden each time you press PLAY. It still grows and changes as
@@ -536,7 +536,7 @@ chord and the scale. The FM-1 says nothing until the page connects, so a DAW on 
 ## 9. Saving
 
 Nightscape FM keeps all eight pieces in the FM-1's memory, each as you left it: the knobs, the scale,
-the tempo, the pad's colour and the bells' octave, plus Tune, MIDI out and Lights.
+the tempo, the pad's colour and the lead's octave, plus Tune, MIDI out and Lights.
 
 - **By itself:** a few seconds after a change, but only while resting. Writing to the memory
   interrupts the sound for a moment, so it never happens while the garden grows. A dot at the top
@@ -633,7 +633,7 @@ The defaults are Blue Hour's; each piece has its own.
 | Garden | Length (SELECT held) | 5 s – 1 min | 20 s |
 | Garden | Often (SELECT held) | 10 s – 5 min | 45 s |
 | Pad | Notes (SELECT held) | 2, 3, 4 | 4 |
-| Bells | Colour | Bell, Soft, Wood, Strings, Piano, Lead | Bell |
+| Lead | Colour | Bell, Soft, Wood, Strings, Piano, Synth | Bell |
 | Arp | Arp | Off, Up, Down, Up/Dn, Dn/Up, Random, Converge, Diverge | Off |
 | Arp | Rate | 1/4, 1/8., 1/8, 1/16 | 1/8 |
 | Arp | Range | 1–3 octaves | 2 |
@@ -645,10 +645,10 @@ The defaults are Blue Hour's; each piece has its own.
 | Pad | Swell | 0–100 | 60 |
 | Pad | Bright | 0–100 | 40 |
 | Pad | Colour | Rhodes, Voices, Strings, Noir | Rhodes |
-| Bells | Level | 0–100 | 65 |
-| Bells | Density | 0–100 (0 to 5 notes a loop) | 40 |
-| Bells | Tone | 0–100 | 50 |
-| Bells | Octave (SELECT held) | −2 – +2 | 0 |
+| Lead | Level | 0–100 | 33 |
+| Lead | Density | 0–100 (0 to 5 notes a loop) | 40 |
+| Lead | Tone | 0–100 | 50 |
+| Lead | Octave (SELECT held) | −2 – +2 | 0 |
 | Bass | Level | 0–100 | 45 |
 | Bass | Octave | −1 – +1 | 0 |
 | Bass | Glide | 0–100 (20 ms – 1.2 s) | 20 |

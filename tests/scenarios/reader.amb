@@ -82,9 +82,9 @@ said GROWING
 wait 300
 unsaid RESTING
 tap OCT+
-said BELL OCTAVE +1
+said LEAD OCTAVE +1
 tap OCT-
-said BELL OCTAVE 0
+said LEAD OCTAVE 0
 tap EDIT
 said NEXT CHORD ON THE BAR
 # a help card: its button, then its lines

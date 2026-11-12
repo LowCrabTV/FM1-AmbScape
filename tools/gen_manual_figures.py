@@ -94,7 +94,7 @@ def panel(screen_png):
          knob(105, 210, 24, "PRESETS", "Piece"), knob(215, 210, 24, "ALGORITHM", "Mode"),
          f'<rect x="58" y="284" width="210" height="58" rx="14" fill="{TRAY}"/>',
          button(72, 294, 82, 38, "OCT-"), button(170, 294, 82, 38, "OCT+"),
-         what(113, 362, "Bells down"), what(211, 362, "Bells up"),
+         what(113, 362, "Lead down"), what(211, 362, "Lead up"),
          f'<rect x="300" y="44" width="236" height="236" rx="26" fill="#111214"/>',
          f'<image x="318" y="62" width="200" height="200" href="{png_data_uri(screen_png)}" style="image-rendering:pixelated"/>']
     for i in range(4):
@@ -102,7 +102,7 @@ def panel(screen_png):
     s.append(what(766, 136, "The page's four values (KNOB1: a layer's level)"))
     s.append(f'<rect x="568" y="146" width="400" height="236" rx="18" fill="{TRAY}"/>')
     top = [("FX", "Space"), ("SEL", ""), ("ENV", "Pad"), ("LFO", "Bass"), ("EDIT", "Next|chord"), ("GLO", "Setup")]
-    bot = [("HOME", "Garden"), ("SAVE", "Save, hold:|recipe"), ("ARP", "Bells"), ("SEQ", "Pulse"),
+    bot = [("HOME", "Dream"), ("SAVE", "Save, hold:|recipe"), ("ARP", "Lead"), ("SEQ", "Pulse"),
            (("PLAY", "STOP"), "Grow /|rest"), ("REC", "Freeze")]
     for i in range(6):
         x = 582 + i * 63

@@ -1198,7 +1198,7 @@ int main(void)
 
     /* the bells' colours: each sounds, stays bounded and clean; the strike comes as it should */
     {
-        static const char *const NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano", "Lead"};
+        static const char *const NAME[EN_NBCOLOR] = {"Bell", "Soft", "Wood", "Strings", "Piano", "Synth"};
         float early[EN_NBCOLOR], later[EN_NBCOLOR];
         char t[12];
         int c;
