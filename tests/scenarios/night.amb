@@ -1,4 +1,4 @@
-# The Night: FX again from the Space page. Crickets, Peepers, Water (Creek, Drizzle, Rain, Downpour, Waves),
+# The Night: FX again from the Space page. Crickets, Peepers, Water (Drizzle, Rain, Downpour, Waves),
 # Thunder; all off at first; the player's, not the piece's: they stay through PRESETS and a dream; saved; a format-17
 # project comes up with the night quiet.
 wait 300
@@ -297,7 +297,7 @@ wait 150
 spin K3 1
 wait 150
 wait 800
-said Water Creek
+said Water Drizzle
 spin K3 1
 wait 150
 spin K3 1
@@ -339,7 +339,7 @@ wait 150
 spin K3 1
 wait 150
 wait 800
-said Water Drizzle
+said Water Rain
 spin K3 1
 wait 150
 spin K3 1

@@ -166,7 +166,7 @@ void en_param_text(int i, int v, char *b)
     else if (i == P_PSPREAD)
         s = SPREAD_NAME[(unsigned)v < 4u ? v : 0];
     else if (i == P_WATER)                       /* where on the water's journey */
-        s = !v ? "Off" : v < 21 ? "Creek" : v < 43 ? "Drizzle" : v < 60 ? "Rain" : v < 80 ? "Downpour" : "Waves";
+        s = !v ? "Off" : v < 24 ? "Drizzle" : v < 49 ? "Rain" : v < 76 ? "Downpour" : "Waves";
     else if ((i == P_CRICKET || i == P_PEEP || i == P_THUNDER) && !v)
         s = "Off";
     if (s) {
@@ -2092,9 +2092,8 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
 /* ----------------------------------------------------------------- night --- */
 /* The Night page: crickets, spring peepers, water and distant thunder, synthesized: impressions, not recordings.
  * Crickets: a few, each chirping its own few pulses of a high tone, left and right. Peepers: little rising whistles,
- * each frog about once a second, near and far; the knob calls up more of them. Water, one journey: a creek's
- * babble (bands of noise wandering, no pitched bubbles), then rain from a drizzle to a downpour (drops are ticks of
- * noise), then the sea's waves, each crossfading into the next. Thunder: now and then a far roll, slow overlapping
+ * each frog about once a second, near and far; the knob calls up more of them. Water, one journey: rain from a
+ * drizzle to a downpour (drops are ticks of noise), then the sea's waves, each crossfading into the next. Thunder: now and then a far roll, slow overlapping
  * swells of deep noise, much of it in the reverb, never a clap; turned up, more often and louder. Each follows PLAY
  * as the music does and sits in its reverb; their own dice, so the garden grows as it would without them; and
  * nothing is computed for what's off. They belong to the player, not the piece (the weather). */
@@ -2109,7 +2108,6 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
 #define NT_G_PEEP 0.22f
 #define NT_G_DROP 0.5f
 #define NT_G_RAIN 0.18f
-#define NT_G_CREEK 0.2f
 #define NT_G_WAVES 0.9f
 #define NT_G_THUNDER 0.9f
 static uint32_t nt_rng = 0x1B873593u;
@@ -2117,11 +2115,8 @@ static float nt_play, nt_lv[4], nt_want[4];      /* crickets, peepers, water, th
 static struct { float ph, inc, gl, gr; uint32_t t, period, pt; uint8_t k, np; } nt_cr[NT_NCR];
 static struct { float ph, inc0, dinc, gl, gr; uint32_t t, period, dur; } nt_pe[NT_NPE];
 static struct { float amp, dec, gl, gr; } nt_bl[NT_NBL];   /* drops: ticks of noise */
-static float nt_wx;                              /* where on the water's journey: 0 creek .. 3 waves */
-static float nt_lp[4], nt_brown, nt_cf, nt_rain_a, nt_rain_g, nt_low_g, nt_creek_g, nt_tick;
-/* the creek's babble: four bands of noise (two a side), each wandering in pitch and swelling and sinking a few
- * dozen times a second, as water does over stones */
-static float nt_ck_f[4], nt_ck_ft[4], nt_ck_c[4], nt_ck_g[4], nt_ck_gt[4], nt_ck_lo[4], nt_ck_bd[4];
+static float nt_wx;                              /* where on the water's journey: 1 drizzle .. 3 waves */
+static float nt_lp[4], nt_brown, nt_cf, nt_rain_a, nt_rain_g, nt_low_g, nt_tick;
 static float nt_wv_ph, nt_wv_len, nt_wv_pan, nt_wv_e, nt_wv_tl, nt_wv_tr, nt_wv_gl, nt_wv_gr, nt_wv_a, nt_wv_foam;
 static float nt_th_t, nt_th_wait, nt_th_pan, nt_th_e, nt_th_g, nt_th_gl, nt_th_gr, nt_th_fl, nt_th_flt;
 static float nt_th_lp[6];                         /* each side: two poles round 90 Hz, and the body round 220 */
@@ -2176,26 +2171,13 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
         nt_lv[i] += (nt_want[i] - nt_lv[i]) * fm_minf(k * 4.0f, 1.0f);
     if (nt_lv[2] > 1e-5f) {                      /* water */
         const float x = nt_wx, rain = fm_clampf((x - 0.4f) * 1.6f, 0.0f, 1.0f) * fm_clampf((2.9f - x) * 1.6f, 0.0f, 1.0f);
-        const float heavy = fm_clampf(x - 1.0f, 0.0f, 1.0f), creek = fm_clampf(1.4f - x, 0.0f, 1.0f);
+        const float heavy = fm_clampf(x - 1.0f, 0.0f, 1.0f);
         const float waves = fm_clampf((x - 2.3f) * 1.6f, 0.0f, 1.0f), g = nt_lv[2] * nt_play;
         float rate, e, p;
         nt_cf = fm_sinf(FM_PI * (2600.0f - 1500.0f * heavy) * (1.0f / EN_SR)) * 2.0f;   /* the hiss: from 2.6 kHz, lower when heavy */
         nt_rain_a = nt_cf * 0.5f;
-        nt_rain_g = g * (rain * (0.35f + 0.65f * heavy) * 0.9f + creek * 0.12f);   /* the creek's own quiet hiss too */
+        nt_rain_g = g * rain * (0.35f + 0.65f * heavy) * 0.9f;
         nt_low_g = heavy * 0.7f;                 /* a downpour's roar underneath */
-        nt_creek_g = g * creek;
-        if (nt_creek_g > 1e-5f)
-            for (i = 0; i < 4; i++) {            /* the babble: each band wanders and swells, a few dozen times a second */
-                static const float MID[2] = {750.0f, 2100.0f};
-                if (nt_dice() < k * 22.0f) {
-                    nt_ck_ft[i] = MID[i & 1] * fm_exp2f(nt_dice() * 1.3f - 0.65f);
-                    nt_ck_gt[i] = nt_dice();
-                    nt_ck_gt[i] *= nt_ck_gt[i];
-                }
-                nt_ck_f[i] += (nt_ck_ft[i] - nt_ck_f[i]) * fm_minf(k * 30.0f, 1.0f);
-                nt_ck_g[i] += (nt_ck_gt[i] - nt_ck_g[i]) * fm_minf(k * 45.0f, 1.0f);
-                nt_ck_c[i] = 2.0f * fm_sinf(FM_PI * nt_ck_f[i] * (1.0f / EN_SR));
-            }
         rate = rain * (5.0f + 45.0f * heavy);    /* drops a second, ticking on the leaves */
         if (nt_dice() < rate * k) {
             for (i = 0; i < NT_NBL && nt_bl[i].amp > 1e-4f; i++)
@@ -2225,7 +2207,7 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
             nt_wv_tr *= g * waves * e * 1.1f;
         }
     } else {
-        nt_rain_g = nt_creek_g = 0.0f;
+        nt_rain_g = 0.0f;
         nt_wv_tl = nt_wv_tr = 0.0f;
     }
     if (nt_want[3] > 0.0f && en_playing) {       /* thunder: wait, then a roll */
@@ -2292,13 +2274,11 @@ static void night_init(void)                     /* the creatures where they sit
     for (i = 0; i < NT_NBL; i++)
         nt_bl[i].amp = 0.0f;
     for (i = 0; i < 4; i++) {
-        nt_lp[i] = nt_ck_lo[i] = nt_ck_bd[i] = nt_ck_g[i] = nt_ck_gt[i] = 0.0f;
-        nt_ck_f[i] = nt_ck_ft[i] = (i & 1) ? 2100.0f : 750.0f;
-        nt_ck_c[i] = 2.0f * fm_sinf(FM_PI * nt_ck_f[i] * (1.0f / EN_SR));
+        nt_lp[i] = 0.0f;
     }
     for (i = 0; i < 6; i++)
         nt_th_lp[i] = 0.0f;
-    nt_brown = nt_rain_g = nt_creek_g = nt_low_g = nt_tick = 0.0f;
+    nt_brown = nt_rain_g = nt_low_g = nt_tick = 0.0f;
     nt_cf = nt_rain_a = 0.0f;
     nt_wv_ph = 0.0f;
     nt_wv_len = 10.0f;
@@ -2671,7 +2651,7 @@ static void apply(int p, int v)
     case P_WATER:                                /* a place on the journey, not a level: each has its own */
         nt_want[2] = v ? 1.0f : 0.0f;
         if (v)
-            nt_wx = (float)(v - 1) * (3.0f / 99.0f);
+            nt_wx = 1.0f + (float)(v - 1) * (2.0f / 99.0f);
         break;
     case P_THUNDER: {                            /* far and seldom to nearer and often; up from 0, a first roll soon */
         const int was = nt_th_v;
@@ -3541,13 +3521,11 @@ static void render_night(uint32_t n)
             nt_bl[i].amp = a;
         }
     }
-    if (nt_rain_g + nt_creek_g > 1e-6f || nt_wv_tl + nt_wv_tr + nt_wv_gl + nt_wv_gr > 1e-6f) {   /* water */
+    if (nt_rain_g > 1e-6f || nt_wv_tl + nt_wv_tr + nt_wv_gl + nt_wv_gr > 1e-6f) {   /* water */
         uint32_t r = nt_rng;
         float l0 = nt_lp[0], l1 = nt_lp[1], w0 = nt_lp[2], w1 = nt_lp[3], br = nt_brown;
         float wgl = nt_wv_gl, wgr = nt_wv_gr;
-        const float ra = nt_rain_a, rg = nt_rain_g * NT_G_RAIN, lowg = nt_low_g, cg = nt_creek_g * NT_G_CREEK;
-        const float c0 = nt_ck_c[0], c1 = nt_ck_c[1], c2 = nt_ck_c[2], c3 = nt_ck_c[3];
-        const float g0 = nt_ck_g[0] * cg, g1 = nt_ck_g[1] * cg, g2 = nt_ck_g[2] * cg, g3 = nt_ck_g[3] * cg;
+        const float ra = nt_rain_a, rg = nt_rain_g * NT_G_RAIN, lowg = nt_low_g;
         const float wa = nt_wv_a, foam = nt_wv_foam, k = 1.0f / (float)n;
         const float dl = (nt_wv_tl * NT_G_WAVES - wgl) * k, dr = (nt_wv_tr * NT_G_WAVES - wgr) * k;
         for (j = 0; j < n; j++) {
@@ -3560,18 +3538,6 @@ static void render_night(uint32_t n)
             l1 += ra * (b - l1);
             yl = ((a - l0) + lowg * l0) * rg;
             yr = ((b - l1) + lowg * l1) * rg;
-            if (cg > 1e-6f) {                    /* the creek: four wandering bands of the same noise */
-                nt_ck_lo[0] += c0 * nt_ck_bd[0];
-                nt_ck_bd[0] += c0 * (a - nt_ck_lo[0] - 0.7f * nt_ck_bd[0]);
-                nt_ck_lo[1] += c1 * nt_ck_bd[1];
-                nt_ck_bd[1] += c1 * (a - nt_ck_lo[1] - 0.7f * nt_ck_bd[1]);
-                nt_ck_lo[2] += c2 * nt_ck_bd[2];
-                nt_ck_bd[2] += c2 * (b - nt_ck_lo[2] - 0.7f * nt_ck_bd[2]);
-                nt_ck_lo[3] += c3 * nt_ck_bd[3];
-                nt_ck_bd[3] += c3 * (b - nt_ck_lo[3] - 0.7f * nt_ck_bd[3]);
-                yl += nt_ck_bd[0] * g0 + nt_ck_bd[1] * g1;
-                yr += nt_ck_bd[2] * g2 + nt_ck_bd[3] * g3;
-            }
             br += (a - br) * 0.02f;              /* the sea: deep noise opening with the swell, foam at the crash */
             w0 += wa * (br * 5.0f + a * foam - w0);
             w1 += wa * (br * 5.0f + b * foam - w1);

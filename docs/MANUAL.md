@@ -511,9 +511,9 @@ the music does, sit in its reverb, and the garden plays the same notes with them
 - **Peepers (KNOB 2):** spring peepers, little whistles bending upward, each frog about once a second,
   some near and some far. Turned up, more frogs join, up to eight, and they get louder.
 - **Water (KNOB 3):** one journey through water, each place crossfading into the next as you turn:
-  **Creek** (1–20), a stream babbling over stones; **Drizzle** (21–42); **Rain** (43–59); **Downpour**
-  (60–79), a roar beneath the hiss; **Waves** (80–100), the sea: a slow swell, the crash, the wash going
-  back, every 8 to 12 seconds. Each place has its own loudness: the creek is quiet, the downpour is not.
+  **Drizzle** (1–23); **Rain** (24–48); **Downpour** (49–75), a roar beneath the hiss; **Waves** (76–100),
+  the sea: a slow swell, the crash, the wash going
+  back, every 8 to 12 seconds. Each place has its own loudness: the drizzle is quiet, the downpour is not.
 - **Thunder (KNOB 4):** now and then a far roll, slow overlapping swells of deep noise over 10 to 20 seconds,
   mostly in the reverb: always far, a rumble, never a clap. Low, seldom and quiet (about one roll in
   three minutes); turned up, more often (about one in 25 seconds) and louder. Turned up from 0, the first
@@ -693,7 +693,7 @@ The defaults are Blue Hour's; each piece has its own.
 | Space | Often (SELECT held) | 10 s – 5 min | 28 s |
 | Space | Tone (SELECT held) | 0–100 (white to brown) | 50 |
 | Night | Crickets, Peepers | 0–100 | 0 |
-| Night | Water | Off, Creek, Drizzle, Rain, Downpour, Waves (0–100) | Off |
+| Night | Water | Off, Drizzle, Rain, Downpour, Waves (0–100) | Off |
 | Night | Thunder | 0–100 | 0 |
 | Dream | Seed | Wild, 1–999 | Wild |
 | Rings | Thump, Closed, Open | Auto, 0–16; Auto, 0–12; Auto, 0–7 | Auto |

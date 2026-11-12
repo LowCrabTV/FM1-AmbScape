@@ -1197,11 +1197,11 @@ int main(void)
     }
 
     /* the Night: each sound alone sounds, clean and bounded, under the piece (dB against the whole piece's level:
-     * crickets and peepers -16..-8, water's places -18..-3, thunder over a minute -12..-3); all at 0, silence */
+     * crickets and peepers -16..-8, water's places -18..-2, thunder over a minute -12..-3); all at 0, silence */
     {
         static const struct { int p, v; double lo, hi; const char *name; } NT[] = {
-            {P_CRICKET, 100, -16, -8, "crickets"}, {P_PEEP, 100, -16, -8, "peepers"}, {P_WATER, 10, -18, -10, "creek"},
-            {P_WATER, 35, -18, -10, "drizzle"}, {P_WATER, 52, -13, -5, "rain"}, {P_WATER, 70, -9, -2, "downpour"},
+            {P_CRICKET, 100, -16, -8, "crickets"}, {P_PEEP, 100, -16, -8, "peepers"}, {P_WATER, 10, -18, -9, "drizzle"},
+            {P_WATER, 35, -13, -5, "rain"}, {P_WATER, 62, -9, -2, "downpour"},
             {P_WATER, 92, -11, -3, "waves"}, {P_THUNDER, 100, -12, -3, "thunder"}, {-1, 0, -200, -90, "the night off"}};
         double lv[10], piece = 0.0;
         int c, b2, j, k;
