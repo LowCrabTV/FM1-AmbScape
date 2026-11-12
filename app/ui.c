@@ -17,9 +17,9 @@
 #include "fastmath.h"
 
 /* the pages, one a layer (a button each); SELECT steps through them in this order */
-enum { V_GARDEN, V_PAD, V_BELLS, V_ARP, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, V_ROOTS, V_DEAL, V_RINGS, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Keys", "Deal", "Rings"};
-static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL, B_SEL, B_SEQ};
+enum { V_GARDEN, V_PAD, V_BELLS, V_ARP, V_BASS, V_PULSE, V_SPACE, V_SETUP, V_CHORDS, V_ROOTS, V_DEAL, V_RINGS, V_DREAM, NVIEWS };
+static const char *const VIEW_NAME[NVIEWS] = {"Garden", "Pad", "Bells", "Arp", "Bass", "Pulse", "Space", "Setup", "Chords", "Keys", "Deal", "Rings", "Dream"};
+static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_ARP, B_LFO, B_SEQ, B_FX, B_GLO, B_SEL, B_SEL, B_SEL, B_SEQ, B_HOME};
 /* the four knobs of each page: a parameter, or one of these; and what the knob is called there */
 enum { K_LEDS = 100, K_CPU, K_NONE };
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
@@ -35,6 +35,7 @@ static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_RSLOT1, P_RSLOT2, P_RSLOT3, P_RSLOT4},
     {P_DEAL, P_DCOUNT, P_DSPICE, P_DFORM},
     {P_RHITS0, P_RHITS1, P_RHITS2, P_RMOVES},
+    {P_DREAM, P_DRANGE, P_DCAP, P_SEED},
 };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Tempo", "Evolve", "Motion", "Drift"},
@@ -49,6 +50,7 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Key 1", "Key 2", "Key 3", "Key 4"},
     {"Deal", "Chords", "Spice", "Form"},
     {"Thump", "Closed", "Open", "Moves"},
+    {"Dream", "Range", "Spice cap", "Seed"},
 };
 /* SELECT held: a page's other knobs */
 static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
@@ -59,11 +61,12 @@ static const uint8_t VIEW_KNOB2[NVIEWS][4] = {
     {K_NONE, P_BASSN, P_BPLUCK, K_NONE},
     {K_NONE, K_NONE, K_NONE, K_NONE},
     {P_SWOOSH, P_SWLEN, P_SWOFT, P_SWTONE},
-    {P_DREAM, P_DRANGE, P_DCAP, P_SEED},
+    {K_NONE, K_NONE, K_NONE, K_NONE},
     {P_LEN1, P_LEN2, P_LEN3, P_LEN4},
     {P_RLEN1, P_RLEN2, P_RLEN3, P_RLEN4},
     {P_RDEAL, P_RDCOUNT, P_RDSPICE, P_RDFORM},
     {P_RTURN0, P_RTURN1, P_RTURN2, K_NONE},
+    {K_NONE, K_NONE, K_NONE, K_NONE},
 };
 static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"Sparkle", "Length", "Often", "Song"},
@@ -73,11 +76,12 @@ static const char *const KNOB_LABEL2[NVIEWS][4] = {
     {"", "Notes", "Pluck", ""},
     {"", "", "", ""},
     {"Swoosh", "Length", "Often", "Tone"},
-    {"Dream", "Range", "Spice cap", "Seed"},
+    {"", "", "", ""},
     {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
     {"Bars 1", "Bars 2", "Bars 3", "Bars 4"},
     {"Key deal", "Keys", "Spice", "Form"},
     {"Thump", "Closed", "Open", ""},
+    {"", "", "", ""},
 };
 
 /* the screen's colours (Nightscape FM): LowCrabTV's photograph of a pine-lined road at the edge of dusk. The
@@ -767,6 +771,10 @@ static void button(int b)
         set_view(ui.view == V_CHORDS ? V_ROOTS : ui.view == V_ROOTS ? V_DEAL : V_CHORDS);
         return;
     }
+    if (b == B_HOME) {                           /* the dream first; again, the garden; again, the dream */
+        set_view(ui.view == V_DREAM ? V_GARDEN : V_DREAM);
+        return;
+    }
     if (b == B_ARP) {                            /* the bells, then their arpeggio, then the bells */
         set_view(ui.view == V_BELLS ? V_ARP : V_BELLS);
         return;
@@ -1346,7 +1354,7 @@ static int help_lines(int b, const char *l[HELP_LINES])
     int n = 0;
 #define L(t) (l[n++] = (t))
     switch (b) {
-    case B_HOME: L("THE GARDEN"); L("TEMPO, EVOLVE, MOTION, DRIFT"); L("+ SELECT: TEMPO"); break;
+    case B_HOME: L("THE DREAM: DREAM, RANGE,"); L("SPICE CAP, SEED"); L("AGAIN: THE GARDEN"); L("+ SELECT: TEMPO"); break;
     case B_ENV: L("THE PAD"); L("LEVEL, SWELL, BRIGHT,"); L("COLOUR"); break;
     case B_ARP: L("THE BELLS"); L("LEVEL, DENSITY, TONE,"); L("COLOUR; AGAIN: THE ARP"); break;
     case B_SEL: L("SELECT"); L("TAP: CHORDS, KEYS, DEAL"); L("HOLD: THIS PAGE'S"); L("OTHER KNOBS (+)"); break;
@@ -1972,6 +1980,7 @@ void ui_init(void)
 {
     memset(&ui, 0, sizeof ui);
     ui.touched = -1;
+    ui.view = V_DREAM;                           /* a dreamer's first: the Dream page */
     if (proj.par[P_DREAM] == 1)
         dream_deal(dream_fresh());
     else

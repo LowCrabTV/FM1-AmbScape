@@ -1,14 +1,10 @@
-# Dream: SELECT held on the Setup page. Off in every recipe. Up from Off, Wild deals a dream; up from Wild, the knob
+# Dream: the Dream page (HOME), where the FM-1 starts. Off in every recipe. Up from Off, Wild deals a dream; up from Wild, the knob
 # keeps it; on, the next number. Range 0 leaves the sound; 100 moves it, and a part the recipe has off stays off
 # (Last Light: no bass, no pulse). With the piece; gone with the recipe. A project from the dealers' build (format 13)
 # keeps its settings, Dream Off.
 wait 300
-tap GLO
-wait 100
-expect view 7
+expect view 12
 expect par67 0
-press SEL
-wait 100
 shot off.png
 spin K2 -30
 wait 100
@@ -35,9 +31,7 @@ expect par68 100
 expect dreamkept 1
 expect dreamdealt 1
 shot range.png
-release SEL
-wait 100
-expect view 7
+expect view 12
 # a hand on the instruments: the Pad's Colour to Noir, kept until the next turn of Dream
 tap ENV
 wait 100
@@ -45,15 +39,12 @@ spin K4 -5
 spin K4 3
 wait 100
 expect par22 3
-tap GLO
+tap HOME
 wait 100
-press SEL
-wait 100
+expect view 12
 spin K3 0
 wait 100
 expect par22 3
-release SEL
-wait 100
 tap SAVE
 wait 200
 reboot
@@ -64,11 +55,7 @@ wait 300
 expect piece 1
 expect par2 0
 expect par3 0
-tap GLO
-wait 100
-expect view 7
-press SEL
-wait 100
+expect view 12
 spin K2 100
 spin K1 1
 wait 100
@@ -76,8 +63,6 @@ expect par67 1
 expect dreamdealt 1
 expect par2 0
 expect par3 0
-release SEL
-wait 100
 press SAVE
 wait 1700
 release SAVE

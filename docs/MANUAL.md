@@ -94,7 +94,7 @@ The drawing at the top shows them all; here they are in more detail.
 | PLAY | Grow / rest. Nightscape FM starts growing by itself when it's switched on. At rest, the sounds fade out slowly and the reverb rings away. Lit green while growing. |
 | REC | **Freeze**: the chord holds and the reverb rings on forever, while the bells and pulse go on dry above it. Press again to thaw. Lit while frozen. |
 | EDIT | The next chord, at the start of the next bar (at once while resting). |
-| HOME | The Garden page: the whole garden. |
+| HOME | The Dream page, where it starts: Dream, Range, Spice cap, Seed. Again: the Garden page. |
 | ENV · ARP · LFO · SEQ | The layers' pages: Pad, Bells, Bass, Pulse. |
 | FX · GLO | The Space and Setup pages. The lit button shows the page. |
 | SELECT | The previous or next page. Hold HOME and turn it for the tempo, from any page. |
@@ -209,7 +209,7 @@ Key deal read **Dream** while Dream deals them. Turn one of those three and it's
 One page a layer, each on its own button, with four values on KNOB 1–4. A layer's level is
 always KNOB 1. SELECT steps through them in this order.
 
-### HOME: Garden
+### HOME again: Garden
 
 ![The Garden page: TEMPO 72, EVOLVE 35, MOTION 50, DRIFT 39s](img/screen-garden.png "The Garden page")
 
@@ -288,7 +288,14 @@ chords, so a progression is never cut off. Form: **Even** (one pass each), **Slo
 two), **Lift** (home long, then the last key a whole step above the one before: the last chorus's lift).
 Turning the chord dealer deals the keys again too, to fit the new length.
 
-### Hold SELECT: Dream, on the Setup page
+### HOME: Dream
+
+The dreamer's page, and where Nightscape FM starts: everything to grow a whole new piece is here, with PRESETS
+for the piece, ALGORITHM for the scale and PLAY. The other pages are for tweaking, whenever you like; HOME always
+brings you back. (HOME again: the Garden page.)
+
+- **KNOB 1 Dream, KNOB 2 Range, KNOB 3 Spice cap, KNOB 4 Seed.**
+
 
 One number deals the whole piece: the garden's Seed, both dealers on the Deal page, and, with Range, the piece's
 sound. Everything it deals shows on its own page and can be turned by hand after.
@@ -457,7 +464,7 @@ and the open hat (7). Press SEQ again from the Pulse page, and again to go back.
 - **Size:** how long the plate rings, from a room to a long hall, and how many times the echo
   comes back.
 
-### Hold SELECT: Seed, on the Setup page
+### Seed, on the Dream page
 
 **KNOB 4**, beside Dream, Range and Spice cap: the piece's dice together. A piece's knobs are its personality; the dice decide the rest: which notes
 the bells' loops hold, how the patterns turn, where the chords drift, how the arc rises and falls.
@@ -546,7 +553,7 @@ and python-rtmidi packages:
    `python tools/amb_render.py fetch` (to `renders/pieces.amb1`; the FM-1 may keep playing).
 2. Render: `python tools/amb_render.py render --piece Headlights --minutes 30 --dream 417`. Or a batch to audition,
    one file each: `--dream 1-20 --minutes 5`. Without a Dream, each render takes a new Seed and says which, to
-   find it again on the FM-1 (Setup page, SELECT held). `--range`, `--cap`, and any knob after Dream has dealt:
+   find it again on the FM-1 (Dream page, KNOB 4). `--range`, `--cap`, and any knob after Dream has dealt:
    `--set padtone=3 --set hats=0`. A fade-in (`--fade`, 6 s), and at the end the tails ring out (`--tail`, 30 s).
    The files go to `renders/`.
 
@@ -655,13 +662,13 @@ The defaults are Blue Hour's; each piece has its own.
 | Space | Length (SELECT held) | 2–20 s | 6 s |
 | Space | Often (SELECT held) | 10 s – 5 min | 28 s |
 | Space | Tone (SELECT held) | 0–100 (white to brown) | 50 |
-| Setup | Seed (SELECT held) | Wild, 1–999 | Wild |
+| Dream | Seed | Wild, 1–999 | Wild |
 | Rings | Thump, Closed, Open | Auto, 0–16; Auto, 0–12; Auto, 0–7 | Auto |
 | Rings | Moves | Follow, Still | Follow |
 | Rings | Turns (SELECT held) | 0–15; 0–11; 0–6 | 0, 2, 3 |
 | Deal | Deal, Chords, Spice, Form | Off, 1–999; 2–4; 0–100; Even, Home, Turn at 12, 20, 32 s a chord | Off, 4, 30, Even 20s |
 | Deal | Key deal, Keys, Spice, Form (SELECT held) | Off, 1–999; 2–4; 0–100; Even, Slow, Home, Lift | Off, 3, 30, Even |
-| Setup | Dream, Range, Spice cap (SELECT held) | Off, Wild, 1–999; 0–100; 0–100 | Off, 30, 70 |
+| Dream | Dream, Range, Spice cap | Off, Wild, 1–999; 0–100; 0–100 | Off, 30, 70 |
 | Setup | Root | C – B | D |
 | Setup | Tune | −50 – +50 cents | 0 |
 | Setup | MIDI out | Off, On | On |

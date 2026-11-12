@@ -1,6 +1,8 @@
 # Sparkle: SELECT held on the Garden. Off in every recipe; with the piece; gone with the recipe. A project from the
 # colors' build (format 7) keeps its chords, Sparkle off.
 wait 300
+tap HOME
+wait 100
 expect view 0
 expect par42 0
 press SEL

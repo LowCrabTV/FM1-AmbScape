@@ -3,7 +3,7 @@
 wait 200
 listen
 wait 100
-said Garden page: Tempo 72, Evolve 35, Motion 50, Drift 39 seconds. Piece Blue Hour, D Dorian, growing
+said Dream page: Dream Off, Range 30, Spice cap 70, Seed Wild. Piece Blue Hour, D Dorian, tempo 72, growing
 # (the garden follows, queued: the chord, how far to the next, the scale from the root up)
 listen
 where
@@ -31,6 +31,8 @@ said Space page: Echo 45, Echo time 1 bar, Reverb 65, Size 80
 spin K2 -1
 wait 300
 said Echo time 1/2.
+tap HOME
+wait 100
 tap HOME
 wait 300
 said Garden page

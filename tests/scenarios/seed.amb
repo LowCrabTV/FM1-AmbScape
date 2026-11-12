@@ -1,12 +1,8 @@
-# Seed: SELECT held on the Setup page, KNOB 4, beside Dream. Wild in every recipe; turned up from Wild, the number of the garden
+# Seed: the Dream page (HOME), KNOB 4, beside Dream. Wild in every recipe; turned up from Wild, the number of the garden
 # growing; with the piece; gone with the recipe. A project from Swoosh's build (format 11) keeps its settings, Wild.
 wait 300
-tap GLO
-wait 100
-expect view 7
+expect view 12
 expect par58 0
-press SEL
-wait 100
 shot wild.png
 spin K4 1
 wait 100
@@ -21,8 +17,6 @@ expect par58 0
 spin K4 1
 wait 100
 expect seedkept 1
-release SEL
-wait 100
 tap SAVE
 wait 200
 reboot
