@@ -1246,7 +1246,7 @@ static const char *batt_words(int b)
 }
 
 /* the header: the piece in a tag, its root and mode; on the right, the battery, the tempo with a slow
- * beat light (a play triangle while resting) and a dot while there is something unsaved. Messages take
+ * beat light (a play triangle while resting), a crescent moon while Sleep counts, and a dot while there is something unsaved. Messages take
  * its place for a moment. */
 static void draw_header(void)
 {
@@ -1262,6 +1262,7 @@ static void draw_header(void)
         h = hash(h, (en_bars / 4u) & 1u);
     h = hash(h, (uint32_t)(proj.par[P_DREAM] ? ui.dream_now : 0) | (uint32_t)proj.par[P_SEED] << 16 |
                 (uint32_t)(proj.par[P_DREAM] != 0) << 31);
+    h = hash(h, sl.set);
     if (h == ui.sig[0])
         return;
     ui.sig[0] = h;
@@ -1305,6 +1306,11 @@ static void draw_header(void)
             int32_t j;                            /* resting: a play triangle */
             for (j = 0; j < 5; j++)
                 cv_rect(x + 2 + j, 9 + j, 1, 11 - 2 * j, K_DIM);
+        }
+        if (sl.set) {                             /* Sleep is counting: a crescent moon */
+            x -= 16;
+            cv_disc(x + 6, 14, 6, K_FROST);
+            cv_disc(x + 9, 11, 5, K_BG);
         }
         {                                         /* the dream playing (D), or the Seed (S): to note, to render */
             const int n = proj.par[P_DREAM] ? ui.dream_now : proj.par[P_SEED];

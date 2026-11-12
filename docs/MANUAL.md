@@ -527,7 +527,7 @@ Together the four ask a little more of the FM-1 (about a tenth more work), well 
 ### Hold SELECT: Sleep, on the Night page
 
 - **Sleep (KNOB 1):** Off, 15, 30, 60, 120 or 180 minutes, counting from when you set it. While it
-  runs, the knob shows the minutes left. In the last fifth of the time (the last 3 minutes of 15, the
+  runs, a crescent moon sits at the top of the screen and the knob shows the minutes left. In the last fifth of the time (the last 3 minutes of 15, the
   last 36 of 180) everything fades out together, slowly at first. At the end the screen says GOOD
   NIGHT and the garden rests, quiet, the night sounds too, until you press PLAY again. Set it again
   or turn it to Off at any time: the sound comes back up within a second. It is never saved: every
