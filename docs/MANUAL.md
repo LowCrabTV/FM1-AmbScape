@@ -511,13 +511,13 @@ the music does, sit in its reverb, and the garden plays the same notes with them
 - **Peepers (KNOB 2):** spring peepers, little whistles bending upward, each frog about once a second,
   some near and some far. Turned up, more frogs join, up to eight, and they get louder.
 - **Water (KNOB 3):** one journey through water, each place crossfading into the next as you turn:
-  **Creek** (1–20), a quiet trickle and bubbles; **Drizzle** (21–42); **Rain** (43–59); **Downpour**
+  **Creek** (1–20), a stream babbling over stones; **Drizzle** (21–42); **Rain** (43–59); **Downpour**
   (60–79), a roar beneath the hiss; **Waves** (80–100), the sea: a slow swell, the crash, the wash going
   back, every 8 to 12 seconds. Each place has its own loudness: the creek is quiet, the downpour is not.
-- **Thunder (KNOB 4):** now and then a far roll, slow bumps of deep noise over 5 to 12 seconds. Low,
-  seldom and distant (about one roll in three minutes); turned up, more often (about one in 25 seconds)
-  and nearer, and from 61 now and then a crack before the roll. Turned up from 0, the first roll comes
-  within ten seconds.
+- **Thunder (KNOB 4):** now and then a far roll, slow overlapping swells of deep noise over 10 to 20 seconds,
+  mostly in the reverb: always far, a rumble, never a clap. Low, seldom and quiet (about one roll in
+  three minutes); turned up, more often (about one in 25 seconds) and louder. Turned up from 0, the first
+  roll comes within ten seconds.
 
 Together the four ask a little more of the FM-1 (about a tenth more work), well within what it has.
 
