@@ -510,6 +510,8 @@ static void dream_deal(int num)
             }
             if (dream_f() < 0.35f * r)
                 o += dream_f() < 0.5f ? -1 : 1;
+            if (c == 5)                              /* Lead: an octave down, now and then two: never piercing */
+                o = dream_f() < 0.85f ? -1 : -2;
             put(P_BCOLOR, c);
             put(P_BOCT, o < -2 ? -2 : o > 2 ? 2 : o);
             if (c == 5 && proj.par[P_DENSITY] > 45)
@@ -553,6 +555,26 @@ static void dream_deal(int num)
             {                                        /* Pluck: humming when calm, plucked a little when lively */
                 const int pv = rec[P_BPLUCK] + (int)(((ch * 60.0f - 15.0f) + (dream_f() - 0.5f) * 20.0f) * r);
                 put(P_BPLUCK, pv < 0 ? 0 : pv > 100 ? 100 : pv);
+            }
+        }
+        {                                            /* the scale: calm, the open bright ones; lively, the darker */
+            static const float CALM[EN_NMODES] = {2.0f, 2.0f, 0.3f, 3.0f, 1.0f, 1.0f, 3.0f, 1.0f};
+            static const float LIVE[EN_NMODES] = {1.0f, 2.5f, 0.6f, 1.0f, 3.0f, 2.5f, 1.0f, 3.0f};
+            int md = rec[P_MODE], k;
+            if (dream_f() < 0.6f * r) {
+                float sum = 0.0f, y;
+                for (k = 0; k < EN_NMODES; k++)
+                    sum += CALM[k] * (1.0f - ch) + LIVE[k] * ch;
+                y = dream_f() * sum;
+                for (k = 0; k < EN_NMODES - 1; k++)
+                    if ((y -= CALM[k] * (1.0f - ch) + LIVE[k] * ch) < 0.0f)
+                        break;
+                md = k;
+            }
+            if (md != proj.par[P_MODE] || proj.pool != EN_MODE_POOL[md]) {
+                put(P_MODE, md);
+                proj.pool = EN_MODE_POOL[md];
+                en_pool(proj.pool);
             }
         }
         if (rec[P_PULSE]) {                          /* the rings: turns now and then; Still the calmer */
@@ -710,6 +732,8 @@ static void set_mode(int m)
     proj.pool = EN_MODE_POOL[m];
     en_set(P_MODE, m);
     en_pool(proj.pool);
+    if (proj.par[P_DEAL])                        /* the Deal again, in this scale's own chords: a new world, composed */
+        deal_chords();
     say("MODE", EN_MODE_NAME[m]);
     mark_dirty();
 }
