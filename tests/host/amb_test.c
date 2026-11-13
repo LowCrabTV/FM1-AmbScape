@@ -1197,12 +1197,12 @@ int main(void)
     }
 
     /* the Night: each sound alone sounds, clean and bounded, under the piece (dB against the whole piece's level:
-     * crickets and peepers -16..-8, water's places -18..-2, storms over a minute -12..0, a strike counting most); all at 0, silence */
+     * crickets and peepers -20..-10, water's places -23..-5 (5 dB down, David), storms over a minute -12..0, a strike counting most); all at 0, silence */
     {
         static const struct { int p, v; double lo, hi; const char *name; } NT[] = {
-            {P_CRICKET, 100, -16, -8, "crickets"}, {P_PEEP, 100, -16, -8, "peepers"}, {P_WATER, 10, -18, -9, "drizzle"},
-            {P_WATER, 35, -13, -5, "rain"}, {P_WATER, 62, -9, -2, "downpour"},
-            {P_WATER, 92, -11, -3, "waves"}, {P_THUNDER, 100, -12, 0, "storms"}, {-1, 0, -200, -90, "the night off"}};
+            {P_CRICKET, 100, -20, -10, "crickets"}, {P_PEEP, 100, -20, -10, "peepers"}, {P_WATER, 10, -23, -13, "drizzle"},
+            {P_WATER, 35, -18, -8, "rain"}, {P_WATER, 62, -14, -6, "downpour"},
+            {P_WATER, 92, -15, -5, "waves"}, {P_THUNDER, 100, -12, 0, "storms"}, {-1, 0, -200, -90, "the night off"}};
         double lv[10], piece = 0.0;
         int c, b2, j, k;
         for (k = -1; k < (int)(sizeof NT / sizeof NT[0]); k++) {

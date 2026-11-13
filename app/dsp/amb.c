@@ -2104,21 +2104,54 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
 #define NT_PULSE 706u                            /* a cricket's pulse, 16 ms; a pulse every 30 ms */
 #define NT_STEP 1323u
 /* how loud each, at 100 (set by ear and measured against the pad: see the tests) */
-#define NT_G_CRICKET 0.24f
-#define NT_G_PEEP 0.22f
-#define NT_G_DROP 0.5f
-#define NT_G_RAIN 0.18f
-#define NT_G_WAVES 0.9f
+#define NT_G_CRICKET 0.135f
+#define NT_G_PEEP 0.124f
+#define NT_G_DROP 0.28f
+#define NT_G_RAIN 0.10f
+#define NT_G_WAVES 0.5f
 #ifndef NT_G_THUNDER                             /* (a measuring build may set it: 0, the thunder alone) */
-#define NT_G_THUNDER 0.28f
+#define NT_G_THUNDER 0.34f
 #endif
-#define NT_G_BOLT 1.6f
+#ifndef NT_G_BOLT                                /* (a measuring build may set it: 0, the wind alone) */
+#define NT_G_BOLT 2.8f
+#endif
 #define NT_NBOLT 8
 #define NT_TB_F35 0.005f   /* 2 sin(pi 35 Hz / 44.1 kHz) */
-#define NT_TB_G35 1.1f
-#define NT_TB_GMID 4.0f
+#ifndef NT_TB_G35
+#define NT_TB_G35 0.25f
+#endif
+#ifndef NT_TB_GMID
+#define NT_TB_GMID 1.0f
+#endif
+#ifndef NT_TB_RATE                               /* booms a second, in the body */
+#define NT_TB_RATE 40.0f
+#endif
+#ifndef NT_TB_DEC                                /* each boom's fall: a time constant in seconds */
+#define NT_TB_DEC 0.025f
+#endif
+#ifndef NT_TB_LPA                                /* the top of the band: 1-pole a, ~320 Hz (rumbly) */
+#define NT_TB_LPA 0.045f
+#endif
+#ifndef NT_G_CRASH                               /* the master crash, against the booms */
+#define NT_G_CRASH 2.5f
+#endif
+#ifndef NT_G_CLAP                                /* the roll's claps, against the booms */
+#define NT_G_CLAP 3.5f
+#endif
+#ifndef NT_TM_P                                  /* how often a roll opens with the master crash: a rarity, a storm come nearer */
+#define NT_TM_P 0.12f
+#endif
+#ifndef NT_TM_TAU                                /* its fall: a time constant, seconds (and some) */
+#define NT_TM_TAU 2.5f
+#endif
+#ifndef NT_TM_DARK                               /* how soon its highs go: the cutoff's time constant, seconds */
+#define NT_TM_DARK 0.6f
+#endif
+#ifndef NT_TB_HPA                                /* its foot: ~70 Hz */
+#define NT_TB_HPA 0.01f
+#endif
 static uint32_t nt_rng = 0x1B873593u;
-static float nt_play, nt_lv[4], nt_want[4];      /* crickets, peepers, water, thunder: as sounding, as wanted */
+static float nt_play, nt_lv[4], nt_want[4], nt_rv[2];   /* ... and the crickets', peepers' reverb by the knob */      /* crickets, peepers, water, thunder: as sounding, as wanted */
 static struct { float ph, inc, gl, gr; uint32_t t, period, pt; uint8_t k, np; } nt_cr[NT_NCR];
 static struct { float ph, inc0, dinc, gl, gr; uint32_t t, period, dur; } nt_pe[NT_NPE];
 static struct { float amp, dec, gl, gr; } nt_bl[NT_NBL];   /* drops: ticks of noise */
@@ -2127,11 +2160,14 @@ static float nt_lp[4], nt_brown, nt_cf, nt_rain_a, nt_rain_g, nt_low_g, nt_tick;
 static float nt_wv_ph, nt_wv_len, nt_wv_pan, nt_wv_e, nt_wv_tl, nt_wv_tr, nt_wv_gl, nt_wv_gr, nt_wv_a, nt_wv_foam;
 static float nt_th_t, nt_th_wait, nt_th_pan, nt_th_e, nt_th_g, nt_th_gl, nt_th_gr, nt_th_fl, nt_th_flt, nt_th_raw, nt_th_carry;
 static float nt_th_lp[6];                         /* the wind, each side: two poles round 90 Hz, the body round 220 */
-static float nt_tb_lp[8];                         /* thunder: a band round 35 Hz, a band 60-150 Hz, a touch of width */
+static float nt_tb_lp[8];                         /* thunder: the booms; a band round 35 Hz; the band 70-450 Hz */
 /* a roll of thunder, its own: the rumble swelling in quickly, then its swells (no clap: far off, none is heard) */
 static float nt_tb_at[NT_NBOLT], nt_tb_amp[NT_NBOLT], nt_tb_rise[NT_NBOLT], nt_tb_fall[NT_NBOLT];
 static float nt_tb_t, nt_tb_wait, nt_tb_e, nt_tb_g, nt_tb_gnow, nt_tb_fl, nt_tb_flt, nt_tb_sl, nt_tb_slt;
 static int nt_th_v;
+static float nt_cl_t, nt_cl_len, nt_cl_l1, nt_cl_tone, nt_cl_tau, nt_cl_next, nt_cl_hit, nt_cl_g, nt_cl_gnow;   /* the claps */
+static float nt_cl_a, nt_cl_anow, nt_cl_b, nt_cl_bnow, nt_cl_s[6];
+static float nt_tm_t, nt_tm_amp, nt_tm_tau, nt_tm_e, nt_tm_g, nt_tm_gnow, nt_tm_a, nt_tm_anow, nt_tm_lp[3];   /* the master crash */
 static float nt_th_at[NT_NTB], nt_th_amp[NT_NTB], nt_th_rise[NT_NTB], nt_th_fall[NT_NTB];
 
 static float nt_dice(void)
@@ -2168,6 +2204,15 @@ static void night_bolt_start(void)               /* thunder, far off: no clap, o
     int i;
     float at = 0.0f;
     nt_tb_t = 0.0f;
+    nt_cl_t = 0.0f;                              /* the claps: a close cluster, then the secondary ones, 3-5 s in all */
+    nt_cl_len = 3.0f + 2.0f * nt_dice();
+    nt_cl_l1 = 0.8f + 0.6f * nt_dice();         /* the cluster: on its own little bell, the claps overlapping */
+    nt_cl_tau = 0.8f + 1.2f * nt_dice();         /* the secondary claps' fall */
+    nt_cl_tone = 90.0f + 260.0f * nt_dice() * nt_dice();   /* this roll's tone: its claps share it */
+    nt_cl_next = 0.05f + 0.15f * nt_dice();
+    nt_tm_t = nt_dice() < NT_TM_P ? 0.0f : -1.0f;   /* the master crash, now and then: it rings under it all */
+    nt_tm_amp = 0.8f + 0.4f * nt_dice();
+    nt_tm_tau = NT_TM_TAU * (0.8f + 0.5f * nt_dice());
     nt_tb_at[0] = nt_tb_amp[0] = 0.0f;           /* (the strike's place: silent; far off, none is heard) */
     nt_tb_rise[0] = nt_tb_fall[0] = 1.0f;
     nt_tb_at[1] = 0.0f;                          /* the body: in over a third of a second or so, about two seconds long */
@@ -2184,9 +2229,9 @@ static void night_bolt_start(void)               /* thunder, far off: no clap, o
     for (; i < NT_NBOLT; i++) {                  /* then the tail: softer, longer, some 15 dB down */
         at += 0.6f + 1.0f * nt_dice();
         nt_tb_at[i] = at;
-        nt_tb_amp[i] = nt_dice() < 0.8f ? 0.12f + 0.15f * nt_dice() : 0.0f;
-        nt_tb_rise[i] = 0.3f + 0.5f * nt_dice();
-        nt_tb_fall[i] = 1.5f + 1.5f * nt_dice();
+        nt_tb_amp[i] = nt_dice() < 0.85f ? 0.25f + 0.2f * nt_dice() : 0.0f;
+        nt_tb_rise[i] = 0.4f + 0.6f * nt_dice();
+        nt_tb_fall[i] = 2.5f + 2.0f * nt_dice();
     }
 }
 
@@ -2238,7 +2283,7 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
             nt_wv_ph += k / nt_wv_len;
             if (nt_wv_ph >= 1.0f) {
                 nt_wv_ph -= 1.0f;
-                nt_wv_len = 8.0f + 4.0f * nt_dice();
+                nt_wv_len = 10.0f + 4.0f * nt_dice();
                 nt_wv_pan = (nt_dice() * 2.0f - 1.0f) * 0.35f;
             }
             p = nt_wv_ph;
@@ -2247,8 +2292,8 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
                 e = 0.15f + 0.45f * u * u;
             } else if (p < 0.56f) {              /* the crash: eased in, a broad peak a little over the swell */
                 e = 0.6f + 0.25f * (0.5f - 0.5f * fm_cosf(FM_PI * (p - 0.42f) * (1.0f / 0.14f)));
-            } else {                             /* the wash going back */
-                e = 0.1f + 0.75f * fm_expf(-(p - 0.56f) * 6.0f);
+            } else {                             /* the wash going back: a slow ebb, smooth to the next swell */
+                e = 0.15f + 0.35f * (1.0f + fm_cosf(FM_PI * (p - 0.56f) * (1.0f / 0.44f)));
             }
             nt_wv_e = e;
             nt_wv_a = 1.0f - fm_expf(-2.0f * FM_PI * (180.0f + 2600.0f * e * e) * (1.0f / EN_SR));
@@ -2283,10 +2328,10 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
             }
         }
         if (nt_dice() < k * 7.0f)                /* the wind's grain: slow, uneven surges */
-            nt_th_flt = 0.8f + 0.4f * nt_dice();
+            nt_th_flt = 0.88f + 0.24f * nt_dice();
         nt_th_fl += (nt_th_flt - nt_th_fl) * fm_minf(k * 5.0f, 1.0f);
         nt_th_raw = e;
-        nt_th_e = (0.9f + 0.8f * e / (1.0f + e)) * nt_th_fl;   /* a floor; gusts eased: it wavers, never drops away */
+        nt_th_e = (1.0f + 0.45f * e / (1.0f + e)) * nt_th_fl;  /* a floor; gusts a few dB over it: it leans, never drops away */
         if (nt_th_t >= 0.0f && nt_th_t > end)
             night_thunder_next(0.0f);
     }
@@ -2310,9 +2355,9 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
         if (nt_dice() < k * 20.0f)               /* the rumble's grain: quick surges ... */
             nt_tb_flt = 0.6f + 0.8f * nt_dice();
         nt_tb_fl += (nt_tb_flt - nt_tb_fl) * fm_minf(k * 25.0f, 1.0f);
-        if (nt_dice() < k * 2.5f)                /* ... and slower ones under them: rolling at every rate, as heard */
-            nt_tb_slt = 0.6f + 0.8f * nt_dice();
-        nt_tb_sl += (nt_tb_slt - nt_tb_sl) * fm_minf(k * 4.0f, 1.0f);
+        if (nt_dice() < k * 1.6f)                /* ... and slower, heavier ones under them: the roll */
+            nt_tb_slt = 0.5f + 1.0f * nt_dice();
+        nt_tb_sl += (nt_tb_slt - nt_tb_sl) * fm_minf(k * 2.5f, 1.0f);
         nt_tb_e = e * nt_tb_fl * nt_tb_sl;
         if (nt_tb_t > end)
             night_bolt_next(0.0f);
@@ -2320,6 +2365,41 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
         nt_tb_e = 0.0f;
     }
     nt_tb_g = nt_lv[3] * nt_play * nt_tb_e;
+    if (nt_tm_t >= 0.0f) {                       /* the master crash: in at once, out slowly, darkening as it goes */
+        float fc;
+        nt_tm_t += k;
+        nt_tm_e = nt_tm_amp * fm_minf(nt_tm_t * (1.0f / 0.03f), 1.0f) * fm_expf(-nt_tm_t / nt_tm_tau);
+        fc = 140.0f + 3000.0f * fm_expf(-nt_tm_t / NT_TM_DARK);
+        nt_tm_a = 1.0f - fm_expf(-2.0f * FM_PI * fc * (1.0f / EN_SR));
+        if (nt_tm_t > 7.0f * nt_tm_tau)
+            nt_tm_t = -1.0f;
+    } else {
+        nt_tm_e = 0.0f;
+    }
+    nt_tm_g = nt_lv[3] * nt_play * nt_tm_e;
+    if (nt_cl_t >= 0.0f) {                       /* the claps: each 0.2-0.7 s after the last, on the arch */
+        const float u = nt_cl_t / nt_cl_len;
+        nt_cl_t += k;
+        if (nt_cl_t >= nt_cl_next && u < 1.0f) {
+            const int c1 = nt_cl_t < nt_cl_l1;
+            const float w = c1 ? sine(0.5f * nt_cl_t / nt_cl_l1) : 0.75f * fm_expf(-(nt_cl_t - nt_cl_l1) / nt_cl_tau);
+            float a = w * fm_exp2f(-3.0f * nt_dice());   /* each its own: up to 18 dB under the shape */
+            if (nt_dice() < 0.12f)
+                a *= 1.8f;                       /* now and then one breaks out: the chaos in the bell */
+            nt_cl_hit += a;
+            nt_cl_next = nt_cl_t + (c1 ? 0.06f + 0.16f * nt_dice() : 0.2f + 0.5f * nt_dice());
+        }
+        {                                        /* the tone, a little darker as the roll goes; the highs cut over it */
+            const float f = nt_cl_tone * (1.0f - 0.3f * fm_minf(u, 1.0f));
+            nt_cl_a = 2.0f * FM_PI * f * (1.0f / EN_SR);
+            nt_cl_b = 1.0f - fm_expf(-2.0f * FM_PI * 2.0f * f * (1.0f / EN_SR));
+        }
+        nt_cl_g = nt_lv[3] * nt_play;
+        if (nt_cl_t > nt_cl_len + 1.5f)
+            nt_cl_t = -1.0f;
+    } else {
+        nt_cl_g = 0.0f;
+    }
 }
 
 static void night_init(void)                     /* the creatures where they sit, all quiet */
@@ -2367,6 +2447,16 @@ static void night_init(void)                     /* the creatures where they sit
     nt_tb_wait = 1e9f;
     nt_tb_e = nt_tb_g = nt_tb_gnow = 0.0f;
     nt_tb_fl = nt_tb_flt = 1.0f;
+    nt_cl_t = -1.0f;
+    nt_cl_hit = nt_cl_g = nt_cl_gnow = 0.0f;
+    nt_cl_a = nt_cl_anow = 0.02f;
+    nt_cl_b = nt_cl_bnow = 0.05f;
+    for (i = 0; i < 6; i++)
+        nt_cl_s[i] = 0.0f;
+    nt_tm_t = -1.0f;
+    nt_tm_e = nt_tm_g = nt_tm_gnow = 0.0f;
+    nt_tm_a = nt_tm_anow = 0.5f;
+    nt_tm_lp[0] = nt_tm_lp[1] = nt_tm_lp[2] = 0.0f;
     nt_brown = nt_rain_g = nt_low_g = nt_tick = 0.0f;
     nt_cf = nt_rain_a = 0.0f;
     nt_wv_ph = 0.0f;
@@ -2735,8 +2825,11 @@ static void apply(int p, int v)
             sw_left = (uint32_t)(1.5f * EN_SR);
         }
         break;
-    case P_CRICKET: nt_want[0] = v ? fm_exp2f((float)(v - 100) * 0.035f) : 0.0f; break;   /* gentler: more join too */
-    case P_PEEP: nt_want[1] = v ? fm_exp2f((float)(v - 100) * 0.035f) : 0.0f; break;
+    case P_CRICKET:                              /* gentler: more join too; near and dry low, far and wet high */
+    case P_PEEP:
+        nt_want[p - P_CRICKET] = v ? fm_exp2f((float)(v - 100) * 0.035f) : 0.0f;
+        nt_rv[p - P_CRICKET] = 0.04f + 0.8f * (float)v * (float)v * 1e-4f;
+        break;
     case P_WATER:                                /* a place on the journey, not a level: each has its own */
         nt_want[2] = v ? 1.0f : 0.0f;
         if (v)
@@ -2745,7 +2838,7 @@ static void apply(int p, int v)
     case P_THUNDER: {                            /* Storms: the wind softer to stronger, thunder seldom to often; up from 0, the wind at once */
         const int was = nt_th_v;
         nt_th_v = v;
-        nt_want[3] = v ? fm_exp2f((float)(v - 100) * 0.025f) : 0.0f;
+        nt_want[3] = v ? fm_exp2f((float)(v - 100) * 0.018f) : 0.0f;   /* gentler: heard from the middle of the dial */
         if (v && nt_th_t < 0.0f && (!was || nt_th_wait > 4.5f * (1.0f + 3.0f * (1.0f - 0.01f * (float)v))))
             night_thunder_next(was ? 0.0f : 1.0f + 2.0f * nt_dice());   /* the wind at once */
         if (v && nt_tb_t < 0.0f && (!was || nt_tb_wait > 200.0f * fm_exp2f(-0.03f * (float)v)))
@@ -3534,7 +3627,7 @@ static void render_night(uint32_t n)
                         const float x = sine((float)nt_cr[i].pt * (0.5f / (float)NT_PULSE)) * sine(ph);
                         mixl[j] += x * gl;
                         mixr[j] += x * gr;
-                        rsend[j] += x * (gl + gr) * 0.3f;
+                        rsend[j] += x * (gl + gr) * nt_rv[0];
                     }
                     ph += inc;
                     if (ph >= 1.0f)
@@ -3564,7 +3657,7 @@ static void render_night(uint32_t n)
                     const float s = sine((float)nt_pe[i].t * inv), x = s * s * sine(ph);
                     mixl[j] += x * gl;
                     mixr[j] += x * gr;
-                    rsend[j] += x * (gl + gr) * 0.35f;
+                    rsend[j] += x * (gl + gr) * nt_rv[1];
                     ph += nt_pe[i].inc0 + nt_pe[i].dinc * (float)nt_pe[i].t;
                     if (ph >= 1.0f)
                         ph -= 1.0f;
@@ -3660,8 +3753,8 @@ static void render_night(uint32_t n)
             r1 += (b - r1) * 0.0128f;
             r2 += (r1 - r2) * 0.0128f;
             rb += (b - rb) * 0.031f;
-            yl = (l2 * 4.0f + (lb - l1) * 0.35f) * gl;
-            yr = (r2 * 4.0f + (rb - r1) * 0.35f) * gr;
+            yl = (l2 * 4.0f + (lb - l1) * 0.6f) * gl;   /* more of the body: heard on small speakers too */
+            yr = (r2 * 4.0f + (rb - r1) * 0.6f) * gr;
             mixl[j] += yl;
             mixr[j] += yr;
             rsend[j] += (yl + yr) * 0.6f;
@@ -3669,33 +3762,67 @@ static void render_night(uint32_t n)
         nt_rng = r;
         nt_th_lp[0] = l1, nt_th_lp[1] = l2, nt_th_lp[2] = lb, nt_th_lp[3] = r1, nt_th_lp[4] = r2, nt_th_lp[5] = rb;
     }
-    if (nt_tb_g + nt_tb_gnow > 1e-6f) {          /* thunder: its own noise, deeper, over the wind */
+    if (nt_tb_g + nt_tb_gnow + nt_tm_g + nt_tm_gnow + nt_cl_g + nt_cl_gnow > 1e-6f) {   /* thunder: its own noise, deeper, over the wind */
         uint32_t r = nt_rng;
-        float *s = nt_tb_lp, bg = nt_tb_gnow;
+        float *s = nt_tb_lp, bg = nt_tb_gnow, mg = nt_tm_gnow, ma = nt_tm_anow, *m = nt_tm_lp;
         const float db = (nt_tb_g * NT_G_BOLT - bg) * (1.0f / (float)n);
+        const float dm = (nt_tm_g * NT_G_CRASH - mg) * (1.0f / (float)n), da = (nt_tm_a - ma) * (1.0f / (float)n);
+        float cg = nt_cl_gnow, ca = nt_cl_anow, cb = nt_cl_bnow, *q = nt_cl_s;
+        const float dcg = (nt_cl_g * NT_G_CLAP - cg) * (1.0f / (float)n), dca = (nt_cl_a - ca) * (1.0f / (float)n);
+        const float dcb = (nt_cl_b - cb) * (1.0f / (float)n);
+        const float cdec = 1.0f - 1.0f / (0.09f * EN_SR), catt = 1.0f / (0.008f * EN_SR);
+        q[0] += nt_cl_hit;                        /* this block's clap, if one */
+        nt_cl_hit = 0.0f;
+        const float th = 1.0f - 2.0f * NT_TB_RATE / EN_SR, inv = 1.0f / (1.0f - th);
+        const float dec = 1.0f - 1.0f / (NT_TB_DEC * EN_SR);
         for (j = 0; j < n; j++) {
-            float c, d, y, w;
+            float c, d, x, y, z;
             r ^= r << 13, r ^= r >> 17, r ^= r << 5;
             c = (float)(int32_t)r * (1.0f / 2147483648.0f);
             r ^= r << 13, r ^= r >> 17, r ^= r << 5;
             d = (float)(int32_t)r * (1.0f / 2147483648.0f);
             bg += db;
+            mg += dm;
+            ma += da;
+            m[0] += (d - m[0]) * ma;              /* the master crash: noise, three poles falling from 3 kHz to 140 Hz */
+            m[1] += (m[0] - m[1]) * ma;
+            m[2] += (m[1] - m[2]) * ma;
+            z = m[2] * mg;
+            cg += dcg;
+            ca += dca;
+            cb += dcb;
+            q[0] *= cdec;                         /* a clap: in over ~10 ms, gone in a few tenths */
+            q[1] += (q[0] - q[1]) * catt;
+            x = c * q[1];
+            q[2] += ca * q[3];                    /* the roll's tone: a low-pass with a gentle peak on it (Q ~1.1) */
+            q[3] += ca * (x - q[2] - 0.9f * q[3]);
+            q[4] += (q[2] - q[4]) * cb;           /* and one pole more over it: rumbly, no hiss */
+            z += (q[4] - nt_tb_lp[7]) * cg;
+            nt_tb_lp[7] += (q[4] - nt_tb_lp[7]) * 0.008f;   /* (its foot ~55 Hz) */
+            s[6] *= dec;                          /* the booms: at random, now and then a big one among the small */
+            if (d > th) {
+                const float u = (d - th) * inv;
+                s[6] += u * u * u;
+            }
+            x = c * s[6];
             s[0] += NT_TB_F35 * s[1];             /* a band round 35 Hz: the deep weight */
-            s[1] += NT_TB_F35 * (c - s[0] - s[1]);
-            s[2] += (c - s[2]) * 0.017f;          /* 60-120 Hz: the rumble you hear, two poles each side */
-            s[3] += (s[2] - s[3]) * 0.017f;
-            s[4] += (c - s[4]) * 0.0085f;
-            s[5] += (s[4] - s[5]) * 0.0085f;
-            s[6] += (d - s[6]) * 0.017f;          /* a touch of width: nearly mono, as far thunder is */
-            s[7] += (s[6] - s[7]) * 0.017f;
+            s[1] += NT_TB_F35 * (x - s[0] - s[1]);
+            s[2] += (x - s[2]) * NT_TB_LPA;       /* 70-320 Hz: the rumble you hear, two poles over, two under */
+            s[3] += (s[2] - s[3]) * NT_TB_LPA;
+            s[4] += (s[3] - s[4]) * NT_TB_HPA;
+            s[5] += (s[4] - s[5]) * NT_TB_HPA;
             y = (s[1] * NT_TB_G35 + (s[3] - s[5]) * NT_TB_GMID) * bg;
-            w = s[7] * 0.12f * NT_TB_GMID * bg;
-            rsend[j] += y * 0.15f;                /* little reverb: far thunder is near mono, and goes */
-            mixl[j] += y + w;
-            mixr[j] += y - w;
+            rsend[j] += y * 0.4f + z * 0.7f;      /* some reverb: far off, over open land; the crash rings in it */
+            mixl[j] += y + z;
+            mixr[j] += y + z;
         }
         nt_rng = r;
         nt_tb_gnow = nt_tb_g * NT_G_BOLT;
+        nt_tm_gnow = nt_tm_g * NT_G_CRASH;
+        nt_tm_anow = nt_tm_a;
+        nt_cl_gnow = nt_cl_g * NT_G_CLAP;
+        nt_cl_anow = nt_cl_a;
+        nt_cl_bnow = nt_cl_b;
     }
 }
 

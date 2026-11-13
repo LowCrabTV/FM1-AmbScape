@@ -510,14 +510,18 @@ the music does, sit in its reverb, and the garden plays the same notes with them
   right. Up from 0 one sings; from 41 a second; from 76 a third. Off at 0.
 - **Peepers (KNOB 2):** spring peepers, little whistles bending upward, each frog about once a second,
   some near and some far. Turned up, more frogs join, up to eight, and they get louder.
+  Low on the knob the crickets and peepers are near and dry; turned up, they sit farther off, in more reverb.
 - **Water (KNOB 3):** one journey through water, each place crossfading into the next as you turn:
   **Drizzle** (1–23); **Rain** (24–48); **Downpour** (49–75), a roar beneath the hiss; **Waves** (76–100),
   the sea: a slow swell, the crash, the wash going
-  back, every 8 to 12 seconds; the crash eased in, broad and only a little louder than the swell. Each place has its own loudness: the drizzle is quiet, the downpour is not.
+  back in a slow ebb, every 10 to 14 seconds; the crash eased in, broad and only a little louder than the swell. Each place has its own loudness: the drizzle is quiet, the downpour is not.
 - **Storms (KNOB 4):** a storm far off. Deep, shifting wind that never quite settles, and in it, now and
-  then, thunder, a sound of its own, shaped on a recording of real distant thunder: a deep rumble (its
-  weight round 35 Hz, what you hear 60-200 Hz, nearly mono) swelling in quickly, rolling, then fading,
-  the wind going on under it all the while.
+  then, thunder, a sound of its own, shaped clap by clap on recordings of real distant thunder: a roll
+  opens with a close run of claps, overlapping for a second or so, then the secondary claps follow,
+  spaced out, fading and darkening, over a deep rumble of smaller booms. Each roll has its own tone, deep
+  and rumbly, its claps uneven, no two rolls alike. Now and then (about one roll in eight) the storm has
+  come nearer, and the roll opens with one big crash that rings under it all, its highs going first.
+  The wind goes on under it all the while.
   Low, the wind is soft and the thunder seldom (about once in three minutes); turned up, the wind is
   stronger and the thunder comes more often (about every 25 seconds). Turned up from 0, the wind rises at
   once and the first thunder comes within half a minute.
