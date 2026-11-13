@@ -2138,9 +2138,6 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
 #ifndef NT_G_CLAP                                /* the roll's claps, against the booms */
 #define NT_G_CLAP 5.5f
 #endif
-#ifndef NT_TM_P                                  /* how often a roll opens with the master crash: a rarity, a storm come nearer */
-#define NT_TM_P 0.12f
-#endif
 #ifndef NT_TM_TAU                                /* its fall: a time constant, seconds (and some) */
 #define NT_TM_TAU 2.5f
 #endif
@@ -2211,7 +2208,12 @@ static void night_bolt_start(void)               /* thunder, far off: no clap, o
     nt_cl_tau = 0.8f + 1.2f * nt_dice();         /* the secondary claps' fall */
     nt_cl_tone = 90.0f + 260.0f * nt_dice() * nt_dice();   /* this roll's tone: its claps share it */
     nt_cl_next = 0.05f + 0.15f * nt_dice();
-    nt_tm_t = nt_dice() < NT_TM_P ? 0.0f : -1.0f;   /* the master crash, now and then: it rings under it all */
+    {                                            /* the master crash: only Storms 95 up (David: halting, wanted only when
+                                                  * asked for), a quarter of the rolls at 95, half at 100; it rings under it all */
+        const int v = par[P_THUNDER];
+        const float pc = v >= 95 ? 0.25f + 0.05f * (float)(v - 95) : 0.0f;
+        nt_tm_t = nt_dice() < pc ? 0.0f : -1.0f;
+    }
     nt_tm_amp = 0.8f + 0.4f * nt_dice();
     nt_tm_tau = NT_TM_TAU * (0.8f + 0.5f * nt_dice());
     nt_tb_at[0] = nt_tb_amp[0] = 0.0f;           /* (the strike's place: silent; far off, none is heard) */

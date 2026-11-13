@@ -519,8 +519,9 @@ the music does, sit in its reverb, and the garden plays the same notes with them
   then, thunder, a sound of its own, shaped clap by clap on recordings of real distant thunder: a roll
   opens with a close run of claps, overlapping for a second or so, then the secondary claps follow,
   spaced out, fading and darkening, over a deep rumble of smaller booms. Each roll has its own tone, deep
-  and rumbly, its claps uneven, no two rolls alike. Now and then (about one roll in eight) the storm has
-  come nearer, and the roll opens with one big crash that rings under it all, its highs going first.
+  and rumbly, its claps uneven, no two rolls alike. From 95 up the storm has
+  come nearer: some rolls (a quarter at 95, half at 100) open with one big crash that rings under it
+  all, its highs going first. Below 95 there are none, only the rolls, for quiet listening.
   The wind goes on under it all the while.
   Low, the wind is soft and the thunder seldom (about once in three minutes); turned up, the wind is
   stronger and the thunder comes more often (about every 25 seconds). Turned up from 0, the wind rises at
