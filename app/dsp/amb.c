@@ -2104,10 +2104,13 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
 #define NT_PULSE 706u                            /* a cricket's pulse, 16 ms; a pulse every 30 ms */
 #define NT_STEP 1323u
 /* how loud each, at 100 (set by ear and measured against the pad: see the tests) */
-#define NT_G_CRICKET 0.135f
-#define NT_G_PEEP 0.124f
+#define NT_G_CRICKET 0.064f
+#define NT_G_PEEP 0.059f
 #define NT_G_DROP 0.28f
 #define NT_G_RAIN 0.10f
+#ifndef NT_RAIN_BODY                             /* the rain's body under the hiss: subtle, it must stay light */
+#define NT_RAIN_BODY 0.35f
+#endif
 #define NT_G_WAVES 0.5f
 #ifndef NT_G_THUNDER                             /* (a measuring build may set it: 0, the thunder alone) */
 #define NT_G_THUNDER 0.6f
@@ -2153,6 +2156,7 @@ static struct { float ph, inc, gl, gr; uint32_t t, period, pt; uint8_t k, np; } 
 static struct { float ph, inc0, dinc, gl, gr; uint32_t t, period, dur; } nt_pe[NT_NPE];
 static struct { float amp, dec, gl, gr; } nt_bl[NT_NBL];   /* drops: ticks of noise */
 static float nt_wx;                              /* where on the water's journey: 1 drizzle .. 3 waves */
+static float nt_rbody[2];                        /* the rain's body: its foot, ~300 Hz */
 static float nt_lp[4], nt_brown, nt_cf, nt_rain_a, nt_rain_g, nt_low_g, nt_tick;
 static float nt_wv_ph, nt_wv_len, nt_wv_pan, nt_wv_e, nt_wv_tl, nt_wv_tr, nt_wv_gl, nt_wv_gr, nt_wv_a, nt_wv_foam;
 static float nt_th_t, nt_th_wait, nt_th_pan, nt_th_e, nt_th_g, nt_th_gl, nt_th_gr, nt_th_fl, nt_th_flt, nt_th_raw, nt_th_carry;
@@ -2165,6 +2169,7 @@ static int nt_th_v;
 static float nt_th_lift = 1.0f;                  /* the wind's own curve over the Storms knob: louder low down */
 static float nt_cl_t, nt_cl_len, nt_cl_l1, nt_cl_tone, nt_cl_tau, nt_cl_next, nt_cl_hit, nt_cl_g, nt_cl_gnow;   /* the claps */
 static float nt_cl_a, nt_cl_anow, nt_cl_b, nt_cl_bnow, nt_cl_s[6];
+static float nt_rf_a = 0.3f, nt_rf_anow = 0.3f, nt_rf[4];   /* the roll's high cut, sliding down as it goes */
 static float nt_tm_t, nt_tm_amp, nt_tm_tau, nt_tm_e, nt_tm_g, nt_tm_gnow, nt_tm_a, nt_tm_anow, nt_tm_lp[3];   /* the master crash */
 static float nt_th_at[NT_NTB], nt_th_amp[NT_NTB], nt_th_rise[NT_NTB], nt_th_fall[NT_NTB];
 
@@ -2270,14 +2275,15 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
         float rate, e, p;
         nt_cf = fm_sinf(FM_PI * (2600.0f - 1500.0f * heavy) * (1.0f / EN_SR)) * 2.0f;   /* the hiss: from 2.6 kHz, lower when heavy */
         nt_rain_a = nt_cf * 0.5f;
-        nt_rain_g = g * rain * (0.35f + 0.65f * heavy) * 0.9f;
+        const float soft = 0.4f + 0.6f * fm_clampf((x - 1.0f) * (1.0f / 0.7f), 0.0f, 1.0f);   /* just on: quieter */
+        nt_rain_g = g * rain * soft * (0.35f + 0.65f * heavy) * 0.9f;
         nt_low_g = heavy * 0.7f;                 /* a downpour's roar underneath */
         rate = rain * (5.0f + 45.0f * heavy);    /* drops a second, ticking on the leaves */
         if (nt_dice() < rate * k) {
             for (i = 0; i < NT_NBL && nt_bl[i].amp > 1e-4f; i++)
                 ;
             if (i < NT_NBL) {
-                nt_bl[i].amp = g * rain * (0.15f + 0.35f * nt_dice());
+                nt_bl[i].amp = g * rain * soft * (0.15f + 0.35f * nt_dice());
                 nt_bl[i].dec = fm_exp2f(-1.4427f / ((0.0015f + 0.0035f * nt_dice()) * EN_SR));
                 nt_pan(nt_dice() * 1.8f - 0.9f, &nt_bl[i].gl, &nt_bl[i].gr);
             }
@@ -2368,6 +2374,8 @@ static void night_env(uint32_t n)                /* the slow part: levels, who s
         nt_tb_e = 0.0f;
     }
     nt_tb_g = nt_lv[3] * nt_play * nt_tb_e;
+    nt_rf_a = 1.0f - fm_expf(-2.0f * FM_PI * (nt_tb_t >= 0.0f ? fm_maxf(2400.0f * fm_exp2f(-nt_tb_t * (1.0f / 1.8f)), 150.0f)
+                                                             : 2400.0f) * (1.0f / EN_SR));   /* an octave down every 1.8 s */
     if (nt_tm_t >= 0.0f) {                       /* the master crash: in at once, out slowly, darkening as it goes */
         float fc;
         nt_tm_t += k;
@@ -2450,6 +2458,7 @@ static void night_init(void)                     /* the creatures where they sit
     nt_tb_wait = 1e9f;
     nt_tb_e = nt_tb_g = nt_tb_gnow = 0.0f;
     nt_tb_fl = nt_tb_flt = 1.0f;
+    nt_rf[0] = nt_rf[1] = nt_rf[2] = nt_rf[3] = 0.0f;
     nt_cl_t = -1.0f;
     nt_cl_hit = nt_cl_g = nt_cl_gnow = 0.0f;
     nt_cl_a = nt_cl_anow = 0.02f;
@@ -2462,6 +2471,7 @@ static void night_init(void)                     /* the creatures where they sit
     nt_tm_lp[0] = nt_tm_lp[1] = nt_tm_lp[2] = 0.0f;
     nt_brown = nt_rain_g = nt_low_g = nt_tick = 0.0f;
     nt_cf = nt_rain_a = 0.0f;
+    nt_rbody[0] = nt_rbody[1] = 0.0f;
     nt_wv_ph = 0.0f;
     nt_wv_len = 10.0f;
     nt_wv_pan = nt_wv_e = nt_wv_tl = nt_wv_tr = nt_wv_gl = nt_wv_gr = nt_wv_a = nt_wv_foam = 0.0f;
@@ -3724,8 +3734,10 @@ static void render_night(uint32_t n)
             b = (float)(int32_t)r * (1.0f / 2147483648.0f);
             l0 += ra * (a - l0);                 /* rain: the hiss over a cutoff, a downpour's roar under it */
             l1 += ra * (b - l1);
-            yl = ((a - l0) + lowg * l0) * rg;
-            yr = ((b - l1) + lowg * l1) * rg;
+            nt_rbody[0] += (l0 - nt_rbody[0]) * 0.042f;   /* and a little body under the hiss: 300 Hz up to it */
+            nt_rbody[1] += (l1 - nt_rbody[1]) * 0.042f;
+            yl = ((a - l0) + lowg * l0 + NT_RAIN_BODY * (l0 - nt_rbody[0])) * rg;
+            yr = ((b - l1) + lowg * l1 + NT_RAIN_BODY * (l1 - nt_rbody[1])) * rg;
             br += (a - br) * 0.02f;              /* the sea: deep noise opening with the swell, foam at the crash */
             w0 += wa * (br * 5.0f + a * foam - w0);
             w1 += wa * (br * 5.0f + b * foam - w1);
@@ -3779,8 +3791,10 @@ static void render_night(uint32_t n)
         nt_cl_hit = 0.0f;
         const float th = 1.0f - 2.0f * NT_TB_RATE / EN_SR, inv = 1.0f / (1.0f - th);
         const float dec = 1.0f - 1.0f / (NT_TB_DEC * EN_SR);
+        float fa = nt_rf_anow, *f = nt_rf;
+        const float dfa = (nt_rf_a - fa) * (1.0f / (float)n);
         for (j = 0; j < n; j++) {
-            float c, d, x, y, z;
+            float c, d, x, y, z, v;
             r ^= r << 13, r ^= r >> 17, r ^= r << 5;
             c = (float)(int32_t)r * (1.0f / 2147483648.0f);
             r ^= r << 13, r ^= r >> 17, r ^= r << 5;
@@ -3801,7 +3815,7 @@ static void render_night(uint32_t n)
             q[2] += ca * q[3];                    /* the roll's tone: a low-pass with a gentle peak on it (Q ~1.1) */
             q[3] += ca * (x - q[2] - 0.9f * q[3]);
             q[4] += (q[2] - q[4]) * cb;           /* and one pole more over it: rumbly, no hiss */
-            z += (q[4] - nt_tb_lp[7]) * cg;
+            v = (q[4] - nt_tb_lp[7]) * cg;
             nt_tb_lp[7] += (q[4] - nt_tb_lp[7]) * 0.008f;   /* (its foot ~55 Hz) */
             s[6] *= dec;                          /* the booms: at random, now and then a big one among the small */
             if (d > th) {
@@ -3816,6 +3830,13 @@ static void render_night(uint32_t n)
             s[4] += (s[3] - s[4]) * NT_TB_HPA;
             s[5] += (s[4] - s[5]) * NT_TB_HPA;
             y = (s[1] * NT_TB_G35 + (s[3] - s[5]) * NT_TB_GMID) * bg;
+            fa += dfa;                            /* the roll dulling as it goes: booms and claps, two poles each */
+            f[0] += (y - f[0]) * fa;
+            f[1] += (f[0] - f[1]) * fa;
+            f[2] += (v - f[2]) * fa;
+            f[3] += (f[2] - f[3]) * fa;
+            y = f[1];
+            z += f[3];
             rsend[j] += y * 0.4f + z * 0.7f;      /* some reverb: far off, over open land; the crash rings in it */
             mixl[j] += y + z;
             mixr[j] += y + z;
@@ -3827,6 +3848,7 @@ static void render_night(uint32_t n)
         nt_cl_gnow = nt_cl_g * NT_G_CLAP;
         nt_cl_anow = nt_cl_a;
         nt_cl_bnow = nt_cl_b;
+        nt_rf_anow = nt_rf_a;
     }
 }
 
