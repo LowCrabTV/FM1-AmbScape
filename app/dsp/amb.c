@@ -2110,10 +2110,10 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
 #define NT_G_RAIN 0.10f
 #define NT_G_WAVES 0.5f
 #ifndef NT_G_THUNDER                             /* (a measuring build may set it: 0, the thunder alone) */
-#define NT_G_THUNDER 0.34f
+#define NT_G_THUNDER 0.6f
 #endif
 #ifndef NT_G_BOLT                                /* (a measuring build may set it: 0, the wind alone) */
-#define NT_G_BOLT 2.8f
+#define NT_G_BOLT 4.4f
 #endif
 #define NT_NBOLT 8
 #define NT_TB_F35 0.005f   /* 2 sin(pi 35 Hz / 44.1 kHz) */
@@ -2133,10 +2133,10 @@ static void swoosh_env(uint32_t n)              /* the slow part: where the pass
 #define NT_TB_LPA 0.045f
 #endif
 #ifndef NT_G_CRASH                               /* the master crash, against the booms */
-#define NT_G_CRASH 2.5f
+#define NT_G_CRASH 4.0f
 #endif
 #ifndef NT_G_CLAP                                /* the roll's claps, against the booms */
-#define NT_G_CLAP 3.5f
+#define NT_G_CLAP 5.5f
 #endif
 #ifndef NT_TM_P                                  /* how often a roll opens with the master crash: a rarity, a storm come nearer */
 #define NT_TM_P 0.12f
@@ -2165,6 +2165,7 @@ static float nt_tb_lp[8];                         /* thunder: the booms; a band 
 static float nt_tb_at[NT_NBOLT], nt_tb_amp[NT_NBOLT], nt_tb_rise[NT_NBOLT], nt_tb_fall[NT_NBOLT];
 static float nt_tb_t, nt_tb_wait, nt_tb_e, nt_tb_g, nt_tb_gnow, nt_tb_fl, nt_tb_flt, nt_tb_sl, nt_tb_slt;
 static int nt_th_v;
+static float nt_th_lift = 1.0f;                  /* the wind's own curve over the Storms knob: louder low down */
 static float nt_cl_t, nt_cl_len, nt_cl_l1, nt_cl_tone, nt_cl_tau, nt_cl_next, nt_cl_hit, nt_cl_g, nt_cl_gnow;   /* the claps */
 static float nt_cl_a, nt_cl_anow, nt_cl_b, nt_cl_bnow, nt_cl_s[6];
 static float nt_tm_t, nt_tm_amp, nt_tm_tau, nt_tm_e, nt_tm_g, nt_tm_gnow, nt_tm_a, nt_tm_anow, nt_tm_lp[3];   /* the master crash */
@@ -2839,6 +2840,7 @@ static void apply(int p, int v)
         const int was = nt_th_v;
         nt_th_v = v;
         nt_want[3] = v ? fm_exp2f((float)(v - 100) * 0.018f) : 0.0f;   /* gentler: heard from the middle of the dial */
+        nt_th_lift = fm_exp2f((float)(100 - v) * 0.006f);   /* the wind's curve gentler still (David: heard under the music) */
         if (v && nt_th_t < 0.0f && (!was || nt_th_wait > 4.5f * (1.0f + 3.0f * (1.0f - 0.01f * (float)v))))
             night_thunder_next(was ? 0.0f : 1.0f + 2.0f * nt_dice());   /* the wind at once */
         if (v && nt_tb_t < 0.0f && (!was || nt_tb_wait > 200.0f * fm_exp2f(-0.03f * (float)v)))
@@ -3740,7 +3742,7 @@ static void render_night(uint32_t n)
     if (nt_th_g > 1e-6f) {                       /* storms: the wind, deep surges, wide, much of it the reverb's */
         uint32_t r = nt_rng;
         float l1 = nt_th_lp[0], l2 = nt_th_lp[1], lb = nt_th_lp[2], r1 = nt_th_lp[3], r2 = nt_th_lp[4], rb = nt_th_lp[5];
-        const float tg = nt_th_g * NT_G_THUNDER, gl = nt_th_gl * tg, gr = nt_th_gr * tg;
+        const float tg = nt_th_g * NT_G_THUNDER * nt_th_lift, gl = nt_th_gl * tg, gr = nt_th_gr * tg;
         for (j = 0; j < n; j++) {
             float a, b, yl, yr;
             r ^= r << 13, r ^= r >> 17, r ^= r << 5;
